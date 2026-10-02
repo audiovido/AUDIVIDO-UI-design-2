@@ -1,0 +1,1012 @@
+@import "tailwindcss";
+
+/* Master Aurora Borealis & High-Contrast 3D Liquid Glass Spheres */
+
+@keyframes aurora-wave-1 {
+  0% { transform: translate(-8%, -12%) rotate(0deg) scale(1); }
+  50% { transform: translate(12%, 18%) rotate(180deg) scale(1.2); }
+  100% { transform: translate(-8%, -12%) rotate(360deg) scale(1); }
+}
+
+@keyframes aurora-wave-2 {
+  0% { transform: translate(12%, 18%) rotate(0deg) scale(1.15); }
+  50% { transform: translate(-18%, -12%) rotate(-180deg) scale(0.85); }
+  100% { transform: translate(12%, 18%) rotate(-360deg) scale(1.15); }
+}
+
+@keyframes liquid-wave {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* Master Circular Orbit Keyframes */
+@keyframes orbit-container-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes orbit-item-unspin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-360deg); }
+}
+
+/* Float overlay for bubbles to give natural ocean floating vibes */
+@keyframes bubble-drift {
+  0%, 100% { margin-top: 0px; }
+  50% { margin-top: -10px; }
+}
+
+/* ======================================================== */
+/* === ETHEREAL ULTRA-FINE SHOOTING STARS (SWIFT & RARE) === */
+/* ======================================================== */
+
+/* Pattern 1: Upper-Left Corner Diagonal (42deg) - Ultra-swift 0.55s starlight streak, 24s interval */
+@keyframes meteor-ethereal-1 {
+  0% {
+    transform: translate3d(-90px, -90px, 0) rotate(42deg);
+    opacity: 0;
+  }
+  0.4% {
+    opacity: 0.75;
+  }
+  1.8% {
+    opacity: 0.75;
+  }
+  2.4% {
+    transform: translate3d(240px, 240px, 0) rotate(42deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(240px, 240px, 0) rotate(42deg);
+    opacity: 0;
+  }
+}
+
+/* Pattern 2: Upper-Right Corner Diagonal (138deg) - Ultra-swift 0.55s starlight streak, 24s interval */
+@keyframes meteor-ethereal-2 {
+  0% {
+    transform: translate3d(90px, -90px, 0) rotate(138deg);
+    opacity: 0;
+  }
+  0.4% {
+    opacity: 0.7;
+  }
+  1.8% {
+    opacity: 0.7;
+  }
+  2.4% {
+    transform: translate3d(-240px, 240px, 0) rotate(138deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate3d(-240px, 240px, 0) rotate(138deg);
+    opacity: 0;
+  }
+}
+
+/* Deep Space Stellar Canvas & Cosmic Nebula Dust */
+.aurora-bg {
+  background-color: #020206;
+  background-image: 
+    radial-gradient(ellipse at 20% 18%, rgba(2, 44, 34, 0.45) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 80%, rgba(15, 23, 42, 0.5) 0%, transparent 60%),
+    radial-gradient(circle at 75% 25%, rgba(59, 7, 100, 0.35) 0%, transparent 55%),
+    radial-gradient(circle at 35% 75%, rgba(6, 78, 59, 0.3) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, #030209 0%, #010104 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Multi-layered Wavy Aurora Borealis Polar Curtains */
+.aurora-curtain-green {
+  position: absolute;
+  top: -20%;
+  left: -10%;
+  width: 125%;
+  height: 125%;
+  background: radial-gradient(ellipse at 30% 20%, rgba(3, 242, 165, 0.26) 0%, rgba(16, 185, 129, 0.12) 35%, transparent 68%);
+  filter: blur(85px);
+  mix-blend-mode: screen;
+  animation: aurora-wave-1 20s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.aurora-curtain-purple {
+  position: absolute;
+  bottom: -20%;
+  right: -10%;
+  width: 125%;
+  height: 125%;
+  background: radial-gradient(ellipse at 70% 80%, rgba(168, 85, 247, 0.22) 0%, rgba(236, 72, 153, 0.08) 38%, transparent 68%);
+  filter: blur(95px);
+  mix-blend-mode: screen;
+  animation: aurora-wave-2 24s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+.aurora-curtain-blue {
+  position: absolute;
+  top: 25%;
+  left: 20%;
+  width: 85%;
+  height: 85%;
+  background: radial-gradient(circle at 50% 50%, rgba(6, 182, 212, 0.2) 0%, rgba(99, 102, 241, 0.08) 42%, transparent 70%);
+  filter: blur(90px);
+  mix-blend-mode: screen;
+  animation: aurora-wave-1 26s ease-in-out infinite alternate;
+  pointer-events: none;
+}
+
+/* Cosmic Nebula Dust Cloud */
+.aurora-cosmic-dust {
+  position: absolute;
+  inset: 0;
+  background-image: 
+    radial-gradient(1px 1px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 40px 70px, rgba(165, 243, 252, 0.8), rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 50px 160px, rgba(254, 240, 138, 0.7), rgba(0,0,0,0)),
+    radial-gradient(1.5px 1.5px at 90px 40px, #ffffff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 130px 80px, rgba(244, 114, 182, 0.8), rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 160px 120px, #ffffff, rgba(0,0,0,0));
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  opacity: 0.25;
+  pointer-events: none;
+}
+
+/* Widescreen Starfield Nodes - Soft, Diffused, Ambient Starlight (Deep Background) */
+.sky-star {
+  position: absolute;
+  background-color: #ffffff;
+  border-radius: 9999px;
+  pointer-events: none;
+  animation: sparkle 4.5s ease-in-out infinite;
+}
+
+/* Faint deep-space background stars (soft, gentle glow) */
+.star-faint {
+  background-color: rgba(255, 255, 255, 0.72);
+  filter: blur(0.25px);
+  box-shadow: 0 0 2px rgba(255, 255, 255, 0.35);
+}
+
+.star-micro {
+  background-color: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 2.5px rgba(255, 255, 255, 0.45);
+}
+
+.star-diamond {
+  background-color: #ffffff;
+  box-shadow: 0 0 4px 1px rgba(255, 255, 255, 0.6);
+}
+
+.star-cyan {
+  background-color: #a5f3fc;
+  box-shadow: 0 0 4px 1px rgba(34, 211, 238, 0.55);
+}
+
+.star-gold {
+  background-color: #fef08a;
+  box-shadow: 0 0 4px 1px rgba(245, 158, 11, 0.55);
+}
+
+.star-rose {
+  background-color: #fecdd3;
+  box-shadow: 0 0 4px 1px rgba(244, 63, 94, 0.55);
+}
+
+/* Fine-tuned Starlight Pulse (Noticeable gentle twinkle between 0.22 and 0.78 opacity) */
+@keyframes sparkle {
+  0%, 100% { 
+    opacity: 0.22; 
+    transform: scale(0.88); 
+  }
+  50% { 
+    opacity: 0.78; 
+    transform: scale(1.18); 
+    filter: drop-shadow(0 0 2.5px rgba(255, 255, 255, 0.65));
+  }
+}
+
+@keyframes sparkle-fast {
+  0%, 100% { 
+    opacity: 0.28; 
+    transform: scale(0.9); 
+  }
+  50% { 
+    opacity: 0.88; 
+    transform: scale(1.22); 
+    filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.8));
+  }
+}
+
+/* Natural Classical Shooting Star Flight (Enters smoothly from distance across diagonal sky) */
+@keyframes classic-meteor-streak {
+  0% {
+    opacity: 0;
+    transform: translate3d(-180px, -180px, 0);
+  }
+  4% {
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+    transform: translate3d(-40px, -40px, 0);
+  }
+  65% {
+    opacity: 0.95;
+    transform: translate3d(380px, 380px, 0);
+  }
+  85% {
+    opacity: 0;
+    transform: translate3d(540px, 540px, 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(540px, 540px, 0);
+  }
+}
+
+/* ======================================================== */
+/* === PURE DYNAMIC METEOR SHOOTING STARS (NO STATIC LINES) === */
+/* ======================================================== */
+.shooting-star-meteor {
+  position: absolute;
+  opacity: 0; /* 100% INVISIBLE at start - ZERO static lines */
+  pointer-events: none;
+  height: 2px;
+  border-radius: 99px;
+  transform-origin: right center;
+  will-change: transform, opacity;
+  animation-fill-mode: both;
+}
+
+/* Meteor 1: Emerald/Cyan Starlight */
+@keyframes meteor-blaze-1 {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(34deg) scaleX(0.05);
+  }
+  1.5% {
+    opacity: 0;
+  }
+  2.5% {
+    opacity: 1;
+    transform: translate3d(60px, 40px, 0) rotate(34deg) scaleX(1);
+  }
+  9% {
+    opacity: 0.95;
+    transform: translate3d(360px, 240px, 0) rotate(34deg) scaleX(1.1);
+  }
+  13% {
+    opacity: 0;
+    transform: translate3d(520px, 350px, 0) rotate(34deg) scaleX(0.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(520px, 350px, 0) rotate(34deg) scaleX(0);
+  }
+}
+
+/* Meteor 2: Warm Gold / Champagne Starlight */
+@keyframes meteor-blaze-2 {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(38deg) scaleX(0.05);
+  }
+  2% {
+    opacity: 0;
+  }
+  3% {
+    opacity: 1;
+    transform: translate3d(50px, 38px, 0) rotate(38deg) scaleX(1);
+  }
+  10% {
+    opacity: 0.95;
+    transform: translate3d(340px, 260px, 0) rotate(38deg) scaleX(1.05);
+  }
+  14% {
+    opacity: 0;
+    transform: translate3d(490px, 380px, 0) rotate(38deg) scaleX(0.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(490px, 380px, 0) rotate(38deg) scaleX(0);
+  }
+}
+
+/* Meteor 3: Rose / Violet Starlight */
+@keyframes meteor-blaze-3 {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0) rotate(30deg) scaleX(0.05);
+  }
+  2% {
+    opacity: 0;
+  }
+  3.2% {
+    opacity: 1;
+    transform: translate3d(70px, 40px, 0) rotate(30deg) scaleX(1);
+  }
+  11% {
+    opacity: 0.95;
+    transform: translate3d(380px, 220px, 0) rotate(30deg) scaleX(1.15);
+  }
+  15% {
+    opacity: 0;
+    transform: translate3d(550px, 320px, 0) rotate(30deg) scaleX(0.2);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(550px, 320px, 0) rotate(30deg) scaleX(0);
+  }
+}
+
+.meteor-cyan {
+  width: 140px;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(34, 211, 238, 0.8) 60%, rgba(255,255,255,1) 100%);
+  filter: drop-shadow(0 0 6px rgba(34, 211, 238, 0.85)) drop-shadow(0 0 12px rgba(255, 255, 255, 0.9));
+  animation: meteor-blaze-1 12s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  animation-fill-mode: both;
+}
+
+.meteor-gold {
+  width: 130px;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(251, 191, 36, 0.8) 60%, rgba(255,255,255,1) 100%);
+  filter: drop-shadow(0 0 6px rgba(251, 191, 36, 0.85)) drop-shadow(0 0 12px rgba(255, 255, 255, 0.9));
+  animation: meteor-blaze-2 15s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  animation-fill-mode: both;
+}
+
+.meteor-rose {
+  width: 150px;
+  background: linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(244, 63, 94, 0.8) 60%, rgba(255,255,255,1) 100%);
+  filter: drop-shadow(0 0 6px rgba(244, 63, 94, 0.85)) drop-shadow(0 0 12px rgba(255, 255, 255, 0.9));
+  animation: meteor-blaze-3 17s cubic-bezier(0.22, 1, 0.36, 1) infinite;
+  animation-fill-mode: both;
+}
+
+/* Celestial Slow Orbital Drift Keyframes (Simulating gentle circular pattern) */
+@keyframes orbit-drift-audio {
+  0%   { transform: translate(0px, 0px) rotate(0deg); }
+  25%  { transform: translate(12px, 14px) rotate(1.2deg); }
+  50%  { transform: translate(6px, 20px) rotate(0.4deg); }
+  75%  { transform: translate(-8px, 10px) rotate(-1.2deg); }
+  100% { transform: translate(0px, 0px) rotate(0deg); }
+}
+
+@keyframes orbit-drift-video {
+  0%   { transform: translate(0px, 0px) rotate(0deg); }
+  25%  { transform: translate(-14px, 8px) rotate(-1.2deg); }
+  50%  { transform: translate(-18px, -6px) rotate(-0.5deg); }
+  75%  { transform: translate(-4px, -12px) rotate(1deg); }
+  100% { transform: translate(0px, 0px) rotate(0deg); }
+}
+
+@keyframes orbit-drift-social {
+  0%   { transform: translate(0px, 0px) rotate(0deg); }
+  25%  { transform: translate(10px, -12px) rotate(1deg); }
+  50%  { transform: translate(16px, -18px) rotate(1.5deg); }
+  75%  { transform: translate(8px, -6px) rotate(-0.6deg); }
+  100% { transform: translate(0px, 0px) rotate(0deg); }
+}
+
+.float-node-audio {
+  animation: orbit-drift-audio 14s ease-in-out infinite;
+}
+
+.float-node-video {
+  animation: orbit-drift-video 14s ease-in-out infinite;
+}
+
+.float-node-social {
+  animation: orbit-drift-social 14s ease-in-out infinite;
+}
+
+/* Font utilities for distinctive celestial typography */
+.font-orbitron {
+  font-family: 'Orbitron', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.font-syne {
+  font-family: 'Syne', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.font-syncopate {
+  font-family: 'Syncopate', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Master 3D Translucent Cosmic Bubble Glass Physics */
+/* Master 3D Translucent Cosmic Bubble Glass Physics - Soft Faded Rim with Pearlescent Highlight */
+.liquid-glass-orb {
+  position: relative;
+  border-radius: 9999px;
+  overflow: hidden;
+  backdrop-filter: blur(14px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.20);
+  border-top-color: rgba(255, 255, 255, 0.75);
+  border-left-color: rgba(255, 255, 255, 0.30);
+  border-bottom-color: rgba(255, 255, 255, 0.10);
+  border-right-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 
+    inset 0 20px 28px rgba(255, 255, 255, 0.55), 
+    inset 10px 0 18px rgba(255, 255, 255, 0.22), 
+    inset -8px -12px 22px rgba(0, 0, 0, 0.25), 
+    inset 0 -18px 28px rgba(0, 0, 0, 0.45), 
+    0 24px 60px -8px rgba(0, 0, 0, 0.75),
+    0 0 35px rgba(255, 255, 255, 0.12);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.6s ease;
+}
+
+/* Ethereal Aurora Respiration Halos (Breathing, Irregular Solar/Polar Corona Flares) */
+@keyframes aurora-corona-breathe-1 {
+  0%, 100% {
+    transform: scale(0.95) rotate(0deg);
+    opacity: 0.42;
+    filter: blur(28px);
+  }
+  50% {
+    transform: scale(1.10) rotate(6deg);
+    opacity: 0.82;
+    filter: blur(38px);
+  }
+}
+
+@keyframes aurora-corona-breathe-2 {
+  0%, 100% {
+    transform: scale(0.92) rotate(0deg);
+    opacity: 0.32;
+    filter: blur(34px);
+  }
+  50% {
+    transform: scale(1.16) rotate(-8deg);
+    opacity: 0.75;
+    filter: blur(44px);
+  }
+}
+
+.aurora-corona-pulse-1 {
+  animation: aurora-corona-breathe-1 7.5s ease-in-out infinite;
+  will-change: transform, opacity, filter;
+  pointer-events: none;
+}
+
+.aurora-corona-pulse-2 {
+  animation: aurora-corona-breathe-2 10.5s ease-in-out infinite;
+  will-change: transform, opacity, filter;
+  pointer-events: none;
+}
+
+.liquid-glass-orb:hover {
+  border-top-color: #ffffff;
+  border-left-color: rgba(255, 255, 255, 0.6);
+  border-bottom-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 
+    inset 0 24px 34px rgba(255, 255, 255, 0.75), 
+    inset 12px 0 22px rgba(255, 255, 255, 0.35), 
+    inset -10px -14px 24px rgba(0, 0, 0, 0.35), 
+    inset 0 -20px 32px rgba(0, 0, 0, 0.65), 
+    0 30px 70px -6px rgba(0, 0, 0, 0.85),
+    0 0 45px rgba(255, 255, 255, 0.2);
+}
+
+/* Top-Left Curved Primary Glass Specular Light Glare (Crisp Pearlescent Bubble Reflection) */
+.liquid-glass-orb::before {
+  content: '';
+  position: absolute;
+  top: 4%;
+  left: 14%;
+  width: 72%;
+  height: 38%;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.3) 45%, rgba(255, 255, 255, 0) 100%);
+  border-radius: 50% / 65% 65% 30% 30%;
+  pointer-events: none;
+  filter: blur(1.2px);
+  z-index: 15;
+}
+
+/* Bottom-Right Fresnel Secondary Bubble Rim Light */
+.liquid-glass-orb::after {
+  content: '';
+  position: absolute;
+  bottom: 6%;
+  right: 12%;
+  width: 48%;
+  height: 24%;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.48) 0%, transparent 70%);
+  border-radius: 50%;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  z-index: 15;
+}
+
+/* Theme 1: AUDIO (Aurora Emerald with soft Cyan/Pale Blue hint - Subtle, Classy & Harmonious) */
+.orb-theme-audio {
+  background: radial-gradient(circle at 36% 28%, 
+    rgba(236, 253, 245, 0.45) 0%, 
+    rgba(167, 243, 208, 0.30) 22%, 
+    rgba(52, 211, 153, 0.22) 50%, 
+    rgba(20, 184, 166, 0.20) 75%, 
+    rgba(6, 78, 59, 0.42) 100%
+  );
+}
+
+/* Theme 2: VIDEO (Cosmic Violet - Pure Aurora Purple, Preserved) */
+.orb-theme-video {
+  background: radial-gradient(circle at 36% 28%, 
+    rgba(250, 245, 255, 0.35) 0%, 
+    rgba(233, 213, 255, 0.22) 24%, 
+    rgba(168, 85, 247, 0.18) 55%, 
+    rgba(88, 28, 135, 0.28) 80%, 
+    rgba(46, 16, 101, 0.48) 100%
+  );
+}
+
+/* Theme 3: SOCIAL HUB (Luminous Frosted White & Soft Pale Sky Blue Dew Bubble) */
+.orb-theme-social {
+  background: radial-gradient(circle at 36% 28%, 
+    rgba(255, 255, 255, 0.55) 0%, 
+    rgba(240, 249, 255, 0.38) 20%, 
+    rgba(186, 230, 253, 0.32) 50%, 
+    rgba(125, 211, 252, 0.24) 75%, 
+    rgba(12, 74, 110, 0.40) 100%
+  );
+}
+
+/* Swirling Internal Plasma / Liquid Flow (Translucent Shimmer) */
+@keyframes plasma-swirl {
+  0% { transform: rotate(0deg) scale(1); opacity: 0.3; }
+  50% { transform: rotate(180deg) scale(1.15); opacity: 0.55; }
+  100% { transform: rotate(360deg) scale(1); opacity: 0.3; }
+}
+
+.orb-plasma-liquid {
+  position: absolute;
+  inset: -15%;
+  width: 130%;
+  height: 130%;
+  border-radius: 9999px;
+  animation: plasma-swirl 14s ease-in-out infinite;
+  mix-blend-mode: color-dodge;
+  pointer-events: none;
+}
+
+/* Redesigned Liquid Glass Panels for EVERY page card/form */
+.liquid-glass-panel {
+  background: rgba(255, 255, 255, 0.02);
+  backdrop-filter: blur(28px) saturate(180%);
+  border: 1.2px solid rgba(255, 255, 255, 0.06);
+  border-top-color: rgba(255, 255, 255, 0.12);
+  border-left-color: rgba(255, 255, 255, 0.09);
+  box-shadow: 
+    inset 0 4px 10px rgba(255, 255, 255, 0.02), 
+    0 12px 30px rgba(0, 0, 0, 0.4);
+  border-radius: 18px;
+}
+
+/* Perfect 3D Liquid Glass Bubble Base */
+.liquid-glass-bubble {
+  position: relative;
+  backdrop-filter: blur(28px) saturate(200%);
+  border: 2.2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 9999px; /* Perfect circle */
+  box-shadow: 
+    inset 0 20px 30px rgba(255, 255, 255, 0.35), 
+    inset 10px 0 15px rgba(255, 255, 255, 0.2), 
+    inset -10px 0 15px rgba(0, 0, 0, 0.2), 
+    inset 0 -20px 30px rgba(0, 0, 0, 0.5), 
+    0 25px 45px rgba(0, 0, 0, 0.7);
+  transition: all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1);
+}
+
+.liquid-glass-bubble::before {
+  content: '';
+  position: absolute;
+  top: 6%;
+  left: 14%;
+  width: 72%;
+  height: 25%;
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.7) 0%, rgba(255, 255, 255, 0) 100%);
+  border-radius: 50% / 40% 40% 10% 10%;
+  pointer-events: none;
+  filter: blur(0.5px);
+}
+
+/* High-Contrast Bubble Hues & Glowing Backdrops */
+.bubble-music {
+  border-top-color: rgba(255, 251, 235, 0.95);
+  border-left-color: rgba(251, 191, 36, 0.85);
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.98) 0%, rgba(251, 191, 36, 0.95) 25%, rgba(245, 158, 11, 0.85) 60%, rgba(120, 53, 4, 0.98) 100%);
+  box-shadow: 
+    inset 0 20px 30px rgba(255, 255, 255, 0.5), 
+    inset 10px 0 15px rgba(255, 255, 255, 0.3), 
+    inset -10px 0 15px rgba(0, 0, 0, 0.35), 
+    inset 0 -20px 30px rgba(0, 0, 0, 0.75), 
+    0 25px 50px rgba(0, 0, 0, 0.85),
+    0 0 60px rgba(245, 158, 11, 0.6);
+}
+
+.bubble-movie {
+  border-top-color: rgba(255, 241, 242, 0.95);
+  border-left-color: rgba(251, 113, 133, 0.85);
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.98) 0%, rgba(251, 113, 133, 0.95) 25%, rgba(244, 63, 94, 0.85) 60%, rgba(136, 19, 55, 0.98) 100%);
+  box-shadow: 
+    inset 0 20px 30px rgba(255, 255, 255, 0.5), 
+    inset 10px 0 15px rgba(255, 255, 255, 0.3), 
+    inset -10px 0 15px rgba(0, 0, 0, 0.35), 
+    inset 0 -20px 30px rgba(0, 0, 0, 0.75), 
+    0 25px 50px rgba(0, 0, 0, 0.85),
+    0 0 60px rgba(244, 63, 94, 0.6);
+}
+
+.bubble-community {
+  border-top-color: rgba(236, 254, 255, 0.95);
+  border-left-color: rgba(103, 232, 249, 0.85);
+  background: radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.98) 0%, rgba(103, 232, 249, 0.95) 25%, rgba(6, 182, 212, 0.85) 60%, rgba(21, 94, 117, 0.98) 100%);
+  box-shadow: 
+    inset 0 20px 30px rgba(255, 255, 255, 0.5), 
+    inset 10px 0 15px rgba(255, 255, 255, 0.3), 
+    inset -10px 0 15px rgba(0, 0, 0, 0.35), 
+    inset 0 -20px 30px rgba(0, 0, 0, 0.75), 
+    0 25px 50px rgba(0, 0, 0, 0.85),
+    0 0 60px rgba(6, 182, 212, 0.6);
+}
+
+.bubble-wave-music {
+  background: linear-gradient(-45deg, rgba(245, 158, 11, 0.5), rgba(217, 119, 6, 0.25), rgba(245, 158, 11, 0.15));
+  background-size: 300% 300%;
+  animation: liquid-wave 7s ease infinite;
+}
+
+.bubble-wave-movie {
+  background: linear-gradient(-45deg, rgba(244, 63, 94, 0.5), rgba(225, 29, 72, 0.25), rgba(244, 63, 94, 0.15));
+  background-size: 300% 300%;
+  animation: liquid-wave 7s ease infinite;
+}
+
+.bubble-wave-community {
+  background: linear-gradient(-45deg, rgba(6, 182, 212, 0.5), rgba(13, 148, 136, 0.25), rgba(6, 182, 212, 0.15));
+  background-size: 300% 300%;
+  animation: liquid-wave 7s ease infinite;
+}
+
+/* Sleek Soft Text Glowing Effects */
+.text-3d-audio {
+  color: #fffbeb;
+  text-shadow: 
+    0 0 16px rgba(245, 158, 11, 0.6),
+    0 2px 8px rgba(0, 0, 0, 0.7);
+  letter-spacing: 0.2em;
+}
+
+.text-3d-video {
+  color: #fff1f2;
+  text-shadow: 
+    0 0 16px rgba(244, 63, 94, 0.6),
+    0 2px 8px rgba(0, 0, 0, 0.7);
+  letter-spacing: 0.2em;
+}
+
+.text-3d-social {
+  color: #ecfeff;
+  text-shadow: 
+    0 0 16px rgba(6, 182, 212, 0.6),
+    0 2px 8px rgba(0, 0, 0, 0.7);
+  letter-spacing: 0.2em;
+}
+
+/* 3D layered metallic/glass icon styles */
+.icon-container-3d {
+  position: relative;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4)) drop-shadow(0 0 10px rgba(255,255,255,0.2));
+}
+
+.icon-shadow-3d {
+  position: absolute;
+  top: 1px;
+  left: 1px;
+  opacity: 0.45;
+  filter: blur(0.5px);
+  pointer-events: none;
+}
+
+/* 3D Tilted Planetary Stardust Ring System */
+.celestial-orbit-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 155%;
+  height: 155%;
+  transform: translate(-50%, -50%) rotateX(72deg) rotateZ(20deg);
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 12;
+}
+
+.ring-audio {
+  border: 1.5px solid rgba(251, 191, 36, 0.45);
+  box-shadow: 0 0 18px rgba(245, 158, 11, 0.4), inset 0 0 14px rgba(245, 158, 11, 0.25);
+}
+
+.ring-video {
+  border: 1.5px solid rgba(251, 113, 133, 0.45);
+  box-shadow: 0 0 18px rgba(244, 63, 94, 0.4), inset 0 0 14px rgba(244, 63, 94, 0.25);
+}
+
+.ring-social {
+  border: 1.5px solid rgba(34, 211, 238, 0.45);
+  box-shadow: 0 0 18px rgba(6, 182, 212, 0.4), inset 0 0 14px rgba(6, 182, 212, 0.25);
+}
+
+/* Floating Stardust Pearl on the Ring */
+.ring-particle {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffffff;
+  filter: drop-shadow(0 0 6px currentColor);
+}
+
+/* 3D Ground Levitation Shadow */
+.bubble-ground-shadow {
+  position: absolute;
+  bottom: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 75%;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 70%);
+  filter: blur(8px);
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* ======================================================== */
+/* === AAA-CLASS 3D LIQUID GLASS VINYL TURNTABLE DECK === */
+/* ======================================================== */
+.turntable-3d-deck {
+  position: relative;
+  border-radius: 28px;
+  background: 
+    radial-gradient(ellipse at 50% 0%, rgba(251, 191, 36, 0.18) 0%, transparent 60%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.22) 0%, rgba(30, 27, 24, 0.85) 30%, rgba(12, 10, 9, 0.96) 100%);
+  backdrop-filter: blur(50px) saturate(240%);
+  border: 1.8px solid rgba(255, 255, 255, 0.4);
+  border-top-color: rgba(255, 255, 255, 0.85);
+  border-left-color: rgba(255, 255, 255, 0.65);
+  box-shadow: 
+    0 40px 80px -15px rgba(0, 0, 0, 0.98),
+    0 20px 40px rgba(0, 0, 0, 0.75),
+    inset 0 2px 2px rgba(255, 255, 255, 0.95),
+    inset 2px 0 4px rgba(255, 255, 255, 0.4),
+    inset 0 -4px 16px rgba(0, 0, 0, 0.85),
+    0 0 50px rgba(245, 158, 11, 0.22);
+  transform: perspective(1000px) rotateX(5deg);
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.6s ease;
+}
+
+.turntable-3d-deck:hover {
+  transform: perspective(1000px) rotateX(2deg) translateY(-4px);
+  box-shadow: 
+    0 50px 95px -15px rgba(0, 0, 0, 0.99),
+    0 25px 50px rgba(0, 0, 0, 0.85),
+    inset 0 3px 3px rgba(255, 255, 255, 1),
+    inset 0 -4px 16px rgba(0, 0, 0, 0.85),
+    0 0 70px rgba(245, 158, 11, 0.35);
+}
+
+/* Glass Plinth Multi-Layer Refractive Caustic Slab */
+.turntable-glass-plinth {
+  position: absolute;
+  inset: 5px;
+  border-radius: 23px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 50%, rgba(0, 0, 0, 0.45) 100%);
+  pointer-events: none;
+  box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.5), inset 0 -2px 6px rgba(0, 0, 0, 0.6);
+}
+
+/* Top curved liquid glass specular highlight */
+.turntable-3d-deck::before {
+  content: '';
+  position: absolute;
+  top: 1px;
+  left: 6%;
+  right: 6%;
+  height: 2.5px;
+  background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.9) 20%, rgba(255, 255, 255, 1) 50%, rgba(255, 255, 255, 0.9) 80%, transparent 100%);
+  border-radius: 99px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Machined heavy brass/aluminum isolation foot with rubber dampener */
+.turntable-iso-foot {
+  position: absolute;
+  width: 16px;
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(180deg, #fef08a 0%, #d97706 45%, #78350f 80%, #1c1917 100%);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.85), inset 0 1px 1px rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  z-index: 20;
+}
+
+/* Heavy Die-Cast Aluminum Platter with Knurled Stroboscopic Rim */
+.platter-well-3d {
+  position: absolute;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 45% 45%, #181513 0%, #100e0d 40%, #080706 70%, #010101 100%);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    inset 0 14px 28px rgba(0, 0, 0, 0.98),
+    inset 0 4px 8px rgba(0, 0, 0, 0.95),
+    inset 0 -3px 8px rgba(255, 255, 255, 0.1),
+    0 6px 20px rgba(0, 0, 0, 0.7);
+}
+
+.platter-chassis {
+  position: relative;
+  border-radius: 9999px;
+  background: 
+    radial-gradient(circle, #292524 0%, #1c1917 50%, #0c0a09 85%, #000000 100%);
+  border: 3px solid rgba(200, 200, 200, 0.35);
+  border-top-color: rgba(255, 255, 255, 0.75);
+  border-bottom-color: rgba(0, 0, 0, 0.95);
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.98),
+    0 8px 16px rgba(0, 0, 0, 0.8),
+    inset 0 3px 6px rgba(255, 255, 255, 0.5),
+    inset 0 -8px 16px rgba(0, 0, 0, 0.95),
+    0 0 30px rgba(0, 0, 0, 0.6);
+}
+
+/* Vinyl Anisotropic Twin-Sheen Reflection Animation */
+@keyframes vinyl-anisotropic-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.vinyl-active-spin {
+  animation: vinyl-anisotropic-spin 3.4s linear infinite;
+}
+
+.vinyl-active-spin-33 {
+  animation: vinyl-anisotropic-spin 3.4s linear infinite;
+}
+
+.vinyl-active-spin-45 {
+  animation: vinyl-anisotropic-spin 2.5s linear infinite;
+}
+
+/* Realistic Platter Strobe Dots */
+.strobe-dot-ring {
+  position: absolute;
+  inset: -6px;
+  border-radius: 9999px;
+  border: 2px dotted rgba(251, 191, 36, 0.4);
+  pointer-events: none;
+}
+
+/* Compact Jewel Menu Chips */
+.jewel-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  border-radius: 9999px;
+  font-size: 0.65rem;
+  font-family: ui-monospace, monospace;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.05);
+  color: #cbd5e1;
+  backdrop-filter: blur(14px);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.jewel-chip:hover {
+  border-color: rgba(255, 255, 255, 0.4);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.jewel-chip-active-emerald {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.95) 0%, rgba(5, 150, 105, 0.95) 100%);
+  color: #022c22;
+  border-color: rgba(167, 243, 208, 0.85);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.45);
+}
+
+.jewel-chip-active-gold {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.95) 0%, rgba(217, 119, 6, 0.95) 100%);
+  color: #0f172a;
+  border-color: rgba(254, 240, 138, 0.85);
+  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.45);
+}
+
+.jewel-chip-active-cyan {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.95) 0%, rgba(14, 116, 144, 0.95) 100%);
+  color: #042f2e;
+  border-color: rgba(165, 243, 252, 0.85);
+  box-shadow: 0 4px 15px rgba(6, 182, 212, 0.45);
+}
+
+.jewel-chip-active-emerald-teal {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.95) 0%, rgba(13, 148, 136, 0.95) 100%);
+  color: #022c22;
+  border-color: rgba(167, 243, 208, 0.85);
+  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.45);
+}
+
+.jewel-chip-active-violet {
+  background: linear-gradient(135deg, rgba(192, 132, 252, 0.95) 0%, rgba(126, 34, 206, 0.95) 100%);
+  color: #2e1065;
+  border-color: rgba(233, 213, 255, 0.85);
+  box-shadow: 0 4px 15px rgba(168, 85, 247, 0.45);
+}
+
+.jewel-chip-active-frost-white {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.98) 0%, rgba(224, 242, 254, 0.92) 100%);
+  color: #0c4a6e;
+  border-color: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 4px 15px rgba(186, 230, 253, 0.55);
+}
+
+.jewel-chip-active-rose {
+  background: linear-gradient(135deg, rgba(251, 113, 133, 0.95) 0%, rgba(190, 18, 60, 0.95) 100%);
+  color: #4c0519;
+  border-color: rgba(254, 205, 211, 0.85);
+  box-shadow: 0 4px 15px rgba(244, 63, 94, 0.45);
+}
+
+.jewel-chip-active-amber {
+  background: linear-gradient(135deg, rgba(251, 146, 60, 0.95) 0%, rgba(194, 65, 12, 0.95) 100%);
+  color: #431407;
+  border-color: rgba(254, 215, 170, 0.85);
+  box-shadow: 0 4px 15px rgba(234, 88, 12, 0.45);
+}
+
+/* Compact Nav Capsule Back-Button */
+.compact-back-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 9999px;
+  font-size: 0.65rem;
+  font-family: ui-monospace, monospace;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(14px);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.compact-back-pill:active {
+  transform: scale(0.95);
+}
+
+/* Clean, standard scrollbars */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.01);
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 99px;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
