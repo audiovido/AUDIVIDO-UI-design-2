@@ -21,7 +21,6 @@ import { AudioSynth } from './utils/AudioSynth';
 import { CosmicNightSky } from './components/CosmicNightSky';
 import { MovieStreamingView } from './components/MovieStreamingView';
 import { SocialHubView } from './components/SocialHubView';
-import { CelestialCloudVortex } from './components/CelestialCloudVortex';
 
 // --- BESPOKE 3D SCULPTED EMBLEMS (STANDARD, HARMONIOUS & PROFESSIONAL) ---
 function AudioEmblem3D() {
@@ -1124,9 +1123,6 @@ export default function App() {
             
             {/* Majestic Authoritative Downward-Pointing Triad Layout */}
             <div className="relative w-full max-w-[700px] h-[550px] flex items-center justify-center">
-
-              {/* Ethereal Cloudy Aurora Vortex Rising From Between the 3 Orbs */}
-              <CelestialCloudVortex />
 
               {/* 1. TOP-LEFT: AUDIO ORB (Emerald & Pale Teal Liquid Glass with Bright Studio Headphones & Breathing Aurora Corona) */}
               <div className="absolute top-[3%] left-[5%] sm:left-[7%] flex flex-col items-center float-node-audio z-20 group">

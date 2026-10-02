@@ -20,8 +20,6 @@ import {
 import { AudioSynth } from './utils/AudioSynth';
 import { CosmicNightSky } from './components/CosmicNightSky';
 import { MovieStreamingView } from './components/MovieStreamingView';
-import { SocialHubView } from './components/SocialHubView';
-import { CelestialCloudVortex } from './components/CelestialCloudVortex';
 
 // --- BESPOKE 3D SCULPTED EMBLEMS (STANDARD, HARMONIOUS & PROFESSIONAL) ---
 function AudioEmblem3D() {
@@ -1125,9 +1123,6 @@ export default function App() {
             {/* Majestic Authoritative Downward-Pointing Triad Layout */}
             <div className="relative w-full max-w-[700px] h-[550px] flex items-center justify-center">
 
-              {/* Ethereal Cloudy Aurora Vortex Rising From Between the 3 Orbs */}
-              <CelestialCloudVortex />
-
               {/* 1. TOP-LEFT: AUDIO ORB (Emerald & Pale Teal Liquid Glass with Bright Studio Headphones & Breathing Aurora Corona) */}
               <div className="absolute top-[3%] left-[5%] sm:left-[7%] flex flex-col items-center float-node-audio z-20 group">
                 <div className="relative flex items-center justify-center">
@@ -1814,13 +1809,251 @@ export default function App() {
         {/* === VIEW 4: STANDALONE WIDESCREEN COMMUNITY HUB (SOCIAL HUB) === */}
         {/* ========================================================= */}
         {currentWorld === 'community' && (
-          <SocialHubView 
-            onNavigateHome={() => handleTravel('portal')} 
-            onPlayTrack={(trackId) => {
-              const trk = AURA_TRACKS.find(t => t.id === trackId);
-              if (trk) selectAndPlayTrack(trk);
-            }}
-          />
+          <div className="w-full max-w-5xl space-y-6 animate-fadeIn py-4">
+            
+            {/* Top Compact Navigation Bar (3-Zone Balanced Architecture) */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-xl shrink-0 shadow-lg">
+              {/* Left Zone: Compact Home Pill & Network Status */}
+              <div className="flex items-center gap-2.5">
+                <button 
+                  onClick={() => handleTravel('portal')}
+                  className="compact-back-pill bg-white/5 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 transition-all cursor-pointer active:scale-95"
+                  title="Return to Home Portal"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>HOME</span>
+                </button>
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-black/40 border border-cyan-500/20 text-[9px] font-mono text-cyan-300">
+                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_6px_#06b6d4]" />
+                  <span>NEURAL NETWORK</span>
+                </div>
+              </div>
+
+              {/* Center Zone: Symmetrical Community Tabs */}
+              <div className="flex items-center gap-1.5 p-1 bg-black/40 rounded-full border border-white/10 backdrop-blur-md">
+                <button 
+                  onClick={() => setCommunityTab('chat')}
+                  className={`jewel-chip ${communityTab === 'chat' ? 'jewel-chip-active-cyan' : 'text-slate-300 hover:text-white'}`}
+                >
+                  <Users className="w-3 h-3 text-cyan-400" />
+                  <span>CHAT</span>
+                </button>
+                <button 
+                  onClick={() => setCommunityTab('realms')}
+                  className={`jewel-chip ${communityTab === 'realms' ? 'jewel-chip-active-cyan' : 'text-slate-300 hover:text-white'}`}
+                >
+                  <Compass className="w-3 h-3 text-cyan-400" />
+                  <span>ORBITS</span>
+                </button>
+                <button 
+                  onClick={() => setCommunityTab('live')}
+                  className={`jewel-chip ${communityTab === 'live' ? 'jewel-chip-active-cyan' : 'text-slate-300 hover:text-white'}`}
+                >
+                  <Radio className="w-3 h-3 text-cyan-400" />
+                  <span>LIVE</span>
+                </button>
+                <button 
+                  onClick={() => setCommunityTab('events')}
+                  className={`jewel-chip ${communityTab === 'events' ? 'jewel-chip-active-cyan' : 'text-slate-300 hover:text-white'}`}
+                >
+                  <Calendar className="w-3 h-3 text-cyan-400" />
+                  <span>EVENTS</span>
+                </button>
+              </div>
+
+              {/* Right Zone: Social Badge */}
+              <div className="flex items-center gap-2 text-[9.5px] font-mono text-cyan-200 font-bold tracking-wider bg-black/40 px-3 py-1.5 rounded-full border border-cyan-500/30 shadow">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#06b6d4]" />
+                <span>SOCIAL 03 · 128 NODES</span>
+              </div>
+            </div>
+
+            {/* --- CHAT TAB --- */}
+            {communityTab === 'chat' && (
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                
+                <div className="lg:col-span-5 p-5 space-y-4 liquid-glass-panel">
+                  <h3 className="text-[10px] font-bold tracking-widest text-cyan-400 font-mono">COMPOSE</h3>
+                  
+                  <form onSubmit={handleSendPost} className="space-y-3">
+                    <textarea 
+                      placeholder="Type a message..."
+                      value={chatMessageText}
+                      onChange={(e) => setChatMessageText(e.target.value)}
+                      className="w-full h-20 bg-black/40 border border-white/5 rounded-xl p-3 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500/50 resize-none font-sans"
+                    />
+
+                    <div className="space-y-2">
+                      <select 
+                        value={attachedTrackId}
+                        onChange={(e) => setAttachedTrackId(e.target.value)}
+                        className="w-full bg-black/40 border border-white/5 rounded-xl px-3 py-2 text-[10px] text-slate-300 focus:outline-none"
+                      >
+                        <option value="">Attach recording</option>
+                        {AURA_TRACKS.map(t => (
+                          <option key={t.id} value={t.id}>{t.title}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <button 
+                      type="submit"
+                      disabled={!chatMessageText.trim()}
+                      className="w-full h-10 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-mono text-xs font-bold rounded-xl transition-all disabled:opacity-40 disabled:pointer-events-none active:scale-[0.98]"
+                    >
+                      SEND
+                    </button>
+                  </form>
+                </div>
+
+                <div className="lg:col-span-7 space-y-3 max-h-[350px] overflow-y-auto pr-1 scrollbar-thin">
+                  {socialPosts.map(post => {
+                    const avatar = getAvatarColors(post.avatarSeed);
+                    return (
+                      <div key={post.id} className="p-4 space-y-2.5 relative liquid-glass-panel border-white/5">
+                        <div className="flex justify-between items-center text-[10px] font-mono">
+                          <div className="flex items-center gap-2">
+                            <span className={`w-6 h-6 rounded-full border flex items-center justify-center text-[8px] font-bold ${avatar.bg}`}>
+                              {avatar.text[0]}
+                            </span>
+                            <span className="text-slate-300 font-semibold">{post.author}</span>
+                          </div>
+                          <span className="text-slate-500">{post.timestamp}</span>
+                        </div>
+
+                        <p className="text-xs text-slate-300 leading-relaxed font-sans">{post.content}</p>
+
+                        {post.attachedTrackId && (() => {
+                          const att = AURA_TRACKS.find(t => t.id === post.attachedTrackId);
+                          if (!att) return null;
+                          return (
+                            <div 
+                              onClick={() => selectAndPlayTrack(att)}
+                              className="flex items-center justify-between p-2 bg-black/35 rounded-xl border border-white/5 cursor-pointer hover:border-cyan-500/20"
+                            >
+                              <span className="text-[10px] text-slate-300 truncate font-semibold">{att.title}</span>
+                              <Play className="w-3 h-3 text-cyan-400 fill-cyan-400/10" />
+                            </div>
+                          );
+                        })()}
+
+                        <div className="flex gap-2 pt-1 border-t border-white/5">
+                          <button 
+                            onClick={() => handlePostReact(post.id, 'love')}
+                            className={`flex items-center gap-1.5 text-[9px] font-mono px-2 py-0.5 rounded-full border transition-all active:scale-95 ${
+                              post.hasReacted.love ? 'bg-rose-950/40 border-rose-500/40 text-rose-300' : 'bg-slate-950/40 border-slate-800 text-slate-500 hover:text-slate-300'
+                            }`}
+                          >
+                            <Heart className="w-2.5 h-2.5" />
+                            <span>{post.reactions.love}</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+              </div>
+            )}
+
+            {/* --- ORBITS TAB --- */}
+            {communityTab === 'realms' && (
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center animate-fadeIn">
+                <div className="md:col-span-8 relative aspect-video w-full rounded-2xl bg-black/40 border border-white/5 overflow-hidden flex items-center justify-center p-4">
+                  <div className="absolute w-[95%] h-[95%] rounded-full border border-dashed border-white/5 animate-spin" />
+                  <div className="absolute w-[75%] h-[75%] rounded-full border border-dashed border-white/10 animate-spin" />
+                  <div className="w-12 h-12 rounded-full bg-cyan-500/10 border border-cyan-500/35 flex items-center justify-center text-white text-[9px] font-mono font-bold shadow-[0_0_15px_rgba(34,211,238,0.4)]">
+                    AURA
+                  </div>
+
+                  <button 
+                    onClick={() => selectAndPlayTrack(AURA_TRACKS[0])}
+                    className="absolute top-12 left-1/4 p-1.5 rounded-full bg-slate-900 border border-amber-500 text-[8px] font-mono font-bold text-amber-300 z-30 shadow"
+                  >
+                    Cabin Vibe
+                  </button>
+                </div>
+
+                <div className="md:col-span-4 p-5 space-y-2 liquid-glass-panel">
+                  <h4 className="text-xs font-bold text-cyan-400 font-mono">ALIGNMENT</h4>
+                  <p className="text-[10px] text-slate-400 leading-relaxed">
+                    Select orbital nodes to sync system receivers.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* --- LIVE STREAMS TAB --- */}
+            {communityTab === 'live' && (
+              <div className="space-y-4 animate-fadeIn">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {AURA_STREAMS.map(stream => (
+                    <div 
+                      key={stream.id}
+                      className="p-4 relative overflow-hidden flex flex-col justify-between min-h-[140px] shadow-lg liquid-glass-panel border-white/5"
+                    >
+                      <div className={`absolute inset-0 bg-gradient-to-tr ${stream.gradient} opacity-15 pointer-events-none`} />
+                      
+                      <div className="relative z-10 flex justify-between items-center text-[9px] font-mono">
+                        <div className="flex items-center gap-1.5 text-cyan-400 font-bold uppercase tracking-wider">
+                          <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                          <span>LIVE</span>
+                        </div>
+                        <span className="text-slate-400 font-mono">{stream.viewers.toLocaleString()} active</span>
+                      </div>
+
+                      <div className="relative z-10 pt-4 flex justify-between items-end">
+                        <div>
+                          <h4 className="text-xs font-bold text-slate-200">{stream.channel}</h4>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            if (stream.category === 'Music') {
+                              selectAndPlayTrack(AURA_TRACKS[1]);
+                            } else {
+                              AudioSynth.playTrack('movie');
+                              setIsPlaying(true);
+                            }
+                          }}
+                          className="px-2.5 py-1 bg-cyan-500 text-slate-950 text-[9px] font-mono font-bold rounded-lg hover:bg-cyan-400 transition-colors"
+                        >
+                          TUNE IN
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* --- EVENTS TAB --- */}
+            {communityTab === 'events' && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fadeIn">
+                {eventsList.map(ev => (
+                  <div key={ev.id} className="p-4 space-y-3 relative overflow-hidden shadow-lg liquid-glass-panel border-white/5">
+                    <div className="flex justify-between items-start text-[10px] font-mono">
+                      <span className="text-cyan-400 font-bold uppercase tracking-wider">{ev.date} · {ev.time}</span>
+                      <span className="text-slate-400">{ev.attendeesCount} RSVP</span>
+                    </div>
+                    <h4 className="text-xs font-bold text-slate-200">{ev.title}</h4>
+                    <p className="text-[11px] text-slate-400 leading-relaxed font-sans">{ev.description}</p>
+
+                    <div className="pt-2 border-t border-white/5 flex justify-end">
+                      <button 
+                        onClick={() => handleToggleRSVP(ev.id)}
+                        className={`px-3 py-1.5 text-[9px] font-mono border rounded-lg transition-all active:scale-95 font-bold ${
+                          ev.rsvpStatus === 'going' ? 'bg-cyan-950 border-cyan-500 text-cyan-300' : 'bg-black/40 border-white/10 text-slate-500'
+                        }`}
+                      >
+                        {ev.rsvpStatus === 'going' ? 'GOING' : 'REXP TO PARTY'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+          </div>
         )}
 
       </main>

@@ -1,0 +1,6 @@
+{
+  "name": "Aura Streaming & Social Hub",
+  "description": "An ambient, cosmic, multi-sensory entertainment hub featuring interactive Music, Cinema, and Collaborative Community platforms with premium UI/UX.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

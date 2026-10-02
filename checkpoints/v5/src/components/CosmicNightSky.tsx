@@ -4,39 +4,10 @@ interface StarData {
   top: string;
   left: string;
   size: number;
-  type: 'faint' | 'micro' | 'diamond' | 'cyan' | 'gold' | 'rose' | 'alpha' | 'pale-blue' | 'pale-red';
+  type: 'faint' | 'micro' | 'diamond' | 'cyan' | 'gold' | 'rose' | 'alpha';
   delay: string;
   duration: string;
 }
-
-// Subtle Milky Way Central Stardust Stream - Extremely faint pale blue and soft red stars
-const MILKY_WAY_STARS: StarData[] = [
-  // Upper-left quadrant of the galactic dust lane
-  { top: '18%', left: '26%', size: 1.1, type: 'pale-blue', delay: '1.4s', duration: '6.8s' },
-  { top: '22%', left: '31%', size: 0.9, type: 'pale-red', delay: '2.8s', duration: '7.4s' },
-  { top: '25%', left: '28%', size: 1.0, type: 'pale-blue', delay: '0.6s', duration: '6.2s' },
-  { top: '28%', left: '36%', size: 1.2, type: 'pale-red', delay: '3.1s', duration: '8.0s' },
-  { top: '32%', left: '33%', size: 0.8, type: 'pale-blue', delay: '1.9s', duration: '7.1s' },
-  { top: '35%', left: '42%', size: 1.1, type: 'pale-red', delay: '2.3s', duration: '6.5s' },
-  
-  // Galactic Core / Center Haze (Subtle soft dispersion)
-  { top: '39%', left: '46%', size: 1.3, type: 'pale-blue', delay: '0.9s', duration: '7.8s' },
-  { top: '42%', left: '52%', size: 1.0, type: 'pale-red', delay: '3.6s', duration: '6.9s' },
-  { top: '45%', left: '48%', size: 0.9, type: 'pale-blue', delay: '1.8s', duration: '8.2s' },
-  { top: '48%', left: '54%', size: 1.2, type: 'pale-red', delay: '2.5s', duration: '7.2s' },
-  { top: '51%', left: '49%', size: 1.1, type: 'pale-blue', delay: '0.4s', duration: '6.6s' },
-  { top: '53%', left: '57%', size: 0.8, type: 'pale-red', delay: '3.9s', duration: '7.5s' },
-  { top: '56%', left: '52%', size: 1.0, type: 'pale-blue', delay: '1.7s', duration: '8.4s' },
-
-  // Lower-right quadrant of the galactic dust lane
-  { top: '59%', left: '62%', size: 1.2, type: 'pale-red', delay: '2.1s', duration: '6.7s' },
-  { top: '63%', left: '58%', size: 0.9, type: 'pale-blue', delay: '3.3s', duration: '7.6s' },
-  { top: '66%', left: '68%', size: 1.1, type: 'pale-red', delay: '0.8s', duration: '6.4s' },
-  { top: '69%', left: '64%', size: 0.8, type: 'pale-blue', delay: '2.7s', duration: '7.9s' },
-  { top: '73%', left: '72%', size: 1.2, type: 'pale-red', delay: '1.2s', duration: '6.8s' },
-  { top: '77%', left: '69%', size: 1.0, type: 'pale-blue', delay: '3.5s', duration: '7.3s' },
-  { top: '81%', left: '76%', size: 0.9, type: 'pale-red', delay: '2.0s', duration: '8.1s' }
-];
 
 // 135 Ambient Deep-Space Celestial Stars (predominantly faint and muted in the background)
 const CELESTIAL_STARS: StarData[] = [
@@ -157,64 +128,10 @@ const CELESTIAL_STARS: StarData[] = [
   { top: '98%', left: '75%', size: 1.0, type: 'faint', delay: '0.7s', duration: '5.9s' }
 ];
 
-interface CosmicNightSkyProps {
-  isPortal?: boolean;
-}
-
-export const CosmicNightSky: React.FC<CosmicNightSkyProps> = ({ isPortal = true }) => {
+export const CosmicNightSky: React.FC = () => {
   return (
     <div className="absolute inset-0 pointer-events-none overflow-hidden select-none z-0">
       
-      {/* 0. Ethereal Milky Way Cloud Streams & Cosmic Haze (Whisper-Soft & Diffused) */}
-      {isPortal && (
-        <>
-          {/* Main Milky Way diagonal galactic dust stream */}
-          <div className="milky-way-stream" />
-          
-          {/* Secondary organic cloud rift */}
-          <div className="milky-way-rift" />
-
-          {/* Central diffuse cosmic stardust veil */}
-          <div className="milky-way-veil" />
-
-          {/* Soft atmospheric cloud haze pods blending into the night sky */}
-          <div 
-            className="absolute top-[32%] left-[28%] w-[420px] h-[200px] rounded-full pointer-events-none opacity-40 blur-[50px]"
-            style={{
-              background: 'radial-gradient(circle, rgba(147, 197, 253, 0.08) 0%, rgba(254, 205, 211, 0.05) 50%, transparent 80%)'
-            }}
-          />
-          <div 
-            className="absolute top-[48%] left-[44%] w-[460px] h-[240px] rounded-full pointer-events-none opacity-45 blur-[55px]"
-            style={{
-              background: 'radial-gradient(circle, rgba(254, 205, 211, 0.07) 0%, rgba(147, 197, 253, 0.06) 50%, transparent 80%)'
-            }}
-          />
-
-          {/* Milky Way delicate faint pale-blue and pale-red stars */}
-          {MILKY_WAY_STARS.map((star, idx) => {
-            const starClass = star.type === 'pale-blue' 
-              ? 'sky-star star-pale-blue' 
-              : 'sky-star star-pale-red';
-
-            return (
-              <span 
-                key={`mw-star-${idx}`}
-                className={starClass}
-                style={{
-                  top: star.top,
-                  left: star.left,
-                  width: `${star.size}px`,
-                  height: `${star.size}px`,
-                  animationDelay: star.delay,
-                  animationDuration: star.duration
-                }}
-              />
-            );
-          })}
-        </>
-      )}
-
       {/* 1. Deep Space Cosmic Nebular Dust Clouds */}
       <div className="aurora-cosmic-dust" />
 
