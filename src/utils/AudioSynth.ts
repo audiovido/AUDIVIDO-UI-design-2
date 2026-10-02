@@ -56,6 +56,24 @@ class AudioSynthManager {
     return this.timeArray;
   }
 
+  public playClick() {
+    this.init();
+    if (!this.ctx || !this.primaryGain) return;
+    try {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, this.ctx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(440, this.ctx.currentTime + 0.04);
+      gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
+      osc.connect(gain);
+      gain.connect(this.primaryGain);
+      osc.start();
+      osc.stop(this.ctx.currentTime + 0.04);
+    } catch {}
+  }
+
   public connectMediaElement(element: HTMLAudioElement) {
     this.init();
     if (!this.ctx || !this.primaryGain) return;

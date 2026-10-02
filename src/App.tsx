@@ -21,7 +21,6 @@ import { AudioSynth } from './utils/AudioSynth';
 import { CosmicNightSky } from './components/CosmicNightSky';
 import { MovieStreamingView } from './components/MovieStreamingView';
 import { SocialHubView } from './components/SocialHubView';
-import { CelestialCloudVortex } from './components/CelestialCloudVortex';
 
 // --- BESPOKE 3D SCULPTED EMBLEMS (STANDARD, HARMONIOUS & PROFESSIONAL) ---
 function AudioEmblem3D() {
@@ -1052,10 +1051,10 @@ export default function App() {
         {/* Brand Home Capsule */}
         <button 
           onClick={() => handleTravel('portal')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 hover:bg-emerald-500/15 border border-emerald-500/30 text-xs font-black tracking-widest text-white font-mono hover:border-emerald-400 transition-all cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.25)] active:scale-95"
+          className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-emerald-500/15 border border-emerald-500/30 text-xs font-black tracking-widest text-white hover:border-emerald-400 transition-all cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.25)] active:scale-95"
         >
           <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-          <span className="bg-gradient-to-r from-white via-emerald-200 to-emerald-400 bg-clip-text text-transparent">AURA</span>
+          <span className="font-extrabold tracking-[0.16em] uppercase bg-gradient-to-r from-white via-slate-100 to-emerald-300 bg-clip-text text-transparent">AUDIO VIDEO</span>
         </button>
 
         {/* Space-Efficient Harmonious Jewel Navigation Chips */}
@@ -1117,101 +1116,204 @@ export default function App() {
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-8 flex flex-col justify-center items-center relative z-10">
 
         {/* ========================================================= */}
-        {/* === VIEW 1: PORTAL MAIN MENU (STABLE TRIAD LIQUID GLASS ORBS) === */}
+        {/* === VIEW 1: PORTAL MAIN MENU (3 HIGH-PERFORMANCE LIQUID GLASS CARDS) === */}
         {/* ========================================================= */}
         {currentWorld === 'portal' && (
-          <div className="w-full max-w-4xl animate-fadeIn flex flex-col items-center justify-center min-h-[600px] relative">
+          <div className="w-full max-w-6xl animate-fadeIn flex flex-col items-center justify-center min-h-[560px] py-4 relative">
             
-            {/* Majestic Authoritative Downward-Pointing Triad Layout */}
-            <div className="relative w-full max-w-[700px] h-[550px] flex items-center justify-center">
+            {/* 3D Sculpted Clean Portal Header (Uncluttered & Prestigious) */}
+            <div className="text-center mb-9 select-none">
+              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-[0.16em] uppercase font-sans bg-gradient-to-b from-white via-slate-100 to-slate-400 bg-clip-text text-transparent drop-shadow-[0_4px_18px_rgba(0,0,0,0.85)]">
+                SELECT YOUR REALM
+              </h1>
+              <div className="w-20 h-0.5 rounded-full bg-gradient-to-r from-transparent via-cyan-400/90 to-transparent mx-auto mt-2.5 shadow-[0_0_10px_rgba(6,182,212,0.9)]" />
+            </div>
 
-              {/* Ethereal Cloudy Aurora Vortex Rising From Between the 3 Orbs */}
-              <CelestialCloudVortex />
+            {/* 3 Vertical Liquid Glass Cards: Left = Audio, Center = Social, Right = Video */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full items-stretch">
+              
+              {/* 1. LEFT CARD: AUDIO STREAMING (Emerald Theme) */}
+              <div 
+                onClick={() => {
+                  AudioSynth.playClick();
+                  handleTravel('music');
+                }}
+                className="portal-card-audio rounded-[32px] sm:rounded-[36px] p-6 sm:p-7 flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none relative overflow-hidden"
+              >
+                <div className="absolute -top-24 -left-24 w-52 h-52 rounded-full bg-emerald-400/20 blur-3xl pointer-events-none group-hover:bg-emerald-400/30 transition-all duration-500" />
+                
+                <div className="space-y-5 relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/40 text-emerald-300 text-[10px] font-sans font-bold tracking-[0.14em] uppercase">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#10b981]" />
+                      HI-RES AUDIO
+                    </span>
+                    <span className="text-xs font-sans text-emerald-300/80 font-medium">96kHz/24-bit</span>
+                  </div>
 
-              {/* 1. TOP-LEFT: AUDIO ORB (Emerald & Pale Teal Liquid Glass with Bright Studio Headphones & Breathing Aurora Corona) */}
-              <div className="absolute top-[3%] left-[5%] sm:left-[7%] flex flex-col items-center float-node-audio z-20 group">
-                <div className="relative flex items-center justify-center">
-                  <div className="bubble-ground-shadow" />
-                  {/* Living Breathing Aurora Corona Flares (Soft Pulsing Aurora Ethereal Emission) */}
-                  <div className="absolute -inset-5 sm:-inset-6 rounded-full bg-gradient-to-tr from-emerald-400/30 via-teal-300/25 to-white/20 aurora-corona-pulse-1" />
-                  <div className="absolute -inset-7 sm:-inset-8 rounded-full bg-gradient-to-br from-teal-400/20 via-cyan-300/15 to-emerald-500/15 aurora-corona-pulse-2" />
-                  <button 
-                    onClick={() => handleTravel('music')}
-                    className="w-48 h-48 sm:w-[216px] sm:h-[216px] rounded-full liquid-glass-orb orb-theme-audio hover:scale-106 active:scale-95 flex flex-col items-center justify-center relative cursor-pointer group shadow-2xl transition-all duration-500"
-                  >
-                    {/* Plasma Flow */}
-                    <div className="orb-plasma-liquid bg-gradient-to-tr from-emerald-400/25 via-teal-300/30 to-transparent" />
-                    
-                    {/* Harmonious Optical Ax-to-Ax Alignment */}
-                    <div className="relative z-20 flex flex-col items-center justify-center w-full h-full pt-1.5 pb-2">
-                      <div className="transition-transform duration-500 group-hover:scale-108 group-hover:-translate-y-1">
-                        <AudioEmblem3D />
-                      </div>
-                      <div className="mt-2 flex flex-col items-center justify-center">
-                        <span className="text-[14px] sm:text-[15.5px] font-black tracking-[0.26em] uppercase font-sans bg-gradient-to-b from-white via-emerald-100 to-teal-200/90 bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(16,185,129,0.85)] pl-0.5 select-none transition-all duration-300 group-hover:tracking-[0.3em] group-hover:drop-shadow-[0_2px_14px_rgba(52,211,153,1)]">
-                          AUDIO
-                        </span>
-                        <span className="w-8 h-[2px] rounded-full bg-gradient-to-r from-transparent via-emerald-400 to-transparent mt-1.5 opacity-75 group-hover:w-14 group-hover:opacity-100 transition-all duration-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                      </div>
+                  <div className="flex items-center justify-center py-2 transition-transform duration-500 group-hover:scale-108 group-hover:-translate-y-1">
+                    <AudioEmblem3D />
+                  </div>
+
+                  <div className="text-center space-y-1">
+                    <h2 className="text-2xl sm:text-3xl font-black tracking-[0.14em] uppercase text-white group-hover:text-emerald-300 transition-colors font-sans">
+                      AUDIO
+                    </h2>
+                    <p className="text-xs text-emerald-200/90 font-sans font-medium tracking-wide">
+                      Spatial Sound & Vinyl Stems
+                    </p>
+                  </div>
+
+                  <div className="space-y-2.5 pt-3 border-t border-emerald-500/20 text-xs text-slate-200 font-sans leading-relaxed">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      <span>Lossless Dolby Atmos & Hi-Res Flac</span>
                     </div>
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      <span>Custom Synthesizer & Multi-Stems</span>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      <span>Curated Ambient & Lo-Fi Stations</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-6 space-y-3 relative z-10">
+                  <div className="flex items-center justify-between text-xs font-sans text-emerald-300/90 font-medium px-1">
+                    <span>🟢 4,280 Listening</span>
+                    <span>12 Stations</span>
+                  </div>
+                  <button 
+                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-slate-950 font-bold text-xs font-sans tracking-[0.14em] uppercase flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(16,185,129,0.5)] group-hover:shadow-[0_0_28px_rgba(16,185,129,0.8)] transition-all cursor-pointer"
+                  >
+                    <Play className="w-4 h-4 fill-slate-950" />
+                    <span>ENTER AUDIO</span>
                   </button>
                 </div>
               </div>
 
-              {/* 2. TOP-RIGHT: VIDEO ORB (Cosmic Violet Liquid Glass with Modern Cinema Display & Breathing Aurora Corona) */}
-              <div className="absolute top-[3%] right-[5%] sm:right-[7%] flex flex-col items-center float-node-video z-20 group">
-                <div className="relative flex items-center justify-center">
-                  <div className="bubble-ground-shadow" />
-                  {/* Living Breathing Aurora Corona Flares (Soft Pulsing Cosmic Violet Ethereal Emission) */}
-                  <div className="absolute -inset-5 sm:-inset-6 rounded-full bg-gradient-to-tr from-purple-500/30 via-violet-400/25 to-white/20 aurora-corona-pulse-1" />
-                  <div className="absolute -inset-7 sm:-inset-8 rounded-full bg-gradient-to-br from-violet-500/20 via-fuchsia-400/15 to-purple-600/15 aurora-corona-pulse-2" />
-                  <button 
-                    onClick={() => handleTravel('movie')}
-                    className="w-48 h-48 sm:w-[216px] sm:h-[216px] rounded-full liquid-glass-orb orb-theme-video hover:scale-106 active:scale-95 flex flex-col items-center justify-center relative cursor-pointer group shadow-2xl transition-all duration-500"
-                  >
-                    <div className="orb-plasma-liquid bg-gradient-to-tr from-purple-400/25 via-violet-300/30 to-transparent" />
-                    
-                    {/* Harmonious Optical Ax-to-Ax Alignment */}
-                    <div className="relative z-20 flex flex-col items-center justify-center w-full h-full pt-1.5 pb-2">
-                      <div className="transition-transform duration-500 group-hover:scale-108 group-hover:-translate-y-1">
-                        <VideoEmblem3D />
-                      </div>
-                      <div className="mt-2 flex flex-col items-center justify-center">
-                        <span className="text-[14px] sm:text-[15.5px] font-black tracking-[0.26em] uppercase font-sans bg-gradient-to-b from-white via-purple-100 to-purple-300/90 bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(168,85,247,0.85)] pl-0.5 select-none transition-all duration-300 group-hover:tracking-[0.3em] group-hover:drop-shadow-[0_2px_14px_rgba(192,132,252,1)]">
-                          VIDEO
-                        </span>
-                        <span className="w-8 h-[2px] rounded-full bg-gradient-to-r from-transparent via-purple-400 to-transparent mt-1.5 opacity-75 group-hover:w-14 group-hover:opacity-100 transition-all duration-500 shadow-[0_0_8px_rgba(168,85,247,0.8)]" />
-                      </div>
+              {/* 2. CENTER CARD: SOCIAL HUB (Frosted White & Pale Sky-Blue Theme) */}
+              <div 
+                onClick={() => {
+                  AudioSynth.playClick();
+                  handleTravel('community');
+                }}
+                className="portal-card-social rounded-[32px] sm:rounded-[36px] p-6 sm:p-7 flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none relative overflow-hidden md:-translate-y-2 hover:md:-translate-y-4"
+              >
+                <div className="absolute -top-24 -left-24 w-52 h-52 rounded-full bg-sky-400/20 blur-3xl pointer-events-none group-hover:bg-sky-400/35 transition-all duration-500" />
+                
+                <div className="space-y-5 relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 border border-sky-300/50 text-white text-[10px] font-sans font-bold tracking-[0.14em] uppercase">
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-300 animate-pulse shadow-[0_0_6px_#38bdf8]" />
+                      LIVE COMMUNITY
+                    </span>
+                    <span className="text-xs font-sans text-sky-200 font-medium">1.5K Online</span>
+                  </div>
+
+                  <div className="flex items-center justify-center py-2 transition-transform duration-500 group-hover:scale-108 group-hover:-translate-y-1">
+                    <SocialEmblem3D />
+                  </div>
+
+                  <div className="text-center space-y-1">
+                    <h2 className="text-2xl sm:text-3xl font-black tracking-[0.14em] uppercase text-white group-hover:text-sky-200 transition-colors font-sans">
+                      SOCIAL
+                    </h2>
+                    <p className="text-xs text-sky-200/90 font-sans font-medium tracking-wide">
+                      Co-Watching, Clubs & Live Chat
+                    </p>
+                  </div>
+
+                  <div className="space-y-2.5 pt-3 border-t border-sky-300/20 text-xs text-slate-100 font-sans leading-relaxed">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-300 shrink-0" />
+                      <span>Synchronized 4K Watch Parties</span>
                     </div>
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-300 shrink-0" />
+                      <span>Real-time Interactive Live Chat & Stems</span>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-sky-300 shrink-0" />
+                      <span>Creator Cinema & Vinyl Lounges</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-6 space-y-3 relative z-10">
+                  <div className="flex items-center justify-between text-xs font-sans text-sky-200/95 font-medium px-1">
+                    <span>🟢 18 Active Rooms</span>
+                    <span>4.8K Members</span>
+                  </div>
+                  <button 
+                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-white via-sky-100 to-sky-300 hover:from-white hover:to-sky-200 text-slate-950 font-bold text-xs font-sans tracking-[0.14em] uppercase flex items-center justify-center gap-2 shadow-[0_0_24px_rgba(255,255,255,0.7)] group-hover:shadow-[0_0_32px_rgba(125,211,252,0.9)] transition-all cursor-pointer"
+                  >
+                    <Users className="w-4 h-4 text-slate-950" />
+                    <span>ENTER SOCIAL</span>
                   </button>
                 </div>
               </div>
 
-              {/* 3. BOTTOM-CENTER: SOCIAL HUB ORB (Luminous Frosted White & Pale Sky Blue Liquid Glass with Breathing Aurora Corona) */}
-              <div className="absolute bottom-[3%] left-1/2 -translate-x-1/2 flex flex-col items-center float-node-social z-20 group">
-                <div className="relative flex items-center justify-center">
-                  <div className="bubble-ground-shadow" />
-                  {/* Living Breathing Aurora Corona Flares (Soft Pulsing Pale Sky Blue & White Ethereal Emission) */}
-                  <div className="absolute -inset-5 sm:-inset-6 rounded-full bg-gradient-to-tr from-white/35 via-sky-200/35 to-blue-300/25 aurora-corona-pulse-1" />
-                  <div className="absolute -inset-7 sm:-inset-8 rounded-full bg-gradient-to-br from-sky-400/20 via-cyan-200/20 to-white/25 aurora-corona-pulse-2" />
-                  <button 
-                    onClick={() => handleTravel('community')}
-                    className="w-48 h-48 sm:w-[216px] sm:h-[216px] rounded-full liquid-glass-orb orb-theme-social hover:scale-106 active:scale-95 flex flex-col items-center justify-center relative cursor-pointer group shadow-2xl transition-all duration-500"
-                  >
-                    <div className="orb-plasma-liquid bg-gradient-to-tr from-white/30 via-sky-200/30 to-transparent" />
-                    
-                    {/* Harmonious Optical Ax-to-Ax Alignment */}
-                    <div className="relative z-20 flex flex-col items-center justify-center w-full h-full pt-1.5 pb-2">
-                      <div className="transition-transform duration-500 group-hover:scale-108 group-hover:-translate-y-1">
-                        <SocialEmblem3D />
-                      </div>
-                      <div className="mt-2 flex flex-col items-center justify-center">
-                        <span className="text-[14px] sm:text-[15.5px] font-black tracking-[0.26em] uppercase font-sans bg-gradient-to-b from-white via-sky-100 to-sky-200 bg-clip-text text-transparent drop-shadow-[0_2px_10px_rgba(125,211,252,0.85)] pl-0.5 select-none transition-all duration-300 group-hover:tracking-[0.3em] group-hover:drop-shadow-[0_2px_14px_rgba(56,189,248,1)]">
-                          SOCIAL
-                        </span>
-                        <span className="w-8 h-[2px] rounded-full bg-gradient-to-r from-transparent via-sky-300 to-transparent mt-1.5 opacity-85 group-hover:w-14 group-hover:opacity-100 transition-all duration-500 shadow-[0_0_8px_rgba(56,189,248,0.85)]" />
-                      </div>
+              {/* 3. RIGHT CARD: VIDEO STREAMING (Cosmic Violet Theme) */}
+              <div 
+                onClick={() => {
+                  AudioSynth.playClick();
+                  handleTravel('movie');
+                }}
+                className="portal-card-video rounded-[32px] sm:rounded-[36px] p-6 sm:p-7 flex flex-col justify-between cursor-pointer group active:scale-[0.98] select-none relative overflow-hidden"
+              >
+                <div className="absolute -top-24 -left-24 w-52 h-52 rounded-full bg-purple-500/20 blur-3xl pointer-events-none group-hover:bg-purple-500/35 transition-all duration-500" />
+                
+                <div className="space-y-5 relative z-10">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-300 text-[10px] font-sans font-bold tracking-[0.14em] uppercase">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse shadow-[0_0_6px_#c084fc]" />
+                      4K CINEMA
+                    </span>
+                    <span className="text-xs font-sans text-purple-300/80 font-medium">60 FPS</span>
+                  </div>
+
+                  <div className="flex items-center justify-center py-2 transition-transform duration-500 group-hover:scale-108 group-hover:-translate-y-1">
+                    <VideoEmblem3D />
+                  </div>
+
+                  <div className="text-center space-y-1">
+                    <h2 className="text-2xl sm:text-3xl font-black tracking-[0.14em] uppercase text-white group-hover:text-purple-300 transition-colors font-sans">
+                      VIDEO
+                    </h2>
+                    <p className="text-xs text-purple-200/90 font-sans font-medium tracking-wide">
+                      IMAX Enhanced & Masterpieces
+                    </p>
+                  </div>
+
+                  <div className="space-y-2.5 pt-3 border-t border-purple-500/20 text-xs text-slate-200 font-sans leading-relaxed">
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
+                      <span>Ultra-HD 4K HDR & IMAX Ratio</span>
                     </div>
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
+                      <span>Spatial Surround & Multi-Audio Track</span>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-purple-400 shrink-0" />
+                      <span>Curated Directors & Film Premieres</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-6 space-y-3 relative z-10">
+                  <div className="flex items-center justify-between text-xs font-sans text-purple-300/90 font-medium px-1">
+                    <span>🟢 3,456 Watching</span>
+                    <span>Dolby Vision</span>
+                  </div>
+                  <button 
+                    className="w-full py-3 rounded-2xl bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-400 hover:to-pink-400 text-white font-bold text-xs font-sans tracking-[0.14em] uppercase flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(168,85,247,0.5)] group-hover:shadow-[0_0_28px_rgba(168,85,247,0.8)] transition-all cursor-pointer"
+                  >
+                    <Film className="w-4 h-4 text-white" />
+                    <span>ENTER VIDEO</span>
                   </button>
                 </div>
               </div>
@@ -1329,86 +1431,72 @@ export default function App() {
             {/* Main Streaming Grid: Bold Hero Turntable Deck on Left, Up Next Queue Sidebar on Right */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch min-h-[500px]">
               
-              {/* LEFT: Curated Amber Hero Deck with BOLD Gramophone (8 Columns) */}
-              <div className="lg:col-span-8 flex flex-col justify-between">
+              {/* LEFT: Compact Curated Hero Deck with 3D Vinyl Turntable (8 Columns) */}
+              <div className="lg:col-span-8 flex flex-col justify-start">
                 
-                {/* Hero Card */}
-                <div className="relative rounded-[36px] bg-gradient-to-tr from-amber-600/85 via-amber-700/80 to-orange-500/85 p-7 sm:p-8 flex flex-col md:flex-row justify-between items-center gap-8 overflow-hidden shadow-2xl border border-white/20 backdrop-blur-xl h-full">
+                {/* Hero Card - Compact, Upper-Left Oriented & Uncluttered */}
+                <div className="relative rounded-[28px] bg-gradient-to-tr from-amber-600/75 via-amber-700/65 to-orange-500/75 p-5 sm:p-6 flex flex-col md:flex-row justify-between items-center gap-6 overflow-hidden shadow-2xl border border-white/20 backdrop-blur-xl">
                   
                   {/* Subtle vector stardust nodes overlay */}
                   <div className="absolute inset-0 bg-radial-nodes opacity-15 pointer-events-none" />
-                  
-                  {/* Discreet Round Upload MP3 Button in Top Corner */}
-                  <div className="absolute top-5 right-5 sm:top-6 sm:right-6 z-20">
-                    <button 
-                      onClick={() => fileInputRef.current?.click()}
-                      className="p-2.5 sm:px-3.5 sm:py-2 rounded-full bg-black/25 hover:bg-black/45 border border-white/20 text-amber-100 hover:text-white transition-all shadow-md active:scale-95 cursor-pointer backdrop-blur-md flex items-center gap-1.5 group"
-                      title="Upload custom MP3"
-                    >
-                      <Upload className="w-3.5 h-3.5 text-amber-300 group-hover:scale-110 transition-transform" />
-                      <span className="hidden sm:inline text-[10.5px] font-mono font-medium">IMPORT MP3</span>
-                    </button>
-                    <input 
-                      ref={fileInputRef} 
-                      type="file" 
-                      accept="audio/*" 
-                      onChange={handleCustomAudioUpload} 
-                      className="hidden" 
-                    />
-                  </div>
 
-                  {/* Left Column: Clean Song Specification & Information Showcase */}
-                  <div className="relative z-10 space-y-4 max-w-sm text-left flex-1 flex flex-col justify-between py-1">
+                  {/* Left Column: Concise Song Specification & Clean Typography */}
+                  <div className="relative z-10 space-y-3 text-left flex-1 max-w-sm py-1">
                     
-                    <div className="space-y-3.5">
-                      <div>
-                        <span className="text-[10px] font-mono font-bold tracking-widest text-amber-200/80 uppercase block">SONG SPECIFICATIONS</span>
-                        <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight text-white font-sans drop-shadow-sm leading-tight mt-1">
-                          {currentTrack.title}
-                        </h2>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-black/30 border border-white/15 text-[9.5px] font-sans font-bold tracking-[0.14em] uppercase text-amber-200">
+                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_6px_#fbbf24]" />
+                          NOW PLAYING
+                        </span>
+                        <span className="text-[11px] font-sans text-amber-100/80 font-medium">Vinyl Master</span>
                       </div>
 
-                      {/* Clean Music Information Grid */}
-                      <div className="grid grid-cols-2 gap-2.5 pt-1">
-                        <div className="p-3 rounded-2xl bg-black/20 backdrop-blur-md border border-white/10">
-                          <span className="text-[9.5px] font-mono text-amber-200/75 uppercase tracking-wider block">ARTIST</span>
-                          <span className="text-xs sm:text-sm font-bold text-white truncate block mt-0.5">{currentTrack.artist}</span>
-                        </div>
+                      <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white font-sans drop-shadow-sm leading-snug">
+                        {currentTrack.title}
+                      </h2>
 
-                        <div className="p-3 rounded-2xl bg-black/20 backdrop-blur-md border border-white/10">
-                          <span className="text-[9.5px] font-mono text-amber-200/75 uppercase tracking-wider block">ALBUM</span>
-                          <span className="text-xs sm:text-sm font-bold text-white truncate block mt-0.5">
-                            {currentTrack.id === 'track-coffee-bars' && customAudioUrl.startsWith('blob:') ? 'Local Master' : 'Aura Sessions Vol. 1'}
-                          </span>
-                        </div>
+                      <p className="text-xs text-amber-100/90 font-sans font-medium">
+                        {currentTrack.artist}
+                      </p>
+                    </div>
 
-                        <div className="p-3 rounded-2xl bg-black/20 backdrop-blur-md border border-white/10">
-                          <span className="text-[9.5px] font-mono text-amber-200/75 uppercase tracking-wider block">GENRE</span>
-                          <span className="text-xs sm:text-sm font-bold text-white truncate block mt-0.5">{currentTrack.genre}</span>
-                        </div>
+                    {/* Concise, Compact Specs Row */}
+                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                      <span className="px-2.5 py-1 rounded-xl bg-black/25 border border-white/15 text-[10.5px] font-sans font-medium text-white shadow-sm">
+                        {currentTrack.duration}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-xl bg-black/25 border border-white/15 text-[10.5px] font-sans font-medium text-amber-100 shadow-sm">
+                        {currentTrack.genre}
+                      </span>
+                      <span className="px-2.5 py-1 rounded-xl bg-black/25 border border-white/15 text-[10.5px] font-sans font-medium text-amber-100 shadow-sm">
+                        33 RPM
+                      </span>
+                    </div>
 
-                        <div className="p-3 rounded-2xl bg-black/20 backdrop-blur-md border border-white/10">
-                          <span className="text-[9.5px] font-mono text-amber-200/75 uppercase tracking-wider block">FORMAT · LENGTH</span>
-                          <span className="text-xs sm:text-sm font-bold text-white truncate block mt-0.5">
-                            Vinyl 33 · {currentTrack.duration}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Vibes Badges */}
-                      <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                        {currentTrack.vibes.map(v => (
-                          <span key={v} className="px-3 py-1 rounded-full bg-black/20 backdrop-blur-sm border border-white/10 text-[10px] font-medium text-amber-100">
-                            #{v}
-                          </span>
-                        ))}
-                      </div>
+                    {/* Compact Import MP3 Button */}
+                    <div className="pt-2">
+                      <button 
+                        onClick={() => fileInputRef.current?.click()}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/30 hover:bg-black/50 border border-white/20 text-amber-100 hover:text-white transition-all text-xs font-sans font-semibold active:scale-95 cursor-pointer shadow-sm group"
+                        title="Upload custom MP3"
+                      >
+                        <Upload className="w-3.5 h-3.5 text-amber-300 group-hover:scale-110 transition-transform" />
+                        <span>Import MP3</span>
+                      </button>
+                      <input 
+                        ref={fileInputRef} 
+                        type="file" 
+                        accept="audio/*" 
+                        onChange={handleCustomAudioUpload} 
+                        className="hidden" 
+                      />
                     </div>
 
                   </div>
 
                   {/* Right Column: ELEGANT SQUARE 3D LIQUID GLASS VINYL TURNTABLE (GRAMOPHONE) */}
-                  <div className="turntable-3d-deck rounded-[34px] w-64 h-64 sm:w-72 sm:h-72 md:w-[306px] md:h-[306px] aspect-square p-3.5 flex items-center justify-center shrink-0 relative overflow-hidden group select-none shadow-[0_30px_70px_rgba(0,0,0,0.95),inset_0_2px_3px_rgba(255,255,255,0.7)]">
+                  <div className="turntable-3d-deck rounded-[30px] w-56 h-56 sm:w-64 sm:h-64 aspect-square p-3 flex items-center justify-center shrink-0 relative overflow-hidden group select-none shadow-[0_25px_60px_rgba(0,0,0,0.9),inset_0_2px_3px_rgba(255,255,255,0.7)]">
                     
                     {/* Inner Refractive 3D Liquid Glass Plinth Slab with Beveled Rim */}
                     <div className="turntable-glass-plinth rounded-[28px]" />
@@ -1545,9 +1633,9 @@ export default function App() {
                 {/* Header */}
                 <div className="flex items-center justify-between border-b border-white/10 pb-3">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold tracking-widest text-amber-400 font-mono uppercase">UP NEXT</span>
+                    <span className="text-xs font-bold tracking-[0.14em] text-amber-300 font-sans uppercase">UP NEXT</span>
                   </div>
-                  <span className="text-[10px] font-mono text-slate-400">{getFilteredTracks().length} TRACKS</span>
+                  <span className="text-xs font-sans text-slate-300/80 font-medium">{getFilteredTracks().length} TRACKS</span>
                 </div>
 
                 {/* Track List */}
@@ -1824,10 +1912,6 @@ export default function App() {
         )}
 
       </main>
-
-      <footer className="relative z-10 w-full bg-slate-950/20 border-t border-white/5 py-4 text-center text-[9px] text-slate-600 font-mono tracking-widest mt-auto shrink-0">
-        &copy; 2026 AURA SYSTEMS INC. LIQUID GLASS ENGINE.
-      </footer>
 
     </div>
   );
