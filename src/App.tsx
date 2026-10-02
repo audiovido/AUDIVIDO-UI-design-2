@@ -7,7 +7,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { 
   Sparkles, Music, Film, Users, Play, Pause, SkipForward, SkipBack, 
   Search, Heart, Flame, Send, Calendar, Check, Radio, VolumeX, Volume2,
-  Compass, ArrowLeft, Tv, Library, Compass as BrowseIcon, FolderHeart, Clock, Disc, Upload,
+  Compass, ArrowLeft, Tv, Library, Compass as BrowseIcon, FolderHeart, Clock, Disc, Disc3, ListMusic, Upload,
   Shuffle, Repeat, Star, Share2, Bookmark, MoreHorizontal, Maximize2, Minimize2,
   Settings, User, Bell, HelpCircle, LogOut, MessageSquare, Plus, ExternalLink,
   ChevronRight, ChevronLeft, CheckCircle2, Sliders, ThumbsUp, Eye, ShieldCheck, X
@@ -21,6 +21,7 @@ import { AudioSynth } from './utils/AudioSynth';
 import { CosmicNightSky } from './components/CosmicNightSky';
 import { MovieStreamingView } from './components/MovieStreamingView';
 import { SocialHubView } from './components/SocialHubView';
+import { AudioVidoBrandLogo } from './components/AudioVidoBrandLogo';
 
 // --- BESPOKE 3D SCULPTED EMBLEMS (STANDARD, HARMONIOUS & PROFESSIONAL) ---
 function AudioEmblem3D() {
@@ -498,9 +499,27 @@ export default function App() {
     return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
+  // Helper to parse duration string (e.g. '1:00', '4:20') into total seconds
+  const parseDurationToSeconds = (durStr: string): number => {
+    if (!durStr) return 180;
+    const parts = durStr.split(':').map(Number);
+    if (parts.length === 2) return (parts[0] || 0) * 60 + (parts[1] || 0);
+    if (parts.length === 3) return (parts[0] || 0) * 3600 + (parts[1] || 0) * 60 + (parts[2] || 0);
+    return 180;
+  };
+
+  // Helper to format seconds into M:SS or MM:SS
+  const formatSecondsToDisplay = (sec: number): string => {
+    const s = Math.max(0, Math.floor(sec));
+    const m = Math.floor(s / 60);
+    const rem = s % 60;
+    return `${m}:${rem.toString().padStart(2, '0')}`;
+  };
+
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
   const [isPlayingFireplace, setIsPlayingFireplace] = useState<boolean>(false);
-  const [trackProgress, setTrackProgress] = useState<number>(35); // %
+  const [trackProgress, setTrackProgress] = useState<number>(0); // %
+  const [currentTrackSeconds, setCurrentTrackSeconds] = useState<number>(0); // elapsed seconds
   const [movieProgress, setMovieProgress] = useState<number>(60); // %
 
   // Glass Connect Controllers
@@ -513,7 +532,7 @@ export default function App() {
   const [eventsList, setEventsList] = useState<AuraEvent[]>(INITIAL_AURA_EVENTS);
   const [movieSearch, setMovieSearch] = useState<string>('');
   const [musicSearch, setMusicSearch] = useState<string>('');
-  const [musicNavTab, setMusicNavTab] = useState<'explore' | 'library'>('explore');
+  const [musicNavTab, setMusicNavTab] = useState<'library' | 'likes' | 'playlists'>('library');
   const [chatMessageText, setChatMessageText] = useState<string>('');
   const [attachedTrackId, setAttachedTrackId] = useState<string>('');
 
@@ -534,10 +553,13 @@ export default function App() {
         title: file.name.replace(/\.[^/.]+$/, ''),
         artist: 'Your Uploaded Music (Local File)'
       }));
+      setCurrentTrackSeconds(0);
+      setTrackProgress(0);
       setIsPlaying(true);
       AudioSynth.stopAll();
       setTimeout(() => {
         if (audioPlayerRef.current) {
+          audioPlayerRef.current.currentTime = 0;
           audioPlayerRef.current.play().catch(e => console.log('Audio playback started:', e));
         }
       }, 60);
@@ -545,16 +567,25 @@ export default function App() {
   };
 
   const handleTimeUpdate = () => {
-    if (audioPlayerRef.current && audioPlayerRef.current.duration) {
-      const pct = (audioPlayerRef.current.currentTime / audioPlayerRef.current.duration) * 100;
-      setTrackProgress(pct);
+    if (audioPlayerRef.current) {
+      const cur = audioPlayerRef.current.currentTime;
+      const dur = audioPlayerRef.current.duration || parseDurationToSeconds(currentTrack.duration);
+      setCurrentTrackSeconds(cur);
+      if (dur > 0) {
+        setTrackProgress((cur / dur) * 100);
+      }
     }
   };
 
   const handleSeek = (newPct: number) => {
     setTrackProgress(newPct);
-    if (audioPlayerRef.current && audioPlayerRef.current.duration) {
-      audioPlayerRef.current.currentTime = (newPct / 100) * audioPlayerRef.current.duration;
+    const totalSec = (audioPlayerRef.current && audioPlayerRef.current.duration && !isNaN(audioPlayerRef.current.duration))
+      ? audioPlayerRef.current.duration
+      : parseDurationToSeconds(currentTrack.duration);
+    const targetSec = (newPct / 100) * totalSec;
+    setCurrentTrackSeconds(targetSec);
+    if (audioPlayerRef.current && customAudioUrl.startsWith('blob:')) {
+      audioPlayerRef.current.currentTime = targetSec;
     }
   };
 
@@ -593,7 +624,32 @@ export default function App() {
     }
   }, [isPlaying, currentWorld, currentTrack, customAudioUrl]);
 
-  // Track progress timers for non-audio sources
+  // High-precision synchronized timer for synthesized audio tracks
+  useEffect(() => {
+    let interval: any;
+    if (isPlaying && currentWorld === 'music' && (!customAudioUrl || !customAudioUrl.startsWith('blob:'))) {
+      const totalSec = parseDurationToSeconds(currentTrack.duration);
+      interval = setInterval(() => {
+        setCurrentTrackSeconds(prev => {
+          const next = prev + 0.5;
+          if (next >= totalSec) {
+            if (isRepeat) {
+              setTrackProgress(0);
+              return 0;
+            } else {
+              handleNextTrack();
+              return 0;
+            }
+          }
+          setTrackProgress((next / totalSec) * 100);
+          return next;
+        });
+      }, 500);
+    }
+    return () => clearInterval(interval);
+  }, [isPlaying, currentWorld, currentTrack, customAudioUrl, isRepeat]);
+
+  // Track progress timers for non-audio sources (movie world)
   useEffect(() => {
     let interval: any;
     if (isPlaying && currentWorld !== 'music') {
@@ -709,8 +765,11 @@ export default function App() {
 
   const selectAndPlayTrack = (track: Track) => {
     setCurrentTrack(track);
+    setCurrentTrackSeconds(0);
+    setTrackProgress(0);
     if (audioPlayerRef.current && customAudioUrl.startsWith('blob:') && track.id === 'track-coffee-bars') {
       AudioSynth.stopAll();
+      audioPlayerRef.current.currentTime = 0;
       audioPlayerRef.current.play().catch(e => console.log('Audio play error:', e));
     } else {
       if (audioPlayerRef.current) audioPlayerRef.current.pause();
@@ -752,22 +811,25 @@ export default function App() {
     return matchesSearch && matchesGenre;
   });
 
-  // Filter track catalog list based on category, library tab, and search query
+  // Filter track catalog list based on category, library tab, likes, playlists and search query
   const getFilteredTracks = () => {
     let tracks = AURA_TRACKS;
-    if (musicNavTab === 'library') {
+    if (musicNavTab === 'likes') {
       tracks = tracks.filter(t => likedTracks[t.id]);
-    } else if (activeMusicCategory !== 'all') {
+    } else if (musicNavTab === 'playlists') {
       if (activeMusicCategory === 'lofi') tracks = tracks.filter(t => t.genre.toLowerCase().includes('lofi') || t.title.toLowerCase().includes('lofi') || t.genre.toLowerCase().includes('chill'));
       if (activeMusicCategory === 'ambient') tracks = tracks.filter(t => t.genre.toLowerCase().includes('ambient') || t.genre.toLowerCase().includes('drone'));
       if (activeMusicCategory === 'fireplace') tracks = tracks.filter(t => t.audioSynthType === 'fireplace');
+    } else if (musicNavTab === 'library') {
+      tracks = AURA_TRACKS;
     }
     if (musicSearch.trim()) {
       const q = musicSearch.toLowerCase();
       tracks = tracks.filter(t => 
         t.title.toLowerCase().includes(q) || 
         t.artist.toLowerCase().includes(q) || 
-        t.genre.toLowerCase().includes(q)
+        t.genre.toLowerCase().includes(q) ||
+        t.vibes.some(v => v.toLowerCase().includes(q))
       );
     }
     return tracks;
@@ -785,13 +847,13 @@ export default function App() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    canvas.width = 800;
-    canvas.height = 70;
+    canvas.width = 100;
+    canvas.height = 100;
 
     let phase = 0;
 
     const renderCozySinewave = () => {
-      // Pure transparent background so the soft aurora mist floats seamlessly in the bottom bar
+      // Pure transparent background so the soft aurora mist floats seamlessly in the circular visualizer orb
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const freqData = AudioSynth.getFrequencyData();
@@ -817,7 +879,7 @@ export default function App() {
       }
 
       // Dynamic phase speed based on music rhythm and frequency energy
-      const waveSpeed = isPlaying ? (0.025 + bassEnergy * 0.08 + midEnergy * 0.035) : 0.006;
+      const waveSpeed = isPlaying ? (0.035 + bassEnergy * 0.09 + midEnergy * 0.04) : 0.008;
       phase += waveSpeed;
 
       // Authentic Northern Lights (Aurora Borealis) waveform layers: Emerald Green, Cosmic Violet/Purple, and Deep Dark Tones
@@ -825,29 +887,29 @@ export default function App() {
         { 
           stroke: 'rgba(52, 211, 153, 0.95)',  // Aurora Emerald Green
           glow: 'rgba(16, 185, 129, 0.9)', 
-          blur: 10,
-          width: 2.4, 
+          blur: 8,
+          width: 2.2, 
           mult: 1.0, 
           freqShift: 0 
         },
         { 
           stroke: 'rgba(192, 132, 252, 0.92)', // Cosmic Northern Violet / Purple
           glow: 'rgba(168, 85, 247, 0.85)', 
-          blur: 8,
-          width: 1.9, 
+          blur: 7,
+          width: 1.8, 
           mult: 0.8, 
           freqShift: 1.35 
         },
         { 
-          stroke: 'rgba(5, 150, 105, 0.75)',   // Deep Dark Aurora Emerald / Forest
+          stroke: 'rgba(5, 150, 105, 0.75)',   // Deep Dark Aurora Emerald
           glow: 'rgba(4, 120, 87, 0.65)', 
-          blur: 6,
+          blur: 5,
           width: 1.4, 
           mult: 0.6, 
           freqShift: 2.7 
         },
         { 
-          stroke: 'rgba(126, 34, 206, 0.65)',  // Deep Velvet Dark Purple / Cosmic Night
+          stroke: 'rgba(126, 34, 206, 0.65)',  // Deep Velvet Dark Purple
           glow: 'rgba(88, 28, 135, 0.55)', 
           blur: 4,
           width: 1.2, 
@@ -864,14 +926,14 @@ export default function App() {
         ctx.shadowColor = layer.glow;
         ctx.shadowBlur = layer.blur;
 
-        const dynamicAmp = isPlaying ? (5 + bassEnergy * 24 * layer.mult + midEnergy * 8) : 2.5;
+        const dynamicAmp = isPlaying ? (4 + bassEnergy * 16 * layer.mult + midEnergy * 6) : 2.5;
 
         for (let x = 0; x < canvas.width; x++) {
           const sampleIdx = timeData ? Math.floor((x / canvas.width) * timeData.length) : 0;
-          const rawWave = (timeData && isPlaying) ? ((timeData[sampleIdx] - 128) / 128) * 14 * layer.mult : 0;
+          const rawWave = (timeData && isPlaying) ? ((timeData[sampleIdx] - 128) / 128) * 8 * layer.mult : 0;
 
-          const freqOffset = Math.sin(x * (0.02 + trebleEnergy * 0.015) + phase + layer.freqShift) * dynamicAmp;
-          const harmonic = Math.sin(x * 0.045 + phase * 1.6) * (bassEnergy * 8);
+          const freqOffset = Math.sin(x * (0.06 + trebleEnergy * 0.02) + phase + layer.freqShift) * dynamicAmp;
+          const harmonic = Math.sin(x * 0.09 + phase * 1.6) * (bassEnergy * 6);
 
           const y = canvas.height / 2 + freqOffset + rawWave + harmonic;
 
@@ -887,16 +949,16 @@ export default function App() {
 
       // Frequency peak spark particles jumping to beats (Aurora starlight sparkles in emerald & violet)
       if (isPlaying && bassEnergy > 0.06) {
-        const count = Math.min(8, Math.floor(3 + bassEnergy * 8));
+        const count = Math.min(6, Math.floor(2 + bassEnergy * 6));
         for (let p = 0; p < count; p++) {
           const isGreen = p % 2 === 0;
-          ctx.fillStyle = isGreen ? `rgba(52, 211, 153, ${0.5 + bassEnergy * 0.5})` : `rgba(192, 132, 252, ${0.5 + bassEnergy * 0.5})`;
+          ctx.fillStyle = isGreen ? `rgba(52, 211, 153, ${0.6 + bassEnergy * 0.4})` : `rgba(192, 132, 252, ${0.6 + bassEnergy * 0.4})`;
           ctx.shadowColor = isGreen ? '#34d399' : '#c084fc';
-          ctx.shadowBlur = 6;
-          const px = (phase * 35 + p * (canvas.width / count)) % canvas.width;
-          const py = canvas.height / 2 + Math.sin(px * 0.03 + phase) * (6 + bassEnergy * 16) + (isGreen ? -1 : 1) * (bassEnergy * 6);
+          ctx.shadowBlur = 5;
+          const px = (phase * 25 + p * (canvas.width / count)) % canvas.width;
+          const py = canvas.height / 2 + Math.sin(px * 0.06 + phase) * (4 + bassEnergy * 10) + (isGreen ? -1 : 1) * (bassEnergy * 4);
           ctx.beginPath();
-          ctx.arc(px, py, 1.2 + bassEnergy * 2.0, 0, Math.PI * 2);
+          ctx.arc(px, py, 1.2 + bassEnergy * 1.5, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -1045,61 +1107,79 @@ export default function App() {
       {/* GLOBAL COSMIC NIGHT SKY & AURORA BOREALIS & DYNAMIC METEORS */}
       <CosmicNightSky isPortal={currentWorld === 'portal'} />
 
-      {/* --- TOP BRANDING NAV BAR (COMPACT & COLORFUL) --- */}
-      <header className="relative z-50 flex items-center justify-between px-4 sm:px-6 py-3 bg-slate-950/70 backdrop-blur-2xl border-b border-white/10 shrink-0">
+      {/* --- TOP BRANDING NAV BAR (3D LIQUID GLASS JEWEL NAVIGATION) --- */}
+      {/* Top Header: Brand Portal Gateway on Left, 3 Realm Navigation Pills (Audio, Video, Social) on Right */}
+      <header className="relative z-50 flex items-center justify-between px-3 sm:px-6 py-2 sm:py-3 bg-slate-950/85 backdrop-blur-3xl border-b border-white/10 shrink-0 gap-2">
         
-        {/* Brand Home Capsule */}
+        {/* Brand Portal Gateway Button (Exact Infinity Soundwave & Play Logo with Stylized AUDIOVIDO Typography) */}
         <button 
           onClick={() => handleTravel('portal')}
-          className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-emerald-500/15 border border-emerald-500/30 text-xs font-black tracking-widest text-white hover:border-emerald-400 transition-all cursor-pointer shadow-[0_0_15px_rgba(16,185,129,0.25)] active:scale-95"
+          className={`flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border transition-all cursor-pointer select-none active:translate-y-[1px] active:scale-[0.98] group shrink-0 ${
+            currentWorld === 'portal'
+              ? 'bg-slate-950/90 border-amber-300 shadow-[0_0_24px_rgba(56,189,248,0.5),inset_0_1px_2px_rgba(255,255,255,0.4)] scale-[1.02]'
+              : 'bg-black/60 hover:bg-slate-950/90 border-white/20 hover:border-cyan-400/50 shadow-[0_4px_16px_rgba(0,0,0,0.6)]'
+          }`}
+          title="Portal Gateway (AUDIOVIDO)"
         >
-          <Sparkles className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
-          <span className="font-extrabold tracking-[0.16em] uppercase bg-gradient-to-r from-white via-slate-100 to-emerald-300 bg-clip-text text-transparent">AUDIO VIDEO</span>
+          <AudioVidoBrandLogo size="sm" variant="horizontal" />
         </button>
 
-        {/* Space-Efficient Harmonious Jewel Navigation Chips */}
-        <nav className="flex items-center gap-1 sm:gap-1.5 p-1 bg-white/5 border border-white/10 rounded-full backdrop-blur-xl">
-          <button 
-            onClick={() => handleTravel('portal')} 
-            className={`jewel-chip ${currentWorld === 'portal' ? 'jewel-chip-active-emerald' : 'text-slate-300'}`}
-          >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shadow-[0_0_6px_#10b981]" />
-            <span>PORTAL</span>
-          </button>
+        {/* Tactile 3D Realm Navigation Bar (AUDIO, VIDEO, SOCIAL) - Optimized for Mobile */}
+        <nav className="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 bg-slate-950/90 border border-white/20 rounded-full backdrop-blur-3xl shadow-[0_10px_30px_rgba(0,0,0,0.85),inset_0_1.5px_2px_rgba(255,255,255,0.22)] shrink-0">
+          {/* 1. AUDIO */}
           <button 
             onClick={() => handleTravel('music')} 
-            className={`jewel-chip ${currentWorld === 'music' ? 'jewel-chip-active-emerald-teal' : 'text-slate-300'}`}
+            className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
+              currentWorld === 'music' 
+                ? 'bg-gradient-to-b from-emerald-300 via-emerald-400 to-teal-500 text-slate-950 shadow-[0_4px_18px_rgba(16,185,129,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-emerald-100 scale-[1.02]' 
+                : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-emerald-400/40'
+            }`}
+            title="Audio Realm"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block shadow-[0_0_6px_#34d399]" />
+            <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
+              currentWorld === 'music' 
+                ? 'bg-slate-950 shadow-sm' 
+                : 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
+            }`} />
             <span>AUDIO</span>
           </button>
+
+          {/* 2. VIDEO */}
           <button 
             onClick={() => handleTravel('movie')} 
-            className={`jewel-chip ${currentWorld === 'movie' ? 'jewel-chip-active-violet' : 'text-slate-300'}`}
+            className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
+              currentWorld === 'movie' 
+                ? 'bg-gradient-to-b from-violet-300 via-purple-400 to-indigo-500 text-slate-950 shadow-[0_4px_18px_rgba(168,85,247,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-purple-100 scale-[1.02]' 
+                : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-purple-400/40'
+            }`}
+            title="Video Realm"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 inline-block shadow-[0_0_6px_#c084fc]" />
+            <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
+              currentWorld === 'movie' 
+                ? 'bg-slate-950 shadow-sm' 
+                : 'bg-purple-400 shadow-[0_0_8px_#c084fc]'
+            }`} />
             <span>VIDEO</span>
           </button>
+
+          {/* 3. SOCIAL */}
           <button 
             onClick={() => handleTravel('community')} 
-            className={`jewel-chip ${currentWorld === 'community' ? 'jewel-chip-active-frost-white' : 'text-slate-300'}`}
+            className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
+              currentWorld === 'community' 
+                ? 'bg-gradient-to-b from-sky-200 via-sky-300 to-blue-400 text-slate-950 shadow-[0_4px_18px_rgba(56,189,248,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-sky-100 scale-[1.02]' 
+                : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-sky-400/40'
+            }`}
+            title="Social Realm"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-white inline-block shadow-[0_0_6px_#ffffff]" />
+            <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
+              currentWorld === 'community' 
+                ? 'bg-slate-950 shadow-sm' 
+                : 'bg-sky-300 shadow-[0_0_8px_#38bdf8]'
+            }`} />
             <span>SOCIAL</span>
           </button>
         </nav>
-
-        {/* Compact Right Control Pill */}
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={handleMuteAll}
-            className="p-1.5 px-2.5 rounded-full bg-white/5 border border-white/10 hover:border-emerald-500/30 text-slate-300 hover:text-white transition-all text-[10px] font-mono flex items-center gap-1.5 cursor-pointer active:scale-95"
-            title="Mute sounds"
-          >
-            <VolumeX className="w-3.5 h-3.5 text-slate-400" />
-            <span className="hidden sm:inline text-[9px] font-bold">MUTE</span>
-          </button>
-        </div>
       </header>
 
       {/* Real HTML5 Audio Player */}
@@ -1121,12 +1201,10 @@ export default function App() {
         {currentWorld === 'portal' && (
           <div className="w-full max-w-6xl animate-fadeIn flex flex-col items-center justify-center min-h-[560px] py-4 relative">
             
-            {/* 3D Sculpted Clean Portal Header (Uncluttered & Prestigious) */}
-            <div className="text-center mb-9 select-none">
-              <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black tracking-[0.16em] uppercase font-sans bg-gradient-to-b from-white via-slate-100 to-slate-400 bg-clip-text text-transparent drop-shadow-[0_4px_18px_rgba(0,0,0,0.85)]">
-                SELECT YOUR REALM
-              </h1>
-              <div className="w-20 h-0.5 rounded-full bg-gradient-to-r from-transparent via-cyan-400/90 to-transparent mx-auto mt-2.5 shadow-[0_0_10px_rgba(6,182,212,0.9)]" />
+            {/* 3D Sculpted Clean Portal Header (Authentic AUDIOVIDO Logo Artwork) */}
+            <div className="text-center mb-8 select-none flex flex-col items-center">
+              <AudioVidoBrandLogo variant="stacked" className="mb-3" />
+              <div className="w-24 h-0.5 rounded-full bg-gradient-to-r from-transparent via-cyan-400/90 to-transparent mx-auto mt-1 shadow-[0_0_12px_rgba(6,182,212,0.9)]" />
             </div>
 
             {/* 3 Vertical Liquid Glass Cards: Left = Audio, Center = Social, Right = Video */}
@@ -1329,160 +1407,117 @@ export default function App() {
         {currentWorld === 'music' && (
           <div className="w-full max-w-6xl space-y-6 animate-fadeIn py-2 pb-36 relative">
             
-            {/* Top Standard Music Streaming Navigation Bar (Rounded Pills & Full Curves) */}
-            <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-2.5 rounded-full bg-slate-950/35 border border-white/10 backdrop-blur-2xl shrink-0 shadow-lg">
-              
-              {/* Left Navigation: Explore, Stations Filter Pills, Library */}
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button 
-                  onClick={() => { setMusicNavTab('explore'); setActiveMusicCategory('all'); }}
-                  className={`flex items-center gap-1.5 px-4 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    musicNavTab === 'explore' && activeMusicCategory === 'all'
-                      ? 'bg-amber-500/25 text-amber-300 border border-amber-400/40 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
-                      : 'text-slate-300 hover:text-white hover:bg-white/5 border border-transparent'
-                  }`}
-                >
-                  <BrowseIcon className="w-3.5 h-3.5" />
-                  <span>Explore</span>
-                </button>
+            {/* Top Prominent Full-Rounded Amber Search Bar (Compact Width, 3D Neon Halo, Aligned to Left, Circular Yellow Button) */}
+            <div className="w-full max-w-2xl mx-auto relative group">
+              {/* Soft Ambient Amber-Gold Neon Halo */}
+              <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-amber-500/20 via-yellow-400/25 to-amber-500/20 blur-md opacity-70 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
 
-                <button 
-                  onClick={() => { setMusicNavTab('explore'); setActiveMusicCategory('lofi'); }} 
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
-                    musicNavTab === 'explore' && activeMusicCategory === 'lofi' 
-                      ? 'bg-amber-500/25 text-amber-300 border border-amber-400/40 shadow-[0_0_12px_rgba(245,158,11,0.25)]' 
-                      : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
-                  }`}
-                >
-                  Lo-Fi Beats
-                </button>
+              <div className="relative w-full flex items-center justify-between gap-3 pl-5 pr-2 py-1.5 sm:py-2 rounded-full bg-slate-950/80 border border-amber-500/40 backdrop-blur-3xl shrink-0 search-neon-halo transition-all focus-within:border-amber-400 focus-within:shadow-[0_0_28px_rgba(245,158,11,0.35)]">
+                {/* Big Direct Search Input starting flush on the left */}
+                <input 
+                  type="text"
+                  value={musicSearch}
+                  onChange={(e) => setMusicSearch(e.target.value)}
+                  placeholder="Search tracks, artists, albums, or genres..."
+                  className="w-full bg-transparent text-sm sm:text-base text-white placeholder-amber-200/50 font-sans font-medium focus:outline-none tracking-wide text-left"
+                />
 
-                <button 
-                  onClick={() => { setMusicNavTab('explore'); setActiveMusicCategory('ambient'); }} 
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
-                    musicNavTab === 'explore' && activeMusicCategory === 'ambient' 
-                      ? 'bg-amber-500/25 text-amber-300 border border-amber-400/40 shadow-[0_0_12px_rgba(245,158,11,0.25)]' 
-                      : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
-                  }`}
-                >
-                  Ambient Space
-                </button>
-
-                <button 
-                  onClick={() => { setMusicNavTab('explore'); setActiveMusicCategory('fireplace'); }} 
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium transition-all cursor-pointer ${
-                    musicNavTab === 'explore' && activeMusicCategory === 'fireplace' 
-                      ? 'bg-amber-500/25 text-amber-300 border border-amber-400/40 shadow-[0_0_12px_rgba(245,158,11,0.25)]' 
-                      : 'text-slate-400 hover:text-white hover:bg-white/5 border border-transparent'
-                  }`}
-                >
-                  Hearth Fireside
-                </button>
-
-                <button 
-                  onClick={() => setMusicNavTab('library')}
-                  className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-                    musicNavTab === 'library'
-                      ? 'bg-amber-500/25 text-amber-300 border border-amber-400/40 shadow-[0_0_12px_rgba(245,158,11,0.25)]'
-                      : 'text-slate-300 hover:text-white hover:bg-white/5 border border-transparent'
-                  }`}
-                >
-                  <FolderHeart className="w-3.5 h-3.5" />
-                  <span>My Library</span>
-                </button>
-              </div>
-
-              {/* Center/Right: Live Music Search Bar & My Profile Button */}
-              <div className="flex items-center gap-2.5 flex-1 max-w-sm justify-end">
-                <div className="relative w-full max-w-[210px]">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-                  <input 
-                    type="text"
-                    value={musicSearch}
-                    onChange={(e) => setMusicSearch(e.target.value)}
-                    placeholder="Search tracks, artists..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-white placeholder-slate-400 focus:outline-none focus:border-amber-400/50 transition-all font-sans"
-                  />
+                <div className="flex items-center gap-2 shrink-0">
                   {musicSearch && (
                     <button 
                       onClick={() => setMusicSearch('')}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 hover:text-white cursor-pointer"
+                      className="text-xs px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white cursor-pointer transition-colors shrink-0 font-bold"
+                      title="Clear search"
                     >
                       ✕
                     </button>
                   )}
+
+                  {/* Yellow/Amber Circular 3D Search Button with Layered Radiant Borders */}
+                  <button
+                    onClick={() => {}}
+                    className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-200 text-slate-950 shadow-[0_0_16px_rgba(245,158,11,0.65),inset_0_1.5px_2px_rgba(255,255,255,0.85)] border-2 border-yellow-200 hover:scale-105 active:scale-95 transition-all cursor-pointer group/searchbtn"
+                    title="Search tracks"
+                  >
+                    {/* Concentric Glowing Ambient Ring */}
+                    <span className="absolute -inset-1 rounded-full border border-amber-400/50 group-hover/searchbtn:border-amber-300 transition-colors pointer-events-none animate-pulse" />
+                    <Search className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-slate-950 stroke-[2.5]" />
+                  </button>
                 </div>
-
-                {/* My Profile Button Capsule */}
-                <button 
-                  onClick={() => handleTravel('community')}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-slate-200 hover:text-white transition-all cursor-pointer shrink-0 shadow-sm active:scale-95"
-                  title="My Profile"
-                >
-                  <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-amber-400 to-orange-500 flex items-center justify-center text-[10px] font-bold text-slate-950 shadow-sm">
-                    A
-                  </div>
-                  <span className="hidden sm:inline">My Profile</span>
-                </button>
               </div>
-
             </div>
 
-            {/* Main Streaming Grid: Bold Hero Turntable Deck on Left, Up Next Queue Sidebar on Right */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch min-h-[500px]">
+            {/* Main Streaming Grid: Bold Hero Turntable Deck & Sound Library on Left (8 Cols), Suggestions Sidebar on Right (4 Cols) */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               
-              {/* LEFT: Compact Curated Hero Deck with 3D Vinyl Turntable (8 Columns) */}
-              <div className="lg:col-span-8 flex flex-col justify-start">
+              {/* LEFT: 8 Columns containing Wood Hero Console + Aurora Green Sound Library beneath it */}
+              <div className="lg:col-span-8 flex flex-col gap-6">
                 
-                {/* Hero Card - Compact, Upper-Left Oriented & Uncluttered */}
-                <div className="relative rounded-[28px] bg-gradient-to-tr from-amber-600/75 via-amber-700/65 to-orange-500/75 p-5 sm:p-6 flex flex-col md:flex-row justify-between items-center gap-6 overflow-hidden shadow-2xl border border-white/20 backdrop-blur-xl">
+                {/* Hero Card - Vintage Polished Acoustic Rubberwood / Mahogany Veneer Console */}
+                <div className="vintage-acoustic-wood-chassis relative rounded-[28px] sm:rounded-[32px] p-5 sm:p-6 flex flex-col md:flex-row justify-between items-center gap-6 overflow-hidden backdrop-blur-xl">
                   
-                  {/* Subtle vector stardust nodes overlay */}
+                  {/* Polished Lacquer Mirror Top Reflection Line */}
+                  <div className="wood-lacquer-reflection" />
+
+                  {/* Subtle Woodgrain & Acoustic Starlight Nodes Overlay */}
                   <div className="absolute inset-0 bg-radial-nodes opacity-15 pointer-events-none" />
 
-                  {/* Left Column: Concise Song Specification & Clean Typography */}
-                  <div className="relative z-10 space-y-3 text-left flex-1 max-w-sm py-1">
+                  {/* Warm Brass / Golden Inlay Accent Inner Rim */}
+                  <div className="absolute inset-0 rounded-[28px] sm:rounded-[32px] border border-amber-300/30 pointer-events-none shadow-[inset_0_1px_2px_rgba(255,255,255,0.3),inset_0_-1px_3px_rgba(0,0,0,0.6)]" />
+
+                  {/* Left Column: Symmetrical & Balanced Track Presentation Plate */}
+                  <div className="relative z-10 flex flex-col justify-between self-stretch flex-1 min-w-0 py-0.5 space-y-5">
                     
-                    <div className="space-y-1.5">
-                      <div className="flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-black/30 border border-white/15 text-[9.5px] font-sans font-bold tracking-[0.14em] uppercase text-amber-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse shadow-[0_0_6px_#fbbf24]" />
-                          NOW PLAYING
-                        </span>
-                        <span className="text-[11px] font-sans text-amber-100/80 font-medium">Vinyl Master</span>
+                    {/* Top Row: Artist Avatar in Top Corner + Title, Artist & Album */}
+                    <div className="flex items-start gap-4">
+                      {/* Artist / Album Cover Art with Circular Gold-Beveled Frame */}
+                      <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shrink-0 shadow-[0_10px_25px_rgba(0,0,0,0.85)] border-2 border-amber-300/60 ring-2 ring-amber-500/20 group">
+                        <img 
+                          src={currentTrack.artistPhoto || 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=300&q=80'} 
+                          alt={currentTrack.artist} 
+                          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                        {isPlaying && (
+                          <div className="absolute bottom-1 right-2 w-2.5 h-2.5 rounded-full bg-emerald-400 border border-black shadow-[0_0_8px_#34d399]" />
+                        )}
                       </div>
 
-                      <h2 className="text-xl sm:text-2xl font-black tracking-tight text-white font-sans drop-shadow-sm leading-snug">
-                        {currentTrack.title}
-                      </h2>
+                      {/* Song Title, Artist & Album Clean Typography */}
+                      <div className="space-y-1 min-w-0 flex-1 pt-0.5">
+                        <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-amber-50 font-sans drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] truncate">
+                          {currentTrack.title}
+                        </h2>
 
-                      <p className="text-xs text-amber-100/90 font-sans font-medium">
-                        {currentTrack.artist}
-                      </p>
+                        <p className="text-sm sm:text-base text-amber-200 font-sans font-bold truncate drop-shadow-sm">
+                          {currentTrack.artist}
+                        </p>
+
+                        <div className="flex items-center gap-1.5 text-xs text-amber-100/75 font-medium truncate pt-0.5">
+                          <Disc3 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                          <span className="truncate">{currentTrack.album || 'Single Edition'}</span>
+                        </div>
+                      </div>
                     </div>
 
-                    {/* Concise, Compact Specs Row */}
-                    <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
-                      <span className="px-2.5 py-1 rounded-xl bg-black/25 border border-white/15 text-[10.5px] font-sans font-medium text-white shadow-sm">
-                        {currentTrack.duration}
-                      </span>
-                      <span className="px-2.5 py-1 rounded-xl bg-black/25 border border-white/15 text-[10.5px] font-sans font-medium text-amber-100 shadow-sm">
+                    {/* Bottom Controls Row: Coherent Uniform Audio Plaque Buttons */}
+                    <div className="flex items-center gap-2 pt-1 flex-wrap">
+                      <span className="px-3 py-1.5 rounded-full wood-chassis-badge text-[11px] font-sans font-bold text-amber-200 tracking-wide">
                         {currentTrack.genre}
                       </span>
-                      <span className="px-2.5 py-1 rounded-xl bg-black/25 border border-white/15 text-[10.5px] font-sans font-medium text-amber-100 shadow-sm">
-                        33 RPM
-                      </span>
-                    </div>
 
-                    {/* Compact Import MP3 Button */}
-                    <div className="pt-2">
+                      <span className="px-3 py-1.5 rounded-full wood-chassis-badge text-[10.5px] font-mono font-bold text-amber-100 flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shadow-[0_0_6px_#34d399] animate-pulse" />
+                        <span>HI-RES AUDIO</span>
+                      </span>
+
                       <button 
                         onClick={() => fileInputRef.current?.click()}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-black/30 hover:bg-black/50 border border-white/20 text-amber-100 hover:text-white transition-all text-xs font-sans font-semibold active:scale-95 cursor-pointer shadow-sm group"
-                        title="Upload custom MP3"
+                        className="wood-chassis-btn inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-amber-200 hover:text-white text-[11px] font-sans font-bold tracking-wider active:translate-y-[1px] cursor-pointer"
+                        title="Upload local MP3 file"
                       >
-                        <Upload className="w-3.5 h-3.5 text-amber-300 group-hover:scale-110 transition-transform" />
-                        <span>Import MP3</span>
+                        <Upload className="w-3.5 h-3.5 text-amber-300" />
+                        <span>IMPORT MP3</span>
                       </button>
                       <input 
                         ref={fileInputRef} 
@@ -1495,33 +1530,37 @@ export default function App() {
 
                   </div>
 
-                  {/* Right Column: ELEGANT SQUARE 3D LIQUID GLASS VINYL TURNTABLE (GRAMOPHONE) */}
-                  <div className="turntable-3d-deck rounded-[30px] w-56 h-56 sm:w-64 sm:h-64 aspect-square p-3 flex items-center justify-center shrink-0 relative overflow-hidden group select-none shadow-[0_25px_60px_rgba(0,0,0,0.9),inset_0_2px_3px_rgba(255,255,255,0.7)]">
+                  {/* Right Column: COMPACT ELEGANT 3D VINYL TURNTABLE (GRAMOPHONE) - Snug Positioning */}
+                  <div className="turntable-3d-deck rounded-[26px] w-[275px] sm:w-[285px] h-[225px] sm:h-[235px] p-2 flex items-center justify-center shrink-0 relative overflow-hidden group select-none shadow-[0_20px_50px_rgba(0,0,0,0.9),inset_0_2px_3px_rgba(255,255,255,0.7)]">
                     
                     {/* Inner Refractive 3D Liquid Glass Plinth Slab with Beveled Rim */}
-                    <div className="turntable-glass-plinth rounded-[28px]" />
+                    <div className="turntable-glass-plinth rounded-[24px]" />
 
                     {/* --- 1. 3D CIRCULAR SUNKEN RECESSED PLATTER WELL (Under the Disc) --- */}
-                    <div className="absolute left-[44%] top-[50%] -translate-x-1/2 -translate-y-1/2 w-[196px] h-[196px] sm:w-[222px] sm:h-[222px] rounded-full platter-well-3d flex items-center justify-center pointer-events-none">
+                    <div 
+                      className="absolute -translate-x-1/2 -translate-y-1/2 w-[166px] h-[166px] rounded-full platter-well-3d flex items-center justify-center pointer-events-none"
+                      style={{ left: '112px', top: '122px' }}
+                    >
                       {/* Concentric Lathe Machining Groove Rings in the Platter Basin */}
                       <div className="absolute inset-2 rounded-full border border-stone-800/60 pointer-events-none" />
-                      <div className="absolute inset-5 rounded-full border border-stone-800/40 pointer-events-none" />
-                      <div className="absolute inset-9 rounded-full border border-stone-800/25 pointer-events-none" />
+                      <div className="absolute inset-4 rounded-full border border-stone-800/40 pointer-events-none" />
+                      <div className="absolute inset-7 rounded-full border border-stone-800/25 pointer-events-none" />
                     </div>
 
                     {/* --- 2. 3D DIE-CAST PLATTER & GROOVED HIGH-GLOSS VINYL RECORD --- */}
-                    <div className="absolute left-[44%] top-[50%] -translate-x-1/2 -translate-y-1/2 flex items-center justify-center z-10">
-                      
+                    <div 
+                      className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center z-10"
+                      style={{ left: '112px', top: '122px' }}
+                    >
                       {/* Heavy 3D Die-Cast Aluminum Platter with Chamfered Stroboscopic Rim */}
-                      <div className="platter-chassis w-[178px] h-[178px] sm:w-[202px] sm:h-[202px] flex items-center justify-center relative">
-                        
+                      <div className="platter-chassis w-[152px] h-[152px] flex items-center justify-center relative">
                         {/* Outer Strobe Dot Ring */}
                         <div className="strobe-dot-ring" />
 
                         {/* High-Gloss Grooved Vinyl Record with Anisotropic Twin-Sheen Reflection */}
                         <div 
                           onClick={() => setIsPlaying(!isPlaying)}
-                          className={`w-[162px] h-[162px] sm:w-[184px] sm:h-[184px] rounded-full relative flex items-center justify-center shadow-2xl cursor-pointer ${
+                          className={`w-[140px] h-[140px] rounded-full relative flex items-center justify-center shadow-2xl cursor-pointer ${
                             isPlaying ? 'vinyl-active-spin' : ''
                           }`}
                           style={{
@@ -1535,16 +1574,15 @@ export default function App() {
                         >
                           {/* Micro-Grooves Concentric Rings */}
                           <div className="absolute inset-2 rounded-full border border-stone-700/50 pointer-events-none" />
-                          <div className="absolute inset-5 rounded-full border border-stone-800/60 pointer-events-none" />
-                          <div className="absolute inset-8 rounded-full border border-stone-700/40 pointer-events-none" />
-                          <div className="absolute inset-12 rounded-full border border-stone-800/50 pointer-events-none" />
+                          <div className="absolute inset-4 rounded-full border border-stone-800/60 pointer-events-none" />
+                          <div className="absolute inset-7 rounded-full border border-stone-700/40 pointer-events-none" />
+                          <div className="absolute inset-10 rounded-full border border-stone-800/50 pointer-events-none" />
 
-                          {/* Pure Standard Vinyl Center Label (Minimalist, Luxurious, Matching Track Colors) */}
-                          <div className={`w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-gradient-to-tr ${currentTrack.colorFrom} ${currentTrack.colorTo} border border-amber-300/70 flex flex-col items-center justify-center shadow-xl relative z-10 text-center select-none`}>
-                            {/* Inner Gold Foil Hairline Ring */}
-                            <div className="absolute inset-1 rounded-full border border-amber-200/50 pointer-events-none" />
-                            {/* Solid Polished Brass & Steel Spindle Pin */}
-                            <div className="w-3.5 h-3.5 rounded-full bg-stone-950 border border-white/60 flex items-center justify-center shadow-inner">
+                          {/* Minimalist Vinyl Center Label */}
+                          <div className={`w-9 h-9 rounded-full bg-gradient-to-tr ${currentTrack.colorFrom} ${currentTrack.colorTo} border border-amber-300/70 flex flex-col items-center justify-center shadow-xl relative z-10 text-center select-none`}>
+                            <div className="absolute inset-0.5 rounded-full border border-amber-200/50 pointer-events-none" />
+                            {/* Solid Spindle Pin */}
+                            <div className="w-3 h-3 rounded-full bg-stone-950 border border-white/60 flex items-center justify-center shadow-inner">
                               <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-amber-200 to-amber-500 shadow" />
                             </div>
                           </div>
@@ -1554,92 +1592,391 @@ export default function App() {
 
                     </div>
 
-                    {/* --- 3. TACTILE METALLIC START / STOP PUSHBUTTON (Front-Left Corner, Clean & Standard) --- */}
+                    {/* --- 3. TACTILE METALLIC START / STOP PUSHBUTTON --- */}
                     <button
                       onClick={() => setIsPlaying(!isPlaying)}
-                      className="absolute bottom-3 left-3 sm:bottom-3.5 sm:left-3.5 z-30 px-3 py-1.5 rounded-full bg-gradient-to-b from-stone-800 via-stone-900 to-black border border-white/30 shadow-[0_4px_12px_rgba(0,0,0,0.85),inset_0_1px_2px_rgba(255,255,255,0.4)] hover:border-amber-400/60 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer group/btn"
+                      className="absolute bottom-2.5 left-2.5 sm:bottom-3 sm:left-3 z-30 px-2.5 py-1 rounded-full bg-gradient-to-b from-stone-800 via-stone-900 to-black border border-white/30 shadow-[0_4px_10px_rgba(0,0,0,0.85),inset_0_1px_2px_rgba(255,255,255,0.4)] hover:border-amber-400/60 active:scale-95 transition-all flex items-center gap-1.5 cursor-pointer group/btn"
                       title={isPlaying ? "Stop Turntable" : "Start Turntable"}
                     >
-                      <div className={`w-2.5 h-2.5 rounded-full transition-colors ${isPlaying ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-stone-600'}`} />
-                      <span className="text-[9px] font-mono font-bold tracking-wider text-stone-200 group-hover/btn:text-white uppercase select-none">
+                      <div className={`w-2 h-2 rounded-full transition-colors ${isPlaying ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-stone-600'}`} />
+                      <span className="text-[8.5px] font-sans font-bold tracking-wider text-stone-200 group-hover/btn:text-white uppercase select-none">
                         {isPlaying ? 'STOP' : 'START'}
                       </span>
                     </button>
 
-                    {/* --- 4. ARTICULATED TONEARM & POLISHED SILVER REST CRADLE --- */}
-                    
-                    {/* Polished Machined Silver Tonearm Rest Cradle (قسمت نقره‌ای - Positioned naturally close beside the disc) */}
-                    <div className="absolute top-[128px] right-[34px] sm:right-[38px] z-15 flex flex-col items-center pointer-events-none">
-                      {/* Silver Machined Pillar */}
-                      <div className="w-2 h-4 bg-gradient-to-b from-stone-100 via-stone-300 to-stone-500 rounded-xs shadow-[0_2px_5px_rgba(0,0,0,0.85)] border-x border-white/80" />
-                      {/* Silver Cradle Fork */}
-                      <div className="w-4.5 h-1.5 bg-gradient-to-r from-stone-300 via-white to-stone-300 rounded-full border border-stone-300 shadow-sm" />
+                    {/* --- 4. STATIONARY POLISHED MACHINED SILVER TONARMARM REST CRADLE (Lifted cleanly off the disc when stopped!) --- */}
+                    <div 
+                      className="absolute pointer-events-none z-20 flex flex-col items-center"
+                      style={{ 
+                        left: '208px', 
+                        top: '158px',
+                        transform: 'translate(-50%, -50%)'
+                      }}
+                      title="Tonearm Silver Rest Cradle"
+                    >
+                      {/* Silver Cradle Fork with U-notch */}
+                      <div className="w-5 h-2 rounded-full bg-gradient-to-r from-stone-300 via-white to-stone-300 border border-stone-200 shadow-[0_2px_4px_rgba(0,0,0,0.85)] flex items-center justify-center relative">
+                        <div className="w-3 h-1 bg-stone-700/80 rounded-full" />
+                      </div>
+                      {/* Silver Machined Stand Pillar */}
+                      <div className="w-1.5 h-4.5 bg-gradient-to-b from-stone-100 via-stone-300 to-stone-500 rounded-b shadow-[0_2px_4px_rgba(0,0,0,0.9)] border-x border-white/70" />
+                      {/* Base Mounting Ring */}
+                      <div className="w-3.5 h-1 bg-gradient-to-r from-stone-400 via-stone-200 to-stone-500 rounded-full shadow" />
                     </div>
 
-                    {/* Slim Luxury Classic Brass & Chrome Tonearm Assembly (Brought comfortably closer to disc) */}
+                    {/* --- 5. ARTICULATED TONEARM ASSEMBLY (Swings to the LEFT onto disc when playing, rests squarely on silver holder when stopped!) --- */}
                     <div 
-                      className="absolute top-3 right-5 sm:top-3.5 sm:right-6 w-14 h-34 origin-[34px_18px] transition-transform duration-[850ms] cubic-bezier(0.25, 0.8, 0.25, 1) pointer-events-none z-25"
+                      className="absolute pointer-events-none z-30"
                       style={{
-                        transform: isPlaying ? 'rotate(30deg)' : 'rotate(0deg)'
+                        left: '232px',
+                        top: '40px',
+                        transform: isPlaying ? 'rotate(25deg)' : 'rotate(0deg)',
+                        transformOrigin: '0px 0px',
+                        transition: 'transform 850ms cubic-bezier(0.25, 0.8, 0.25, 1)'
                       }}
                     >
-                      {/* Gimbal Pivot Base with Concentric Bearing Rings & Ruby Jewel Bearing */}
-                      <div className="absolute top-1 right-2.5 w-7 h-7 rounded-full bg-gradient-to-br from-amber-200 via-amber-500 to-amber-800 border border-amber-300 shadow-xl flex items-center justify-center">
-                        <div className="w-4.5 h-4.5 rounded-full bg-gradient-to-tr from-stone-800 to-stone-950 border border-amber-500/50 flex items-center justify-center">
-                          {/* Ruby Jewel Bearing Core */}
-                          <div className="w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_5px_#f43f5e]" />
+                      {/* Gimbal Pivot Base with Ruby Jewel Bearing */}
+                      <div className="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-gradient-to-br from-amber-200 via-amber-500 to-amber-800 border border-amber-300 shadow-xl flex items-center justify-center">
+                        <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-stone-800 to-stone-950 border border-amber-500/50 flex items-center justify-center">
+                          <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e]" />
                         </div>
                       </div>
 
                       {/* Cylindrical Numbered Brass Counterweight extending behind gimbal */}
-                      <div className="absolute -top-1 right-4.5 w-3.5 h-3 bg-gradient-to-b from-amber-100 via-amber-400 to-amber-700 rounded-2xs border border-amber-300 shadow" />
+                      <div className="absolute -top-2.5 left-2.5 w-3.5 h-3 bg-gradient-to-b from-amber-100 via-amber-400 to-amber-700 rounded-2xs border border-amber-300 shadow-[0_2px_4px_rgba(0,0,0,0.8)]" />
 
-                      {/* Polished Champagne Brass & Chrome Tonearm Tube */}
-                      <svg viewBox="0 0 40 100" className="absolute top-3.5 right-1 w-10 h-28 overflow-visible filter drop-shadow-[2px_4px_6px_rgba(0,0,0,0.85)]">
+                      {/* Polished Champagne Brass & Chrome Curved Tonearm Tube */}
+                      <svg 
+                        className="absolute -left-[50px] -top-[10px] w-[100px] h-[150px] overflow-visible pointer-events-none filter drop-shadow-[2px_3px_5px_rgba(0,0,0,0.85)]" 
+                        viewBox="-50 -10 100 150"
+                      >
                         <path 
-                          d="M27 0 L27 80 L23 95" 
+                          d="M 0 0 C 0 32, 8 60, -8 88 C -16 104, -20 112, -24 118" 
                           fill="none" 
-                          stroke="url(#brass-chrome-tonearm)" 
+                          stroke="url(#brass-chrome-tonearm-deck-compact)" 
                           strokeWidth="2.8" 
                           strokeLinecap="round" 
                         />
                         <defs>
-                          <linearGradient id="brass-chrome-tonearm" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <linearGradient id="brass-chrome-tonearm-deck-compact" x1="0%" y1="0%" x2="100%" y2="0%">
                             <stop offset="0%" stopColor="#fef08a" />
-                            <stop offset="40%" stopColor="#ffffff" />
-                            <stop offset="75%" stopColor="#d97706" />
+                            <stop offset="35%" stopColor="#ffffff" />
+                            <stop offset="70%" stopColor="#d97706" />
                             <stop offset="100%" stopColor="#78350f" />
                           </linearGradient>
                         </defs>
                       </svg>
 
-                      {/* Precision Angled Headshell & Cartridge with Diamond Stylus Needle */}
-                      <div className="absolute bottom-0 right-[15px] w-3.5 h-6 bg-gradient-to-b from-stone-950 via-stone-800 to-black border border-amber-500/50 rounded-2xs shadow-2xl flex flex-col justify-between p-0.5">
-                        <div className="w-2 h-1 bg-amber-400 rounded-2xs mx-auto" />
-                        {/* Illuminated Stylus Cueing Spotlight (Shines directly ON the vinyl record grooves when playing!) */}
-                        <div className={`w-1.5 h-1.5 rounded-full mx-auto transition-opacity ${isPlaying ? 'bg-amber-300 shadow-[0_0_8px_4px_rgba(251,191,36,0.95)] opacity-100' : 'bg-stone-700 opacity-20'}`} />
+                      {/* Precision Angled Black Headshell & Cartridge (Rests squarely on the silver cradle fork when stopped!) */}
+                      <div 
+                        className="absolute w-3.5 h-6 bg-gradient-to-b from-stone-950 via-stone-900 to-black border border-amber-500/60 rounded-xs shadow-[0_4px_10px_rgba(0,0,0,0.95)] flex flex-col justify-between p-0.5"
+                        style={{
+                          left: '-24px',
+                          top: '118px',
+                          transform: 'translate(-50%, -50%) rotate(-14deg)'
+                        }}
+                      >
+                        {/* Gold Brand Plate & Finger Lift */}
+                        <div className="flex items-center justify-between px-0.5">
+                          <div className="w-1.5 h-0.5 bg-amber-400 rounded-2xs" />
+                          <div className="w-1 h-1.5 bg-gradient-to-r from-amber-300 to-amber-600 rounded-2xs -mr-0.5" />
+                        </div>
+                        {/* Illuminated Stylus Cueing Spotlight */}
+                        <div className="flex items-center justify-center pt-0.5">
+                          <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
+                            isPlaying 
+                              ? 'bg-amber-300 shadow-[0_0_8px_3px_rgba(251,191,36,0.95)] opacity-100 scale-110' 
+                              : 'bg-stone-700 opacity-25'
+                          }`} />
+                        </div>
                       </div>
                     </div>
 
+                  </div>
+
+                </div>
+
+                {/* 2. COMPACT AURORA GREEN 3D LIQUID GLASS SOUND LIBRARY (Positioned directly under Wood Chassis, Aligned Right Edge) */}
+                <div className="liquid-glass-aurora-card relative rounded-[28px] sm:rounded-[32px] p-4 sm:p-5 border border-emerald-400/35 backdrop-blur-3xl overflow-hidden space-y-4 transition-all">
+                  
+                  {/* Aurora Borealis Shimmer, Liquid Waves & Specular Edge Light */}
+                  <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-emerald-300/90 to-transparent pointer-events-none" />
+                  <div className="absolute -top-32 -left-32 w-64 h-64 rounded-full bg-emerald-400/20 blur-3xl pointer-events-none" />
+                  <div className="absolute -bottom-32 -right-32 w-64 h-64 rounded-full bg-teal-400/20 blur-3xl pointer-events-none" />
+                  <div className="absolute inset-0 bg-radial-nodes opacity-10 pointer-events-none" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-white/[0.06] via-transparent to-black/30 pointer-events-none" />
+
+                  {/* Unified Header Bar: Navigation Tabs & Quick Actions */}
+                  <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-2.5 border-b border-emerald-400/20">
+                    
+                    {/* 3D Liquid Glass Rounded Navigation Pills */}
+                    <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto max-w-full pb-0.5 sm:pb-0 scrollbar-none shrink-0">
+                      
+                      {/* 1. MY LIBRARY */}
+                      <button 
+                        onClick={() => setMusicNavTab('library')}
+                        className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-bold font-sans tracking-wider uppercase transition-all duration-200 cursor-pointer select-none active:translate-y-[1px] whitespace-nowrap shrink-0 ${
+                          musicNavTab === 'library'
+                            ? 'bg-gradient-to-b from-emerald-400/40 via-emerald-500/30 to-teal-600/25 text-emerald-100 border border-emerald-300/70 shadow-[0_4px_18px_rgba(16,185,129,0.45),inset_0_1.5px_2px_rgba(255,255,255,0.45)] scale-[1.02]'
+                            : 'text-emerald-200/75 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] border border-emerald-500/20 hover:border-emerald-400/40'
+                        }`}
+                        title="Explore Sound Library"
+                      >
+                        <FolderHeart className={`w-3.5 h-3.5 ${musicNavTab === 'library' ? 'text-emerald-300' : 'text-emerald-400/70'}`} />
+                        <span>MY LIBRARY</span>
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-emerald-400/25 text-emerald-100 border border-emerald-400/40">
+                          {AURA_TRACKS.length}
+                        </span>
+                      </button>
+
+                      {/* 2. MY LIKES */}
+                      <button 
+                        onClick={() => setMusicNavTab('likes')}
+                        className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-bold font-sans tracking-wider uppercase transition-all duration-200 cursor-pointer select-none active:translate-y-[1px] whitespace-nowrap shrink-0 ${
+                          musicNavTab === 'likes'
+                            ? 'bg-gradient-to-b from-rose-500/40 via-rose-600/30 to-pink-700/25 text-rose-100 border border-rose-300/70 shadow-[0_4px_18px_rgba(244,63,94,0.45),inset_0_1.5px_2px_rgba(255,255,255,0.45)] scale-[1.02]'
+                            : 'text-emerald-200/75 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] border border-emerald-500/20 hover:border-rose-400/40'
+                        }`}
+                        title="My Liked Tracks"
+                      >
+                        <Heart className={`w-3.5 h-3.5 ${musicNavTab === 'likes' ? 'text-rose-300 fill-rose-400' : 'text-rose-400/70'}`} />
+                        <span>MY LIKES</span>
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-rose-500/25 text-rose-100 border border-rose-400/40">
+                          {Object.values(likedTracks).filter(Boolean).length}
+                        </span>
+                      </button>
+
+                      {/* 3. MY PLAYLISTS */}
+                      <button 
+                        onClick={() => setMusicNavTab('playlists')}
+                        className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-[11px] sm:text-xs font-bold font-sans tracking-wider uppercase transition-all duration-200 cursor-pointer select-none active:translate-y-[1px] whitespace-nowrap shrink-0 ${
+                          musicNavTab === 'playlists'
+                            ? 'bg-gradient-to-b from-teal-400/40 via-emerald-500/30 to-teal-700/25 text-teal-100 border border-teal-300/70 shadow-[0_4px_18px_rgba(45,212,191,0.45),inset_0_1.5px_2px_rgba(255,255,255,0.45)] scale-[1.02]'
+                            : 'text-emerald-200/75 hover:text-white bg-white/[0.06] hover:bg-white/[0.12] border border-emerald-500/20 hover:border-teal-400/40'
+                        }`}
+                        title="Curated Playlists"
+                      >
+                        <Disc3 className={`w-3.5 h-3.5 ${musicNavTab === 'playlists' ? 'text-teal-300' : 'text-teal-400/70'}`} />
+                        <span>MY PLAYLISTS</span>
+                        <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded-full bg-emerald-400/25 text-emerald-100 border border-emerald-400/40">
+                          4
+                        </span>
+                      </button>
+
+                    </div>
+
+                    {/* Right Contextual Controls */}
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {musicNavTab === 'library' && (
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/25 hover:bg-emerald-500/35 border border-emerald-400/40 text-emerald-100 text-[11px] font-bold transition-all cursor-pointer active:scale-95 shadow-sm"
+                        >
+                          <Upload className="w-3 h-3 text-emerald-300" />
+                          <span>Add MP3</span>
+                        </button>
+                      )}
+
+                      {musicNavTab === 'likes' && Object.values(likedTracks).filter(Boolean).length > 0 && (
+                        <button
+                          onClick={() => {
+                            const firstLiked = AURA_TRACKS.find(t => likedTracks[t.id]);
+                            if (firstLiked) selectAndPlayTrack(firstLiked);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 text-white text-[11px] font-bold tracking-wider shadow-md hover:brightness-110 transition-all cursor-pointer"
+                        >
+                          <Play className="w-3 h-3 fill-white" />
+                          <span>Play Likes</span>
+                        </button>
+                      )}
+                    </div>
+
+                  </div>
+
+                  {/* Integrated Space-Efficient Track List (Zero Wasted Space) */}
+                  <div className="relative z-10">
+                    {/* 1. MY LIBRARY LIST */}
+                    {musicNavTab === 'library' && (
+                      <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+                        {AURA_TRACKS.map(track => {
+                          const isCurrent = currentTrack.id === track.id;
+                          const isLiked = likedTracks[track.id];
+                          return (
+                            <div 
+                              key={track.id}
+                              onClick={() => selectAndPlayTrack(track)}
+                              className={`group flex items-center justify-between py-2 px-3 rounded-2xl transition-all cursor-pointer border ${
+                                isCurrent 
+                                  ? 'bg-emerald-500/25 border-emerald-300/70 shadow-[0_0_16px_rgba(16,185,129,0.3)]' 
+                                  : 'bg-emerald-950/40 hover:bg-emerald-900/50 border-emerald-500/15 hover:border-emerald-400/40'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 shadow border border-emerald-300/40 group-hover:scale-105 transition-transform relative">
+                                  <img 
+                                    src={track.artistPhoto} 
+                                    alt={track.title} 
+                                    className="w-full h-full object-cover" 
+                                  />
+                                  {isCurrent && isPlaying && (
+                                    <div className="absolute inset-0 bg-emerald-950/60 flex items-center justify-center">
+                                      <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399] animate-ping" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <h4 className={`text-xs font-bold truncate transition-colors ${isCurrent ? 'text-emerald-200' : 'text-white group-hover:text-emerald-100'}`}>
+                                    {track.title}
+                                  </h4>
+                                  <p className="text-[10.5px] text-emerald-200/70 truncate">{track.artist}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2.5 shrink-0 ml-2">
+                                <span className="hidden sm:inline-block px-2.5 py-0.5 rounded-full bg-black/40 border border-emerald-400/20 text-[10px] font-sans text-emerald-200">
+                                  {track.genre}
+                                </span>
+                                <button
+                                  onClick={(e) => toggleLikeTrack(track.id, e)}
+                                  className="p-1 hover:text-rose-400 transition-colors cursor-pointer"
+                                  title="Like"
+                                >
+                                  <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-rose-500 text-rose-500' : 'text-emerald-400/50 group-hover:text-emerald-200'}`} />
+                                </button>
+                                <span className="font-mono text-[10px] text-emerald-100/80 w-8 text-right">{track.duration}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {/* 2. MY LIKES LIST */}
+                    {musicNavTab === 'likes' && (
+                      <div>
+                        {Object.values(likedTracks).filter(Boolean).length > 0 ? (
+                          <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+                            {AURA_TRACKS.filter(t => likedTracks[t.id]).map(track => {
+                              const isCurrent = currentTrack.id === track.id;
+                              return (
+                                <div 
+                                  key={track.id}
+                                  onClick={() => selectAndPlayTrack(track)}
+                                  className={`group flex items-center justify-between py-2 px-3 rounded-2xl border transition-all cursor-pointer ${
+                                    isCurrent 
+                                      ? 'bg-rose-500/25 border-rose-400/60 shadow-[0_0_16px_rgba(244,63,94,0.3)]' 
+                                      : 'bg-emerald-950/40 hover:bg-emerald-900/50 border-emerald-500/15 hover:border-emerald-400/40'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3 min-w-0 flex-1">
+                                    <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 shadow border border-rose-300/40 group-hover:scale-105 transition-transform relative">
+                                      <img 
+                                        src={track.artistPhoto} 
+                                        alt={track.title} 
+                                        className="w-full h-full object-cover" 
+                                      />
+                                      {isCurrent && isPlaying && (
+                                        <div className="absolute inset-0 bg-rose-950/60 flex items-center justify-center">
+                                          <span className="w-2 h-2 rounded-full bg-rose-400 shadow-[0_0_8px_#fb7185] animate-ping" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                      <h4 className="text-xs font-bold text-white truncate">{track.title}</h4>
+                                      <p className="text-[10.5px] text-emerald-200/70 truncate">{track.artist}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2.5 shrink-0 ml-2">
+                                    <button
+                                      onClick={(e) => toggleLikeTrack(track.id, e)}
+                                      className="p-1 text-rose-500 hover:text-rose-400 cursor-pointer"
+                                      title="Unlike"
+                                    >
+                                      <Heart className="w-3.5 h-3.5 fill-rose-500 text-rose-500" />
+                                    </button>
+                                    <span className="text-[10px] font-mono text-emerald-100/80 w-8 text-right">{track.duration}</span>
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 space-y-2">
+                            <Heart className="w-6 h-6 text-rose-400 mx-auto" />
+                            <h4 className="text-xs font-bold text-white">No Liked Tracks Yet</h4>
+                            <p className="text-[11px] text-emerald-200/70">Click the heart on any track to pin it here.</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 3. MY PLAYLISTS LIST */}
+                    {musicNavTab === 'playlists' && (
+                      <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
+                        {getFilteredTracks().map(track => {
+                          const isCurrent = currentTrack.id === track.id;
+                          const isLiked = likedTracks[track.id];
+                          return (
+                            <div 
+                              key={track.id}
+                              onClick={() => selectAndPlayTrack(track)}
+                              className={`group flex items-center justify-between py-2 px-3 rounded-2xl border transition-all cursor-pointer ${
+                                isCurrent 
+                                  ? 'bg-emerald-500/25 border-emerald-300/70 shadow-[0_0_16px_rgba(16,185,129,0.3)]' 
+                                  : 'bg-emerald-950/40 hover:bg-emerald-900/50 border-emerald-500/15 hover:border-emerald-400/40'
+                              }`}
+                            >
+                              <div className="flex items-center gap-3 min-w-0 flex-1">
+                                <div className="w-9 h-9 rounded-full overflow-hidden shrink-0 shadow border border-teal-300/40 group-hover:scale-105 transition-transform relative">
+                                  <img 
+                                    src={track.artistPhoto} 
+                                    alt={track.title} 
+                                    className="w-full h-full object-cover" 
+                                  />
+                                  {isCurrent && isPlaying && (
+                                    <div className="absolute inset-0 bg-teal-950/60 flex items-center justify-center">
+                                      <span className="w-2 h-2 rounded-full bg-teal-400 shadow-[0_0_8px_#2dd4bf] animate-ping" />
+                                    </div>
+                                  )}
+                                </div>
+                                <div className="min-w-0 flex-1">
+                                  <h4 className="text-xs font-bold text-white truncate">{track.title}</h4>
+                                  <p className="text-[10.5px] text-emerald-200/70 truncate">{track.artist}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2.5 shrink-0 ml-2">
+                                <button
+                                  onClick={(e) => toggleLikeTrack(track.id, e)}
+                                  className="p-1 hover:text-rose-400 transition-colors cursor-pointer"
+                                  title="Favorite"
+                                >
+                                  <Heart className={`w-3.5 h-3.5 ${isLiked ? 'fill-rose-500 text-rose-500' : 'text-emerald-400/50'}`} />
+                                </button>
+                                <span className="text-[10px] font-mono text-emerald-100/80 w-8 text-right">{track.duration}</span>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                 </div>
 
               </div>
 
-              {/* RIGHT SIDEBAR: UP NEXT QUEUE (4 Columns) */}
-              <div className="lg:col-span-4 rounded-[32px] p-5 sm:p-6 bg-slate-950/35 backdrop-blur-2xl border border-white/10 flex flex-col justify-between space-y-4 shadow-xl">
+              {/* RIGHT SIDEBAR: SUGGESTIONS QUEUE (4 Columns, Aligned Alongside) */}
+              <div className="lg:col-span-4 rounded-[28px] sm:rounded-[36px] p-4 sm:p-5 bg-slate-950/50 backdrop-blur-3xl border border-white/15 flex flex-col justify-between space-y-3.5 shadow-2xl">
                 
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                {/* Header: Renamed to SUGGESTIONS without track count */}
+                <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="text-xs font-bold tracking-[0.14em] text-amber-300 font-sans uppercase">UP NEXT</span>
+                    <span className="text-xs font-bold tracking-[0.16em] text-amber-300 font-sans uppercase">SUGGESTIONS</span>
                   </div>
-                  <span className="text-xs font-sans text-slate-300/80 font-medium">{getFilteredTracks().length} TRACKS</span>
                 </div>
 
-                {/* Track List */}
-                <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1 scrollbar-thin flex-1">
+                {/* Track List - Rounded & Compact */}
+                <div className="space-y-1.5 max-h-[520px] overflow-y-auto pr-1 scrollbar-thin flex-1">
                   {getFilteredTracks().map((track, idx) => {
                     const isCurrent = currentTrack.id === track.id;
                     const isLiked = likedTracks[track.id];
@@ -1647,13 +1984,13 @@ export default function App() {
                       <div 
                         key={track.id}
                         onClick={() => selectAndPlayTrack(track)}
-                        className={`group flex items-center justify-between p-2.5 rounded-2xl transition-all cursor-pointer border ${
+                        className={`group flex items-center justify-between py-2 px-3.5 rounded-full transition-all cursor-pointer border ${
                           isCurrent 
-                            ? 'bg-amber-500/15 border-amber-400/35 shadow-[0_0_15px_rgba(245,158,11,0.15)]' 
-                            : 'bg-white/5 hover:bg-white/10 border-transparent hover:border-white/10'
+                            ? 'bg-amber-500/20 border-amber-400/40 shadow-[0_0_15px_rgba(245,158,11,0.2)]' 
+                            : 'bg-white/[0.04] hover:bg-white/[0.09] border-transparent hover:border-white/10'
                         }`}
                       >
-                        <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           {/* Index or Live Equalizer */}
                           <div className="w-5 text-center shrink-0">
                             {isCurrent && isPlaying ? (
@@ -1669,9 +2006,18 @@ export default function App() {
                             )}
                           </div>
 
-                          {/* Cover Art */}
-                          <div className={`w-9 h-9 rounded-xl bg-gradient-to-tr ${track.colorFrom} ${track.colorTo} flex items-center justify-center shrink-0 shadow-md relative overflow-hidden`}>
-                            <Music className="w-4 h-4 text-white/60" />
+                          {/* Cover Art - Rounded Full with Artist Photo */}
+                          <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 shadow-sm relative border border-white/25 group-hover:border-amber-300/60 transition-colors">
+                            <img 
+                              src={track.artistPhoto} 
+                              alt={track.title} 
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300" 
+                            />
+                            {isCurrent && isPlaying && (
+                              <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                                <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
+                              </div>
+                            )}
                           </div>
 
                           {/* Title & Artist */}
@@ -1699,106 +2045,104 @@ export default function App() {
                   })}
                 </div>
 
-                {/* Subtle Bottom Vibes Line */}
-                <div className="pt-2 border-t border-white/5 flex items-center gap-2 text-[10px] text-slate-400">
-                  <span className="text-amber-400 font-mono font-medium">VIBES:</span>
-                  <div className="flex items-center gap-1.5 truncate">
-                    {currentTrack.vibes.map((v, i) => (
-                      <React.Fragment key={v}>
-                        {i > 0 && <span className="opacity-40">·</span>}
-                        <span>{v}</span>
-                      </React.Fragment>
-                    ))}
-                  </div>
-                </div>
-
               </div>
 
             </div>
 
             {/* --- LOCKED DOCKED 3D LIQUID GLASS BOTTOM MEDIA CONTROLLER (ALWAYS VISIBLE & PINNED) --- */}
-            <div className="fixed bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-3.5rem)] max-w-2xl z-50 pointer-events-auto">
-              <div className="relative w-full px-4 sm:px-6 py-2.5 sm:py-3 rounded-full backdrop-blur-3xl bg-stone-950/92 border border-white/20 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.28),_inset_0_-1px_2px_rgba(0,0,0,0.5),_0_20px_50px_rgba(0,0,0,0.85),_0_0_35px_rgba(245,158,11,0.12)] flex items-center justify-between gap-3 sm:gap-4 transition-all duration-300 overflow-hidden">
+            <div className="fixed bottom-2.5 sm:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1rem)] sm:w-[calc(100%-3.5rem)] max-w-2xl z-50 pointer-events-auto">
+              <div className="relative w-full px-3 sm:px-6 py-2 sm:py-3 rounded-[24px] sm:rounded-[30px] backdrop-blur-3xl bg-slate-950/92 border border-white/15 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.22),_0_20px_50px_rgba(0,0,0,0.85)] flex items-center justify-between gap-2 sm:gap-4 transition-all duration-300 overflow-hidden">
                 
-                {/* Background Ambient Audio-Reactive Aurora Ribbon (Fine Curved Lines with Luminous Halo) */}
-                <div className="absolute inset-0 rounded-full overflow-hidden pointer-events-none z-0">
-                  <canvas 
-                    ref={freqCanvasRef} 
-                    className={`w-full h-full block transition-opacity duration-500 ${isPlaying ? 'opacity-55' : 'opacity-15'}`} 
-                  />
-                  {/* Soft Specular Glass Reflection Sheen */}
-                  <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-black/40 pointer-events-none rounded-full" />
-                </div>
+                {/* Brand-Colored Subtle Hairline Accents on Controller Background */}
+                <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-emerald-400/80 via-cyan-300/60 to-purple-400/80 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-purple-500/25 via-transparent to-emerald-500/25 pointer-events-none" />
+                <div className="absolute inset-0 bg-gradient-to-b from-white/[0.05] via-transparent to-black/35 pointer-events-none rounded-[24px] sm:rounded-[30px]" />
 
-                {/* 1. LEFT ZONE: Current Track Identity (Clean & Minimal - No Border Box) */}
-                <div className="min-w-0 max-w-[130px] sm:max-w-[170px] text-left relative z-10 shrink-0">
-                  <h4 className="text-xs sm:text-sm font-bold text-white truncate font-sans">
-                    {currentTrack.title}
-                  </h4>
-                  <p className="text-[10px] sm:text-[11px] text-stone-300 font-medium truncate mt-0.5">
-                    {currentTrack.artist}
-                  </p>
+                {/* 1. LEFT ZONE: Current Track Identity with Circular Cover Art */}
+                <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 max-w-[95px] sm:max-w-[190px] text-left relative z-10 shrink-0">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden shrink-0 border border-amber-300/40 shadow-sm relative ring-1 ring-amber-500/20">
+                    <img 
+                      src={currentTrack.artistPhoto || 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=300&q=80'} 
+                      alt={currentTrack.title} 
+                      className="w-full h-full object-cover" 
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="text-[11px] sm:text-sm font-bold text-white truncate font-sans">
+                      {currentTrack.title}
+                    </h4>
+                    <p className="text-[9.5px] sm:text-xs text-slate-300 font-sans font-medium truncate">
+                      {currentTrack.artist}
+                    </p>
+                  </div>
                 </div>
 
                 {/* 2. CENTER ZONE: Transport Controls & Interactive Scrubber (Balanced Standard Spacing) */}
-                <div className="flex-1 min-w-0 max-w-sm sm:max-w-md flex flex-col items-center gap-2.5 sm:gap-3 px-1 sm:px-2 relative z-10">
-                  {/* Subtle frosted glass grouping cradle around buttons for high visual clarity */}
-                  <div className="flex items-center gap-1.5 sm:gap-2.5 px-3 py-1 rounded-full bg-white/[0.05] border border-white/10 backdrop-blur-md shadow-[inset_0_1px_2px_rgba(255,255,255,0.08)]">
-                    {/* Shuffle Button */}
-                    <button 
-                      onClick={() => setIsShuffle(!isShuffle)}
-                      className={`p-1.5 rounded-full transition-all cursor-pointer ${
-                        isShuffle ? 'text-amber-300 bg-amber-400/20' : 'text-stone-400 hover:text-white'
-                      }`}
-                      title={isShuffle ? "Shuffle On" : "Shuffle Off"}
-                    >
-                      <Shuffle className="w-3.5 h-3.5" />
-                    </button>
+                <div className="flex-1 min-w-0 max-w-xs sm:max-w-md flex flex-col items-center gap-1 sm:gap-2 px-0.5 sm:px-2 relative z-10">
+                  {/* Subtle frosted glass grouping cradle with delicate cloudy diffused neon halo around transport buttons */}
+                  <div className="relative group/player-cradle">
+                    {/* Soft cloudy, delicate diffused neon ambient halo */}
+                    <div className="player-neon-cloud" />
 
-                    <button 
-                      onClick={handlePrevTrack}
-                      className="p-1.5 rounded-full text-stone-300 hover:text-amber-300 hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
-                      title="Previous track"
-                    >
-                      <SkipBack className="w-4 h-4" />
-                    </button>
+                    <div className="relative flex items-center gap-1 sm:gap-2.5 px-2.5 sm:px-3.5 py-1 sm:py-1.5 rounded-full bg-slate-950/75 border border-amber-400/35 backdrop-blur-xl shadow-[0_4px_22px_rgba(245,158,11,0.25),inset_0_1.5px_2px_rgba(255,255,255,0.18)]">
+                      {/* Shuffle Button (Hidden on Mobile for Optimal Spacing) */}
+                      <button 
+                        onClick={() => setIsShuffle(!isShuffle)}
+                        className={`hidden sm:inline-flex p-1.5 rounded-full transition-all cursor-pointer ${
+                          isShuffle ? 'text-amber-300 bg-amber-400/20 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'text-stone-400 hover:text-white'
+                        }`}
+                        title={isShuffle ? "Shuffle On" : "Shuffle Off"}
+                      >
+                        <Shuffle className="w-3.5 h-3.5" />
+                      </button>
 
-                    <button 
-                      onClick={() => setIsPlaying(!isPlaying)}
-                      className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-200 text-slate-950 flex items-center justify-center hover:scale-108 active:scale-95 transition-all shadow-[0_0_18px_rgba(245,158,11,0.7)] cursor-pointer"
-                      title={isPlaying ? "Pause" : "Play"}
-                    >
-                      {isPlaying ? (
-                        <Pause className="w-4.5 h-4.5 fill-slate-950 text-slate-950" />
-                      ) : (
-                        <Play className="w-4.5 h-4.5 fill-slate-950 text-slate-950 ml-0.5" />
-                      )}
-                    </button>
+                      <button 
+                        onClick={handlePrevTrack}
+                        className="p-1 sm:p-1.5 rounded-full text-stone-300 hover:text-amber-300 hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
+                        title="Previous track"
+                      >
+                        <SkipBack className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </button>
 
-                    <button 
-                      onClick={handleNextTrack}
-                      className="p-1.5 rounded-full text-stone-300 hover:text-amber-300 hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
-                      title="Next track"
-                    >
-                      <SkipForward className="w-4 h-4" />
-                    </button>
+                      <button 
+                        onClick={() => setIsPlaying(!isPlaying)}
+                        className="relative w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-200 text-slate-950 flex items-center justify-center hover:scale-108 active:scale-95 transition-all shadow-[0_0_20px_rgba(245,158,11,0.75)] cursor-pointer group/playbtn shrink-0"
+                        title={isPlaying ? "Pause" : "Play"}
+                      >
+                        {/* Concentric subtle play ring */}
+                        <span className={`absolute -inset-1 rounded-full border border-yellow-300/40 pointer-events-none ${isPlaying ? 'animate-pulse' : ''}`} />
+                        {isPlaying ? (
+                          <Pause className="w-4 h-4 fill-slate-950 text-slate-950" />
+                        ) : (
+                          <Play className="w-4 h-4 fill-slate-950 text-slate-950 ml-0.5" />
+                        )}
+                      </button>
 
-                    {/* Repeat Button */}
-                    <button 
-                      onClick={() => setIsRepeat(!isRepeat)}
-                      className={`p-1.5 rounded-full transition-all cursor-pointer ${
-                        isRepeat ? 'text-amber-300 bg-amber-400/20' : 'text-stone-400 hover:text-white'
-                      }`}
-                      title={isRepeat ? "Repeat On" : "Repeat Off"}
-                    >
-                      <Repeat className="w-3.5 h-3.5" />
-                    </button>
+                      <button 
+                        onClick={handleNextTrack}
+                        className="p-1 sm:p-1.5 rounded-full text-stone-300 hover:text-amber-300 hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
+                        title="Next track"
+                      >
+                        <SkipForward className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                      </button>
+
+                      {/* Repeat Button (Hidden on Mobile for Optimal Spacing) */}
+                      <button 
+                        onClick={() => setIsRepeat(!isRepeat)}
+                        className={`hidden sm:inline-flex p-1.5 rounded-full transition-all cursor-pointer ${
+                          isRepeat ? 'text-amber-300 bg-amber-400/20 shadow-[0_0_8px_rgba(245,158,11,0.5)]' : 'text-stone-400 hover:text-white'
+                        }`}
+                        title={isRepeat ? "Repeat On" : "Repeat Off"}
+                      >
+                        <Repeat className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
 
-                  {/* Track Progress Scrubber with Balanced Dimension & Spacing */}
-                  <div className="w-full flex items-center gap-2.5">
-                    <span className="text-[8.5px] font-mono text-stone-400 w-7 text-right shrink-0">
-                      {Math.floor(trackProgress * 0.05)}:{(Math.floor(trackProgress * 3) % 60).toString().padStart(2, '0')}
+                  {/* Track Progress Scrubber with Precision Synchronized Time */}
+                  <div className="w-full h-5 flex items-center gap-1.5 sm:gap-2.5">
+                    <span className="text-[9px] sm:text-[10px] font-mono font-bold text-amber-200/90 w-7 sm:w-8 text-right shrink-0 select-none">
+                      {formatSecondsToDisplay(currentTrackSeconds)}
                     </span>
                     
                     <div 
@@ -1808,35 +2152,49 @@ export default function App() {
                         const newPct = Math.min(100, Math.max(0, (clickX / rect.width) * 100));
                         handleSeek(newPct);
                       }}
-                      className="flex-1 h-1.5 bg-white/10 hover:bg-white/20 rounded-full overflow-hidden cursor-pointer relative group/scrubber transition-all"
+                      className="flex-1 h-1.5 sm:h-2 bg-white/10 hover:bg-white/20 rounded-full overflow-hidden cursor-pointer relative group/scrubber transition-all"
                     >
                       <div 
-                        className="h-full bg-gradient-to-r from-amber-500 via-amber-300 to-yellow-200 rounded-full relative transition-all duration-200" 
-                        style={{ width: `${trackProgress}%` }}
+                        className="h-full bg-gradient-to-r from-amber-500 via-amber-300 to-yellow-200 rounded-full relative transition-all duration-150" 
+                        style={{ width: `${Math.min(100, Math.max(0, trackProgress))}%` }}
                       >
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 h-2 rounded-full bg-white shadow-[0_0_8px_#fef08a] opacity-0 group-hover/scrubber:opacity-100 transition-opacity" />
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-white shadow-[0_0_10px_#fef08a] opacity-0 group-hover/scrubber:opacity-100 transition-opacity" />
                       </div>
                     </div>
 
-                    <span className="text-[8px] font-mono text-stone-400 w-7 text-left shrink-0">
+                    <span className="text-[9px] sm:text-[10px] font-mono font-medium text-stone-400 w-7 sm:w-8 text-left shrink-0 select-none">
                       {currentTrack.duration}
                     </span>
                   </div>
                 </div>
 
-                {/* 3. RIGHT ZONE: Integrated Master Volume Slider */}
-                <div className="flex justify-end items-center gap-2 shrink-0 relative z-10">
-                  {/* Master Volume Controller */}
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/[0.05] border border-white/10 backdrop-blur-md shadow-[inset_0_1px_2px_rgba(255,255,255,0.08)]">
+                {/* 3. RIGHT ZONE: Enriched Wave Orb (Matches Transport Cradle Height) + Volume Aligned with Scrubber */}
+                <div className="flex flex-col items-center justify-between self-stretch shrink-0 relative z-10 py-0.5">
+                  
+                  {/* Circular Button for Dynamic Wavy Visualizer (Enlarged to match transport buttons cradle) */}
+                  <div 
+                    className="w-9 h-9 sm:w-10 sm:h-10 rounded-full overflow-hidden border border-emerald-400/45 bg-slate-950/90 shadow-[0_0_15px_rgba(52,211,153,0.35),inset_0_1px_2px_rgba(255,255,255,0.4)] relative flex items-center justify-center cursor-pointer group hover:scale-105 transition-transform"
+                    title="Audio-Reactive Frequency Waveform (Northern Aurora Engine)"
+                  >
+                    <canvas 
+                      ref={freqCanvasRef} 
+                      className={`w-full h-full block transition-opacity duration-300 ${isPlaying ? 'opacity-95' : 'opacity-40'}`} 
+                    />
+                    {/* Glass Specular Rim */}
+                    <div className="absolute inset-0 rounded-full border border-white/20 pointer-events-none" />
+                  </div>
+
+                  {/* Volume Control - Perfectly Aligned Horizontally with the Time Scrubber Line */}
+                  <div className="h-5 flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 rounded-full bg-white/[0.05] border border-white/10 backdrop-blur-md shadow-[inset_0_1px_2px_rgba(255,255,255,0.06)]">
                     <button 
                       onClick={() => setAmbientVolume(v => (v > 0 ? 0 : 70))}
-                      className="text-stone-300 hover:text-amber-300 transition-colors cursor-pointer"
+                      className="text-stone-300 hover:text-amber-300 transition-colors cursor-pointer flex items-center justify-center"
                       title={ambientVolume === 0 ? "Unmute" : "Mute"}
                     >
                       {ambientVolume === 0 ? (
-                        <VolumeX className="w-3.5 h-3.5 text-rose-400" />
+                        <VolumeX className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-rose-400" />
                       ) : (
-                        <Volume2 className="w-3.5 h-3.5 text-amber-400" />
+                        <Volume2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-amber-400" />
                       )}
                     </button>
                     <input 
@@ -1845,10 +2203,11 @@ export default function App() {
                       max="100" 
                       value={ambientVolume}
                       onChange={(e) => setAmbientVolume(Number(e.target.value))}
-                      className="w-12 sm:w-16 h-1 bg-white/15 rounded-lg appearance-none cursor-pointer accent-amber-400"
+                      className="hidden sm:inline-block w-12 sm:w-14 h-1 bg-white/15 rounded-lg appearance-none cursor-pointer accent-amber-400"
                       title={`Volume: ${ambientVolume}%`}
                     />
                   </div>
+
                 </div>
 
               </div>

@@ -1254,3 +1254,165 @@
     inset 0 1px 2px rgba(255, 255, 255, 0.75), 
     inset 0 0 32px rgba(168, 85, 247, 0.22);
 }
+
+/* Distinctive Holographic Cosmic Weave Texture for Portal Header Button */
+.portal-nav-btn-texture {
+  background-color: #171107;
+  background-image: 
+    radial-gradient(ellipse at 50% 0%, rgba(251, 191, 36, 0.35) 0%, transparent 75%),
+    radial-gradient(1.2px 1.2px at 4px 4px, rgba(254, 240, 138, 0.45), transparent),
+    radial-gradient(1.2px 1.2px at 12px 12px, rgba(245, 158, 11, 0.35), transparent),
+    linear-gradient(135deg, rgba(245, 158, 11, 0.22) 0%, rgba(180, 83, 9, 0.12) 50%, rgba(120, 53, 15, 0.25) 100%);
+  background-size: 100% 100%, 16px 16px, 16px 16px, 100% 100%;
+}
+
+.portal-nav-btn-texture-active {
+  background-image: 
+    radial-gradient(ellipse at 50% 20%, rgba(255, 255, 255, 0.8) 0%, transparent 60%),
+    radial-gradient(1.2px 1.2px at 4px 4px, rgba(120, 53, 15, 0.3), transparent),
+    radial-gradient(1.2px 1.2px at 12px 12px, rgba(180, 83, 9, 0.25), transparent),
+    linear-gradient(135deg, #fef08a 0%, #f59e0b 55%, #d97706 100%);
+  background-size: 100% 100%, 16px 16px, 16px 16px, 100% 100%;
+}
+
+/* Delicate Diffused Cloudy Neon Glow for Player Controls */
+.player-neon-cloud {
+  position: absolute;
+  inset: -6px -10px;
+  border-radius: 9999px;
+  background: radial-gradient(ellipse at 50% 50%, rgba(245, 158, 11, 0.28) 0%, rgba(251, 191, 36, 0.14) 45%, transparent 75%);
+  filter: blur(10px);
+  pointer-events: none;
+  opacity: 0.85;
+  transition: opacity 0.4s ease, filter 0.4s ease;
+}
+.player-neon-cloud:hover {
+  opacity: 1;
+  filter: blur(12px);
+}
+
+/* Subtle 3D Liquid Glass Search Neon Halo */
+.search-neon-halo {
+  box-shadow: 
+    0 12px 35px rgba(0, 0, 0, 0.8),
+    0 0 24px rgba(245, 158, 11, 0.18),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.22),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Enhanced Aurora Liquid Glass Material Sheen */
+.liquid-glass-aurora-card {
+  background: linear-gradient(
+    145deg,
+    rgba(6, 78, 59, 0.82) 0%,
+    rgba(4, 47, 46, 0.88) 45%,
+    rgba(2, 44, 34, 0.95) 100%
+  );
+  box-shadow: 
+    0 30px 70px rgba(0, 0, 0, 0.9),
+    0 0 35px rgba(16, 185, 129, 0.14),
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.28),
+    inset 0 -1.5px 2px rgba(0, 0, 0, 0.6);
+}
+
+/* Authentic Vintage Acoustic Wood Veneer Chassis (Polished Rubberwood / Burl Mahogany) */
+.vintage-acoustic-wood-chassis {
+  background-color: #261105;
+  background-image: 
+    /* 1. High-Gloss Piano Lacquer Sheen & Ambient Spot Highlight */
+    radial-gradient(ellipse at 30% 20%, rgba(254, 215, 170, 0.26) 0%, rgba(245, 158, 11, 0.12) 35%, transparent 65%),
+    radial-gradient(ellipse at 75% 75%, rgba(180, 83, 9, 0.22) 0%, transparent 60%),
+    /* 2. Perfectly straight 90deg acoustic wood slats & grooved grain lines with wider, elegant spacing */
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 26px,
+      rgba(18, 5, 2, 0.55) 27px,
+      rgba(15, 4, 1, 0.75) 28px,
+      rgba(254, 215, 170, 0.16) 29px,
+      transparent 30px,
+      transparent 36px
+    ),
+    /* 3. Subtle straight micro-pore timber grain striation */
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 200, 120, 0.02) 0px,
+      rgba(255, 200, 120, 0.02) 1px,
+      transparent 1px,
+      transparent 9px
+    ),
+    /* 4. Organic burl wood growth swirls & warm amber-caramel undertones */
+    radial-gradient(ellipse at 20% 50%, rgba(217, 119, 6, 0.45) 0%, rgba(146, 64, 14, 0.35) 45%, rgba(69, 26, 3, 0.75) 85%, rgba(30, 10, 2, 0.95) 100%),
+    /* 5. Deep base mahogany & honey wood stain blend */
+    linear-gradient(
+      135deg,
+      #9a3412 0%,
+      #7c2d12 25%,
+      #451a03 60%,
+      #290e02 100%
+    );
+  background-size: 
+    100% 100%,
+    100% 100%,
+    36px 100%,
+    9px 100%,
+    100% 100%,
+    100% 100%;
+  border: 1px solid rgba(251, 191, 36, 0.42);
+  box-shadow: 
+    0 25px 65px rgba(0, 0, 0, 0.95),
+    0 0 35px rgba(217, 119, 6, 0.25),
+    inset 0 2px 3px rgba(255, 237, 213, 0.45),
+    inset 0 -3px 8px rgba(20, 5, 2, 0.85),
+    inset 0 0 28px rgba(0, 0, 0, 0.45);
+}
+
+/* Polished Wood Edge Highlight Trim */
+.wood-lacquer-reflection {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(
+    90deg, 
+    transparent 0%, 
+    rgba(254, 240, 138, 0.85) 20%, 
+    rgba(251, 191, 36, 0.95) 50%, 
+    rgba(254, 240, 138, 0.85) 80%, 
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Vintage Audio Console Brass & Bakelite Micro-Textured Badges */
+.wood-chassis-badge {
+  background: linear-gradient(180deg, rgba(40, 15, 5, 0.85) 0%, rgba(18, 6, 2, 0.95) 100%);
+  border: 1px solid rgba(251, 191, 36, 0.45);
+  box-shadow: 
+    inset 0 1px 1px rgba(254, 240, 138, 0.3), 
+    inset 0 -1px 2px rgba(0, 0, 0, 0.8), 
+    0 2px 5px rgba(0, 0, 0, 0.6);
+}
+
+/* Vintage Audio Console Push Button with Brushed Metal Bevel */
+.wood-chassis-btn {
+  background: linear-gradient(180deg, #451a03 0%, #290e02 55%, #150601 100%);
+  border: 1px solid rgba(251, 191, 36, 0.55);
+  box-shadow: 
+    0 4px 14px rgba(0, 0, 0, 0.8), 
+    inset 0 1.5px 2px rgba(254, 240, 138, 0.45), 
+    inset 0 -2px 3px rgba(0, 0, 0, 0.85);
+  transition: all 0.2s ease;
+}
+.wood-chassis-btn:hover {
+  background: linear-gradient(180deg, #5c2306 0%, #3a1403 55%, #1a0802 100%);
+  border-color: rgba(254, 240, 138, 0.85);
+  box-shadow: 
+    0 4px 18px rgba(245, 158, 11, 0.4), 
+    inset 0 1.5px 2px rgba(255, 255, 255, 0.6), 
+    inset 0 -2px 3px rgba(0, 0, 0, 0.85);
+}
+
+
+

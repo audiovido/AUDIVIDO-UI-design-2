@@ -9,6 +9,8 @@ export interface Track {
   id: string;
   title: string;
   artist: string;
+  album?: string;
+  artistPhoto?: string;
   duration: string;
   genre: string;
   vibes: string[];
@@ -112,7 +114,9 @@ export const AURA_TRACKS: Track[] = [
   {
     id: 'track-coffee-bars',
     title: '1 Minute Final',
-    artist: 'Chill Study (Your Uploaded Music)',
+    artist: 'Chill Study',
+    album: 'Midnight Vinyl Sessions',
+    artistPhoto: 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=300&q=80',
     duration: '1:00',
     genre: 'Smooth Lofi Beats',
     vibes: ['Cozy Rhodes', 'Warm Bass', 'Chill Hop'],
@@ -125,6 +129,8 @@ export const AURA_TRACKS: Track[] = [
     id: 'track-1',
     title: 'Raindrops on Log Rooftops',
     artist: 'Cabin Resonations',
+    album: 'Whispering Pines',
+    artistPhoto: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=300&q=80',
     duration: '4:20',
     genre: 'Acoustic / Field Recordings',
     vibes: ['Relaxed', 'Rainy', 'Woodwork'],
@@ -137,6 +143,8 @@ export const AURA_TRACKS: Track[] = [
     id: 'track-2',
     title: 'Solar Flare Symphony',
     artist: 'Andromeda Ambient',
+    album: 'Starlight Voyagers',
+    artistPhoto: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?auto=format&fit=crop&w=300&q=80',
     duration: '6:08',
     genre: 'Cosmic Drone',
     vibes: ['Ethereal', 'Spacious', 'Stellar'],
@@ -149,6 +157,8 @@ export const AURA_TRACKS: Track[] = [
     id: 'track-3',
     title: 'Fireside Pine Wood Crackle',
     artist: 'Hearth & Flute',
+    album: 'Winter Solstice',
+    artistPhoto: 'https://images.unsplash.com/photo-1465847899084-d164df4dedc6?auto=format&fit=crop&w=300&q=80',
     duration: '5:45',
     genre: 'Warm Ambient',
     vibes: ['Cozy', 'Warmth', 'Crackling'],
@@ -161,6 +171,8 @@ export const AURA_TRACKS: Track[] = [
     id: 'track-4',
     title: 'Nebular Reflection',
     artist: 'Deep Space Curation',
+    album: 'Celestial Odyssey',
+    artistPhoto: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?auto=format&fit=crop&w=300&q=80',
     duration: '7:15',
     genre: 'Synths & Pads',
     vibes: ['Astral', 'Nebula', 'Pensive'],
@@ -173,6 +185,8 @@ export const AURA_TRACKS: Track[] = [
     id: 'track-5',
     title: 'Aura Dust (Lofi Mix)',
     artist: 'Stardust Beatmaker',
+    album: 'Tokyo Midnight Chill',
+    artistPhoto: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=300&q=80',
     duration: '3:52',
     genre: 'Chillhop / Aura Nodes',
     vibes: ['Chill', 'Nodes', 'Relaxed'],
