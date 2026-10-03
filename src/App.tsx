@@ -23,6 +23,7 @@ import { MovieStreamingView } from './components/MovieStreamingView';
 import { SocialHubView } from './components/SocialHubView';
 import { AudioVidoBrandLogo } from './components/AudioVidoBrandLogo';
 import { MusicV2View } from './components/MusicV2View';
+import { MusicV4View } from './components/MusicV4View';
 
 // --- BESPOKE 3D SCULPTED EMBLEMS (STANDARD, HARMONIOUS & PROFESSIONAL) ---
 function AudioEmblem3D() {
@@ -359,8 +360,8 @@ export default function App() {
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const [customAudioUrl, setCustomAudioUrl] = useState<string>('/audio/coffee_bars.mp3');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // Navigation State: 'portal' | 'music' | 'movie' | 'community' | 'music2'
-  const [currentWorld, setCurrentWorld] = useState<'portal' | 'music' | 'movie' | 'community' | 'music2'>('portal');
+  // Navigation State: 'portal' | 'music' | 'movie' | 'community' | 'music2' | 'music4'
+  const [currentWorld, setCurrentWorld] = useState<'portal' | 'music' | 'movie' | 'community' | 'music2' | 'music4'>('portal');
   
   // Transition triggers
   const [isTraveling, setIsTraveling] = useState<boolean>(false);
@@ -614,6 +615,9 @@ export default function App() {
       } else if (currentWorld === 'movie') {
         if (audio) audio.pause();
         AudioSynth.playTrack('movie');
+      } else if (currentWorld === 'community') {
+        if (audio) audio.pause();
+        AudioSynth.playTrack('social-pad');
       } else {
         if (audio) audio.pause();
         AudioSynth.playTrack('music');
@@ -663,7 +667,7 @@ export default function App() {
   }, [isPlaying, currentWorld]);
 
   // --- TRANSITIONAL ZOOM PORTAL TRAVEL ---
-  const handleTravel = (destination: 'portal' | 'music' | 'movie' | 'community' | 'music2') => {
+  const handleTravel = (destination: 'portal' | 'music' | 'movie' | 'community' | 'music2' | 'music4') => {
     setIsTraveling(true);
     setTravelDestination(destination);
 
@@ -680,6 +684,14 @@ export default function App() {
       } else if (destination === 'movie') {
         if (audioPlayerRef.current) audioPlayerRef.current.pause();
         AudioSynth.playTrack('movie');
+        setIsPlaying(true);
+      } else if (destination === 'community') {
+        if (audioPlayerRef.current) audioPlayerRef.current.pause();
+        AudioSynth.playTrack('social-pad');
+        setIsPlaying(true);
+      } else if (destination === 'music4') {
+        if (audioPlayerRef.current) audioPlayerRef.current.pause();
+        AudioSynth.playTrack('aura-lofi');
         setIsPlaying(true);
       } else {
         if (audioPlayerRef.current) audioPlayerRef.current.pause();
@@ -1107,102 +1119,126 @@ export default function App() {
   }, [currentWorld, movieTab, isPlaying]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans relative overflow-x-hidden select-none aurora-bg transition-colors duration-1000">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans relative overflow-x-clip select-none aurora-bg transition-colors duration-1000">
       
       {/* GLOBAL COSMIC NIGHT SKY & AURORA BOREALIS & DYNAMIC METEORS */}
       <CosmicNightSky isPortal={currentWorld === 'portal'} />
 
-      {/* --- TOP BRANDING NAV BAR (3D LIQUID GLASS JEWEL NAVIGATION) --- */}
-      {/* Top Header: Brand Portal Gateway on Left, 3 Realm Navigation Pills (Audio, Video, Social) on Right */}
-      <header className="relative z-50 flex items-center justify-between px-3 sm:px-6 py-2 sm:py-3 bg-slate-950/85 backdrop-blur-3xl border-b border-white/10 shrink-0 gap-2">
+      {/* --- TOP BRANDING NAV BAR (PERMANENTLY FIXED & LOCKED AT TOP OF SCREEN) --- */}
+      <header className="fixed top-0 left-0 right-0 z-[999] flex items-center justify-between px-3 sm:px-6 py-2.5 bg-slate-950/90 backdrop-blur-3xl border-b border-white/10 shadow-[0_10px_35px_rgba(0,0,0,0.9)] shrink-0 gap-2 transition-all">
         
-        {/* Brand Portal Gateway Button (Exact Infinity Soundwave & Play Logo with Stylized AUDIOVIDO Typography) */}
-        <button 
-          onClick={() => handleTravel('portal')}
-          className={`flex items-center px-2 sm:px-3 py-1 sm:py-1.5 rounded-full border transition-all cursor-pointer select-none active:translate-y-[1px] active:scale-[0.98] group shrink-0 ${
-            currentWorld === 'portal'
-              ? 'bg-slate-950/90 border-amber-300 shadow-[0_0_24px_rgba(56,189,248,0.5),inset_0_1px_2px_rgba(255,255,255,0.4)] scale-[1.02]'
-              : 'bg-black/60 hover:bg-slate-950/90 border-white/20 hover:border-cyan-400/50 shadow-[0_4px_16px_rgba(0,0,0,0.6)]'
-          }`}
-          title="Portal Gateway (AUDIOVIDO)"
-        >
-          <AudioVidoBrandLogo size="sm" variant="horizontal" />
-        </button>
-
-        {/* Tactile 3D Realm Navigation Bar (AUDIO, VIDEO, SOCIAL) - Optimized for Mobile */}
-        <nav className="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 bg-slate-950/90 border border-white/20 rounded-full backdrop-blur-3xl shadow-[0_10px_30px_rgba(0,0,0,0.85),inset_0_1.5px_2px_rgba(255,255,255,0.22)] shrink-0">
-          {/* 1. AUDIO */}
+        {/* Left: Brand Portal Gateway Button */}
+        <div className="flex items-center shrink-0">
           <button 
-            onClick={() => handleTravel('music')} 
-            className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
-              currentWorld === 'music' 
-                ? 'bg-gradient-to-b from-emerald-300 via-emerald-400 to-teal-500 text-slate-950 shadow-[0_4px_18px_rgba(16,185,129,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-emerald-100 scale-[1.02]' 
-                : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-emerald-400/40'
+            onClick={() => handleTravel('portal')}
+            className={`flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border transition-all cursor-pointer select-none active:translate-y-[1px] active:scale-[0.98] group shrink-0 ${
+              currentWorld === 'portal'
+                ? 'bg-slate-950/90 border-amber-300 shadow-[0_0_24px_rgba(56,189,248,0.5),inset_0_1px_2px_rgba(255,255,255,0.4)] scale-[1.02]'
+                : 'bg-black/60 hover:bg-slate-950/90 border-white/20 hover:border-cyan-400/50 shadow-[0_4px_16px_rgba(0,0,0,0.6)]'
             }`}
-            title="Audio Realm"
+            title="Portal Gateway (AUDIOVIDO)"
           >
-            <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
-              currentWorld === 'music' 
-                ? 'bg-slate-950 shadow-sm' 
-                : 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
-            }`} />
-            <span>AUDIO</span>
+            <AudioVidoBrandLogo size="sm" variant="horizontal" />
           </button>
+        </div>
 
-          {/* 2. VIDEO */}
-          <button 
-            onClick={() => handleTravel('movie')} 
-            className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
-              currentWorld === 'movie' 
-                ? 'bg-gradient-to-b from-violet-300 via-purple-400 to-indigo-500 text-slate-950 shadow-[0_4px_18px_rgba(168,85,247,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-purple-100 scale-[1.02]' 
-                : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-purple-400/40'
-            }`}
-            title="Video Realm"
-          >
-            <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
-              currentWorld === 'movie' 
-                ? 'bg-slate-950 shadow-sm' 
-                : 'bg-purple-400 shadow-[0_0_8px_#c084fc]'
-            }`} />
-            <span>VIDEO</span>
-          </button>
+        {/* Center: Tactile 3D Realm Navigation Bar (AUDIO, VIDEO, SOCIAL, MUSIC 2, MUSIC 4) Centered in Screen */}
+        <div className="flex-1 flex items-center justify-center">
+          <nav className="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 bg-slate-950/90 border border-white/20 rounded-full backdrop-blur-3xl shadow-[0_10px_30px_rgba(0,0,0,0.85),inset_0_1.5px_2px_rgba(255,255,255,0.22)] shrink-0">
+            {/* 1. AUDIO */}
+            <button 
+              onClick={() => handleTravel('music')} 
+              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
+                currentWorld === 'music' 
+                  ? 'bg-gradient-to-b from-emerald-300 via-emerald-400 to-teal-500 text-slate-950 shadow-[0_4px_18px_rgba(16,185,129,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-emerald-100 scale-[1.02]' 
+                  : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-emerald-400/40'
+              }`}
+              title="Audio Realm"
+            >
+              <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
+                currentWorld === 'music' 
+                  ? 'bg-slate-950 shadow-sm' 
+                  : 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
+              }`} />
+              <span>AUDIO</span>
+            </button>
 
-          {/* 3. SOCIAL */}
-          <button 
-            onClick={() => handleTravel('community')} 
-            className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
-              currentWorld === 'community' 
-                ? 'bg-gradient-to-b from-sky-200 via-sky-300 to-blue-400 text-slate-950 shadow-[0_4px_18px_rgba(56,189,248,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-sky-100 scale-[1.02]' 
-                : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-sky-400/40'
-            }`}
-            title="Social Realm"
-          >
-            <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
-              currentWorld === 'community' 
-                ? 'bg-slate-950 shadow-sm' 
-                : 'bg-sky-300 shadow-[0_0_8px_#38bdf8]'
-            }`} />
-            <span>SOCIAL</span>
-          </button>
+            {/* 2. VIDEO */}
+            <button 
+              onClick={() => handleTravel('movie')} 
+              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
+                currentWorld === 'movie' 
+                  ? 'bg-gradient-to-b from-violet-300 via-purple-400 to-indigo-500 text-slate-950 shadow-[0_4px_18px_rgba(168,85,247,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-purple-100 scale-[1.02]' 
+                  : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-purple-400/40'
+              }`}
+              title="Video Realm"
+            >
+              <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
+                currentWorld === 'movie' 
+                  ? 'bg-slate-950 shadow-sm' 
+                  : 'bg-purple-400 shadow-[0_0_8px_#c084fc]'
+              }`} />
+              <span>VIDEO</span>
+            </button>
 
-          {/* 4. MUSIC 2 (Electric Lime Modern Streaming Hub from Image) */}
-          <button 
-            onClick={() => handleTravel('music2')} 
-            className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
-              currentWorld === 'music2' 
-                ? 'bg-gradient-to-b from-lime-300 via-lime-400 to-emerald-500 text-slate-950 shadow-[0_4px_18px_rgba(163,230,53,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-lime-100 scale-[1.02]' 
-                : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-lime-400/40'
-            }`}
-            title="Music 2 Streaming (Pulse Studio)"
-          >
-            <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
-              currentWorld === 'music2' 
-                ? 'bg-slate-950 shadow-sm' 
-                : 'bg-lime-400 shadow-[0_0_8px_#a3e635]'
-            }`} />
-            <span>MUSIC 2</span>
-          </button>
-        </nav>
+            {/* 3. SOCIAL */}
+            <button 
+              onClick={() => handleTravel('community')} 
+              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
+                currentWorld === 'community' 
+                  ? 'bg-gradient-to-b from-sky-200 via-sky-300 to-blue-400 text-slate-950 shadow-[0_4px_18px_rgba(56,189,248,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-sky-100 scale-[1.02]' 
+                  : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-sky-400/40'
+              }`}
+              title="Social Realm"
+            >
+              <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
+                currentWorld === 'community' 
+                  ? 'bg-slate-950 shadow-sm' 
+                  : 'bg-sky-300 shadow-[0_0_8px_#38bdf8]'
+              }`} />
+              <span>SOCIAL</span>
+            </button>
+
+            {/* 4. MUSIC 2 (Electric Lime Modern Streaming Hub) */}
+            <button 
+              onClick={() => handleTravel('music2')} 
+              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
+                currentWorld === 'music2' 
+                  ? 'bg-gradient-to-b from-lime-300 via-lime-400 to-emerald-500 text-slate-950 shadow-[0_4px_18px_rgba(163,230,53,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-lime-100 scale-[1.02]' 
+                  : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-lime-400/40'
+              }`}
+              title="Music 2 Streaming (Pulse Studio)"
+            >
+              <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
+                currentWorld === 'music2' 
+                  ? 'bg-slate-950 shadow-sm' 
+                  : 'bg-lime-400 shadow-[0_0_8px_#a3e635]'
+              }`} />
+              <span>MUSIC 2</span>
+            </button>
+
+            {/* 5. MUSIC 4 (Reso Full Desktop & Web Streaming Hub) */}
+            <button 
+              onClick={() => handleTravel('music4')} 
+              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
+                currentWorld === 'music4' 
+                  ? 'bg-gradient-to-b from-pink-300 via-rose-400 to-purple-500 text-slate-950 shadow-[0_4px_18px_rgba(244,63,94,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-pink-100 scale-[1.02]' 
+                  : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-pink-400/40'
+              }`}
+              title="Music 4 (Reso Web Streaming Studio)"
+            >
+              <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
+                currentWorld === 'music4' 
+                  ? 'bg-slate-950 shadow-sm' 
+                  : 'bg-pink-400 shadow-[0_0_8px_#f43f5e]'
+              }`} />
+              <span>MUSIC 4</span>
+            </button>
+          </nav>
+        </div>
+
+        {/* Right Symmetrical Balance Spacer */}
+        <div className="hidden md:flex items-center shrink-0 w-[140px] pointer-events-none" />
       </header>
 
       {/* Real HTML5 Audio Player */}
@@ -1215,8 +1251,8 @@ export default function App() {
         preload="auto" 
       />
 
-      {/* --- MASTER VIEWPORT CONTEXT --- */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 py-8 flex flex-col justify-center items-center relative z-10">
+      {/* --- MASTER VIEWPORT CONTEXT (WITH TOP PADDING FOR FIXED LOCKED HEADER) --- */}
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 pt-20 sm:pt-24 pb-8 flex flex-col justify-center items-center relative z-10">
 
         {/* ========================================================= */}
         {/* === VIEW 1: PORTAL MAIN MENU (3 HIGH-PERFORMANCE LIQUID GLASS CARDS) === */}
@@ -2252,6 +2288,15 @@ export default function App() {
             setIsShuffle={setIsShuffle}
             isRepeat={isRepeat}
             setIsRepeat={setIsRepeat}
+          />
+        )}
+
+        {/* ========================================================= */}
+        {/* === VIEW 6: STANDALONE RESO STREAMING HUB (MUSIC 4)     === */}
+        {/* ========================================================= */}
+        {currentWorld === 'music4' && (
+          <MusicV4View 
+            onNavigatePortal={() => handleTravel('portal')} 
           />
         )}
 

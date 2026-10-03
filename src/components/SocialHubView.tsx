@@ -2,8 +2,9 @@ import React, { useState, useRef, useEffect } from 'react';
 import { 
   ArrowLeft, Search, Home, Users, MessageSquare, Flag, 
   Bell, ChevronDown, Flame, MoreHorizontal, Smile, Send, 
-  Play, Pause, Volume2, VolumeX, Pin, Film, Disc3, Check
+  Play, Pause, Volume2, VolumeX, Pin, Film, Disc3, Check, Sparkles
 } from 'lucide-react';
+import { AudioSynth } from '../utils/AudioSynth';
 
 interface SocialHubViewProps {
   onNavigateHome: () => void;
@@ -41,6 +42,26 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({ onNavigateHome, on
   // Navigation active tab (Decluttered to 4 clear primary destinations)
   const [activeNavTab, setActiveNavTab] = useState<'home' | 'clubs' | 'chat' | 'premieres'>('home');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Soft atmospheric ambient pad music state
+  const [isAmbientPadPlaying, setIsAmbientPadPlaying] = useState(true);
+
+  // Auto-play ambient pad music when entering Social tab, cleanup when leaving
+  useEffect(() => {
+    AudioSynth.playSocialAmbientPad();
+    setIsAmbientPadPlaying(true);
+
+    return () => {
+      if (AudioSynth.getActiveType() === 'social-pad') {
+        AudioSynth.stopAll();
+      }
+    };
+  }, []);
+
+  const handleToggleAmbientPad = () => {
+    const newState = AudioSynth.toggleSocialPad();
+    setIsAmbientPadPlaying(newState);
+  };
 
   // Live video stream state
   const [isLiveStreamPlaying, setIsLiveStreamPlaying] = useState(true);
@@ -303,8 +324,32 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({ onNavigateHome, on
           </button>
         </nav>
 
-        {/* Right: Notifications & User Profile Capsule */}
-        <div className="flex items-center gap-2.5">
+        {/* Right: Ambient Pad Music Toggle, Notifications & User Profile Capsule */}
+        <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Ambient Pad Toggle Button (Small, chic, with animated soundwave) */}
+          <button 
+            onClick={handleToggleAmbientPad}
+            className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer select-none active:scale-95 shadow-sm ${
+              isAmbientPadPlaying 
+                ? 'bg-sky-400/25 border-sky-300/70 text-sky-100 shadow-[0_0_15px_rgba(56,189,248,0.45)]' 
+                : 'bg-white/10 hover:bg-white/15 border-white/20 text-slate-300 hover:text-white'
+            }`}
+            title={isAmbientPadPlaying ? "Mute Ambient Pad Music" : "Play Soft Ambient Pad Music"}
+          >
+            {isAmbientPadPlaying ? (
+              <div className="flex items-end gap-0.5 h-3.5 pr-0.5">
+                <span className="w-0.5 h-2 bg-sky-300 rounded-full animate-pulse" />
+                <span className="w-0.5 h-3.5 bg-cyan-200 rounded-full animate-bounce" style={{ animationDuration: '650ms' }} />
+                <span className="w-0.5 h-2.5 bg-sky-300 rounded-full animate-pulse" style={{ animationDelay: '150ms' }} />
+              </div>
+            ) : (
+              <VolumeX className="w-3.5 h-3.5 text-slate-400" />
+            )}
+            <span className="text-[11px] font-sans tracking-wide">
+              {isAmbientPadPlaying ? 'Ambient Pad' : 'Pad Muted'}
+            </span>
+          </button>
+
           <button 
             className="relative p-2 rounded-xl bg-white/10 hover:bg-white/20 text-white border border-white/25 transition-all cursor-pointer active:scale-95"
             title="Notifications"

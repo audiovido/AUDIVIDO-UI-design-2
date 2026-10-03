@@ -13,9 +13,11 @@ class AudioSynthManager {
   private dataArray: Uint8Array | null = null;
   private timeArray: Uint8Array | null = null;
   private oscs: { osc: OscillatorNode; gain: GainNode }[] = [];
-  private activeType: 'music' | 'movie' | 'fireplace' | 'aura-lofi' | null = null;
+  private activeType: 'music' | 'movie' | 'fireplace' | 'aura-lofi' | 'social-pad' | null = null;
   private isInitialized = false;
   private beatTimer: any = null;
+  private socialPadTimer: any = null;
+  private socialPadChimeTimer: any = null;
 
   constructor() {
     // Lazy initialized on first user interaction
@@ -94,7 +96,7 @@ class AudioSynthManager {
     this.primaryGain.gain.setTargetAtTime(vol * 0.45, this.ctx.currentTime, 0.08);
   }
 
-  public playTrack(type: 'music' | 'movie' | 'fireplace' | 'aura-lofi') {
+  public playTrack(type: 'music' | 'movie' | 'fireplace' | 'aura-lofi' | 'social-pad') {
     this.init();
     if (!this.ctx) return;
 
@@ -113,6 +115,8 @@ class AudioSynthManager {
       this.playWarmHearthPad();
     } else if (type === 'aura-lofi') {
       this.playAuraLofiBeat();
+    } else if (type === 'social-pad') {
+      this.playSocialAmbientPad();
     }
   }
 
@@ -122,6 +126,16 @@ class AudioSynthManager {
     if (this.beatTimer) {
       clearInterval(this.beatTimer);
       this.beatTimer = null;
+    }
+
+    if (this.socialPadTimer) {
+      clearInterval(this.socialPadTimer);
+      this.socialPadTimer = null;
+    }
+
+    if (this.socialPadChimeTimer) {
+      clearInterval(this.socialPadChimeTimer);
+      this.socialPadChimeTimer = null;
     }
 
     this.oscs.forEach(({ osc, gain }) => {
@@ -135,8 +149,133 @@ class AudioSynthManager {
     this.oscs = [];
   }
 
+  public isSocialPadActive(): boolean {
+    return this.activeType === 'social-pad';
+  }
+
+  public toggleSocialPad(): boolean {
+    if (this.activeType === 'social-pad') {
+      this.stopAll();
+      return false;
+    } else {
+      this.playTrack('social-pad');
+      return true;
+    }
+  }
+
   public getActiveType() {
     return this.activeType;
+  }
+
+  // Serene Atmospheric Analog Pad for Social Realm (Warm, soft, dreamy ambient chord progression)
+  public playSocialAmbientPad() {
+    this.init();
+    if (!this.ctx || !this.primaryGain) return;
+
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+
+    // Dreamy 4-chord open voicings (silky warm floating ambient pads: Fmaj9 -> Dmin11 -> Bbmaj9#11 -> Csus2)
+    const chordProgression = [
+      [110.00, 174.61, 261.63, 329.63, 392.00, 523.25], // F Maj9
+      [146.83, 220.00, 261.63, 349.23, 392.00, 440.00], // D Min11
+      [116.54, 174.61, 233.08, 293.66, 370.00, 440.00], // Bb Maj9 #11
+      [130.81, 196.00, 293.66, 349.23, 392.00, 523.25]  // C Sus2
+    ];
+
+    let chordIndex = 0;
+
+    const playChordStep = () => {
+      if (!this.ctx || !this.primaryGain || this.activeType !== 'social-pad') return;
+
+      const chord = chordProgression[chordIndex % chordProgression.length];
+      chordIndex++;
+
+      const now = this.ctx.currentTime;
+      const chordDuration = 7.8;
+      const attackTime = 2.6;
+      const releaseTime = 3.2;
+
+      // Master lowpass filter with gentle slow analog breath
+      const masterFilter = this.ctx.createBiquadFilter();
+      masterFilter.type = 'lowpass';
+      masterFilter.frequency.setValueAtTime(560, now);
+      masterFilter.frequency.linearRampToValueAtTime(680, now + chordDuration * 0.5);
+      masterFilter.frequency.linearRampToValueAtTime(540, now + chordDuration);
+      masterFilter.Q.setValueAtTime(1.1, now);
+
+      const chordMasterGain = this.ctx.createGain();
+      chordMasterGain.gain.setValueAtTime(0.0001, now);
+      chordMasterGain.gain.linearRampToValueAtTime(0.14, now + attackTime);
+      chordMasterGain.gain.setValueAtTime(0.14, now + chordDuration - releaseTime);
+      chordMasterGain.gain.linearRampToValueAtTime(0.0001, now + chordDuration);
+
+      masterFilter.connect(chordMasterGain);
+      chordMasterGain.connect(this.primaryGain);
+
+      // Synthesize each voice in the chord
+      chord.forEach((freq) => {
+        if (!this.ctx) return;
+
+        // Voice A: Warm Triangle (harmonic base)
+        const oscA = this.ctx.createOscillator();
+        const gainA = this.ctx.createGain();
+        oscA.type = 'triangle';
+        oscA.frequency.setValueAtTime(freq, now);
+
+        // Voice B: Soft detuned Sine (stereo-like analog chorusing)
+        const oscB = this.ctx.createOscillator();
+        const gainB = this.ctx.createGain();
+        oscB.type = 'sine';
+        oscB.frequency.setValueAtTime(freq * 1.0035, now);
+
+        const voiceGain = 1.0 / (chord.length * 1.1);
+        gainA.gain.setValueAtTime(voiceGain * 0.65, now);
+        gainB.gain.setValueAtTime(voiceGain * 0.35, now);
+
+        oscA.connect(gainA);
+        oscB.connect(gainB);
+        gainA.connect(masterFilter);
+        gainB.connect(masterFilter);
+
+        oscA.start(now);
+        oscB.start(now);
+
+        oscA.stop(now + chordDuration + 0.1);
+        oscB.stop(now + chordDuration + 0.1);
+
+        this.oscs.push({ osc: oscA, gain: gainA });
+        this.oscs.push({ osc: oscB, gain: gainB });
+      });
+
+      // Cleanup finished node connections
+      setTimeout(() => {
+        try {
+          chordMasterGain.disconnect();
+          masterFilter.disconnect();
+        } catch (e) {}
+      }, (chordDuration + 0.2) * 1000);
+    };
+
+    // Trigger initial chord immediately
+    playChordStep();
+
+    // Trigger subsequent chords with seamless crossfade overlap (every 5.2s for 7.8s chord = 2.6s overlap)
+    this.socialPadTimer = setInterval(() => {
+      if (this.activeType === 'social-pad') {
+        playChordStep();
+      }
+    }, 5200);
+
+    // Delicate celestial chime notes floating in the background every ~7.5 seconds
+    const chimePitches = [784.0, 880.0, 1046.5, 1174.66, 1318.5, 1568.0];
+    this.socialPadChimeTimer = setInterval(() => {
+      if (this.activeType === 'social-pad' && this.ctx) {
+        const pitch = chimePitches[Math.floor(Math.random() * chimePitches.length)];
+        this.triggerCelestialChime(pitch, this.ctx.currentTime + 0.2);
+      }
+    }, 7500);
   }
 
   // Pure Celestial Ambient Chord Pad (silky, warm, peaceful)
