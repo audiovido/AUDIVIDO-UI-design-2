@@ -22,6 +22,7 @@ import { CosmicNightSky } from './components/CosmicNightSky';
 import { MovieStreamingView } from './components/MovieStreamingView';
 import { SocialHubView } from './components/SocialHubView';
 import { AudioVidoBrandLogo } from './components/AudioVidoBrandLogo';
+import { MusicV2View } from './components/MusicV2View';
 
 // --- BESPOKE 3D SCULPTED EMBLEMS (STANDARD, HARMONIOUS & PROFESSIONAL) ---
 function AudioEmblem3D() {
@@ -358,8 +359,8 @@ export default function App() {
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const [customAudioUrl, setCustomAudioUrl] = useState<string>('/audio/coffee_bars.mp3');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // Navigation State: 'portal' | 'music' | 'movie' | 'community'
-  const [currentWorld, setCurrentWorld] = useState<'portal' | 'music' | 'movie' | 'community'>('portal');
+  // Navigation State: 'portal' | 'music' | 'movie' | 'community' | 'music2'
+  const [currentWorld, setCurrentWorld] = useState<'portal' | 'music' | 'movie' | 'community' | 'music2'>('portal');
   
   // Transition triggers
   const [isTraveling, setIsTraveling] = useState<boolean>(false);
@@ -601,7 +602,7 @@ export default function App() {
   useEffect(() => {
     const audio = audioPlayerRef.current;
     if (isPlaying) {
-      if (currentWorld === 'music') {
+      if (currentWorld === 'music' || currentWorld === 'music2') {
         if (customAudioUrl && customAudioUrl.startsWith('blob:') && audio) {
           AudioSynth.stopAll();
           AudioSynth.connectMediaElement(audio);
@@ -627,7 +628,7 @@ export default function App() {
   // High-precision synchronized timer for synthesized audio tracks
   useEffect(() => {
     let interval: any;
-    if (isPlaying && currentWorld === 'music' && (!customAudioUrl || !customAudioUrl.startsWith('blob:'))) {
+    if (isPlaying && (currentWorld === 'music' || currentWorld === 'music2') && (!customAudioUrl || !customAudioUrl.startsWith('blob:'))) {
       const totalSec = parseDurationToSeconds(currentTrack.duration);
       interval = setInterval(() => {
         setCurrentTrackSeconds(prev => {
@@ -652,7 +653,7 @@ export default function App() {
   // Track progress timers for non-audio sources (movie world)
   useEffect(() => {
     let interval: any;
-    if (isPlaying && currentWorld !== 'music') {
+    if (isPlaying && currentWorld !== 'music' && currentWorld !== 'music2') {
       interval = setInterval(() => {
         setTrackProgress(p => (p >= 100 ? 0 : p + 0.6));
         setMovieProgress(p => (p >= 100 ? 0 : p + 0.35));
@@ -662,7 +663,7 @@ export default function App() {
   }, [isPlaying, currentWorld]);
 
   // --- TRANSITIONAL ZOOM PORTAL TRAVEL ---
-  const handleTravel = (destination: 'portal' | 'music' | 'movie' | 'community') => {
+  const handleTravel = (destination: 'portal' | 'music' | 'movie' | 'community' | 'music2') => {
     setIsTraveling(true);
     setTravelDestination(destination);
 
@@ -672,6 +673,10 @@ export default function App() {
         if (audioPlayerRef.current) audioPlayerRef.current.pause();
         AudioSynth.stopAll();
         setIsPlaying(false);
+      } else if (destination === 'music2') {
+        if (audioPlayerRef.current) audioPlayerRef.current.pause();
+        AudioSynth.playTrack(currentTrack.audioSynthType || 'aura-lofi');
+        setIsPlaying(true);
       } else if (destination === 'movie') {
         if (audioPlayerRef.current) audioPlayerRef.current.pause();
         AudioSynth.playTrack('movie');
@@ -1179,6 +1184,24 @@ export default function App() {
             }`} />
             <span>SOCIAL</span>
           </button>
+
+          {/* 4. MUSIC 2 (Electric Lime Modern Streaming Hub from Image) */}
+          <button 
+            onClick={() => handleTravel('music2')} 
+            className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
+              currentWorld === 'music2' 
+                ? 'bg-gradient-to-b from-lime-300 via-lime-400 to-emerald-500 text-slate-950 shadow-[0_4px_18px_rgba(163,230,53,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-lime-100 scale-[1.02]' 
+                : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-lime-400/40'
+            }`}
+            title="Music 2 Streaming (Pulse Studio)"
+          >
+            <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
+              currentWorld === 'music2' 
+                ? 'bg-slate-950 shadow-sm' 
+                : 'bg-lime-400 shadow-[0_0_8px_#a3e635]'
+            }`} />
+            <span>MUSIC 2</span>
+          </button>
         </nav>
       </header>
 
@@ -1201,12 +1224,6 @@ export default function App() {
         {currentWorld === 'portal' && (
           <div className="w-full max-w-6xl animate-fadeIn flex flex-col items-center justify-center min-h-[560px] py-4 relative">
             
-            {/* 3D Sculpted Clean Portal Header (Authentic AUDIOVIDO Logo Artwork) */}
-            <div className="text-center mb-8 select-none flex flex-col items-center">
-              <AudioVidoBrandLogo variant="stacked" className="mb-3" />
-              <div className="w-24 h-0.5 rounded-full bg-gradient-to-r from-transparent via-cyan-400/90 to-transparent mx-auto mt-1 shadow-[0_0_12px_rgba(6,182,212,0.9)]" />
-            </div>
-
             {/* 3 Vertical Liquid Glass Cards: Left = Audio, Center = Social, Right = Video */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full items-stretch">
               
@@ -1406,46 +1423,6 @@ export default function App() {
         {/* ========================================================= */}
         {currentWorld === 'music' && (
           <div className="w-full max-w-6xl space-y-6 animate-fadeIn py-2 pb-36 relative">
-            
-            {/* Top Prominent Full-Rounded Amber Search Bar (Compact Width, 3D Neon Halo, Aligned to Left, Circular Yellow Button) */}
-            <div className="w-full max-w-2xl mx-auto relative group">
-              {/* Soft Ambient Amber-Gold Neon Halo */}
-              <div className="absolute -inset-1 rounded-full bg-gradient-to-r from-amber-500/20 via-yellow-400/25 to-amber-500/20 blur-md opacity-70 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-300 pointer-events-none" />
-
-              <div className="relative w-full flex items-center justify-between gap-3 pl-5 pr-2 py-1.5 sm:py-2 rounded-full bg-slate-950/80 border border-amber-500/40 backdrop-blur-3xl shrink-0 search-neon-halo transition-all focus-within:border-amber-400 focus-within:shadow-[0_0_28px_rgba(245,158,11,0.35)]">
-                {/* Big Direct Search Input starting flush on the left */}
-                <input 
-                  type="text"
-                  value={musicSearch}
-                  onChange={(e) => setMusicSearch(e.target.value)}
-                  placeholder="Search tracks, artists, albums, or genres..."
-                  className="w-full bg-transparent text-sm sm:text-base text-white placeholder-amber-200/50 font-sans font-medium focus:outline-none tracking-wide text-left"
-                />
-
-                <div className="flex items-center gap-2 shrink-0">
-                  {musicSearch && (
-                    <button 
-                      onClick={() => setMusicSearch('')}
-                      className="text-xs px-2.5 py-1 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white cursor-pointer transition-colors shrink-0 font-bold"
-                      title="Clear search"
-                    >
-                      ✕
-                    </button>
-                  )}
-
-                  {/* Yellow/Amber Circular 3D Search Button with Layered Radiant Borders */}
-                  <button
-                    onClick={() => {}}
-                    className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center bg-gradient-to-tr from-amber-400 via-yellow-300 to-amber-200 text-slate-950 shadow-[0_0_16px_rgba(245,158,11,0.65),inset_0_1.5px_2px_rgba(255,255,255,0.85)] border-2 border-yellow-200 hover:scale-105 active:scale-95 transition-all cursor-pointer group/searchbtn"
-                    title="Search tracks"
-                  >
-                    {/* Concentric Glowing Ambient Ring */}
-                    <span className="absolute -inset-1 rounded-full border border-amber-400/50 group-hover/searchbtn:border-amber-300 transition-colors pointer-events-none animate-pulse" />
-                    <Search className="w-4 h-4 sm:w-4.5 sm:h-4.5 text-slate-950 stroke-[2.5]" />
-                  </button>
-                </div>
-              </div>
-            </div>
 
             {/* Main Streaming Grid: Bold Hero Turntable Deck & Sound Library on Left (8 Cols), Suggestions Sidebar on Right (4 Cols) */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
@@ -1453,7 +1430,7 @@ export default function App() {
               {/* LEFT: 8 Columns containing Wood Hero Console + Aurora Green Sound Library beneath it */}
               <div className="lg:col-span-8 flex flex-col gap-6">
                 
-                {/* Hero Card - Vintage Polished Acoustic Rubberwood / Mahogany Veneer Console */}
+                {/* 1. Hero Card - Vintage Polished Acoustic Rubberwood / Mahogany Veneer Console */}
                 <div className="vintage-acoustic-wood-chassis relative rounded-[28px] sm:rounded-[32px] p-5 sm:p-6 flex flex-col md:flex-row justify-between items-center gap-6 overflow-hidden backdrop-blur-xl">
                   
                   {/* Polished Lacquer Mirror Top Reflection Line */}
@@ -1530,7 +1507,7 @@ export default function App() {
 
                   </div>
 
-                  {/* Right Column: COMPACT ELEGANT 3D VINYL TURNTABLE (GRAMOPHONE) - Snug Positioning */}
+                  {/* Right Column: COMPACT ELEGANT 3D VINYL TURNTABLE (GRAMOPHONE) */}
                   <div className="turntable-3d-deck rounded-[26px] w-[275px] sm:w-[285px] h-[225px] sm:h-[235px] p-2 flex items-center justify-center shrink-0 relative overflow-hidden group select-none shadow-[0_20px_50px_rgba(0,0,0,0.9),inset_0_2px_3px_rgba(255,255,255,0.7)]">
                     
                     {/* Inner Refractive 3D Liquid Glass Plinth Slab with Beveled Rim */}
@@ -1541,7 +1518,6 @@ export default function App() {
                       className="absolute -translate-x-1/2 -translate-y-1/2 w-[166px] h-[166px] rounded-full platter-well-3d flex items-center justify-center pointer-events-none"
                       style={{ left: '112px', top: '122px' }}
                     >
-                      {/* Concentric Lathe Machining Groove Rings in the Platter Basin */}
                       <div className="absolute inset-2 rounded-full border border-stone-800/60 pointer-events-none" />
                       <div className="absolute inset-4 rounded-full border border-stone-800/40 pointer-events-none" />
                       <div className="absolute inset-7 rounded-full border border-stone-800/25 pointer-events-none" />
@@ -1552,12 +1528,9 @@ export default function App() {
                       className="absolute -translate-x-1/2 -translate-y-1/2 flex items-center justify-center z-10"
                       style={{ left: '112px', top: '122px' }}
                     >
-                      {/* Heavy 3D Die-Cast Aluminum Platter with Chamfered Stroboscopic Rim */}
                       <div className="platter-chassis w-[152px] h-[152px] flex items-center justify-center relative">
-                        {/* Outer Strobe Dot Ring */}
                         <div className="strobe-dot-ring" />
 
-                        {/* High-Gloss Grooved Vinyl Record with Anisotropic Twin-Sheen Reflection */}
                         <div 
                           onClick={() => setIsPlaying(!isPlaying)}
                           className={`w-[140px] h-[140px] rounded-full relative flex items-center justify-center shadow-2xl cursor-pointer ${
@@ -1572,16 +1545,13 @@ export default function App() {
                           }}
                           title={isPlaying ? "Click to Pause" : "Click to Play"}
                         >
-                          {/* Micro-Grooves Concentric Rings */}
                           <div className="absolute inset-2 rounded-full border border-stone-700/50 pointer-events-none" />
                           <div className="absolute inset-4 rounded-full border border-stone-800/60 pointer-events-none" />
                           <div className="absolute inset-7 rounded-full border border-stone-700/40 pointer-events-none" />
                           <div className="absolute inset-10 rounded-full border border-stone-800/50 pointer-events-none" />
 
-                          {/* Minimalist Vinyl Center Label */}
                           <div className={`w-9 h-9 rounded-full bg-gradient-to-tr ${currentTrack.colorFrom} ${currentTrack.colorTo} border border-amber-300/70 flex flex-col items-center justify-center shadow-xl relative z-10 text-center select-none`}>
                             <div className="absolute inset-0.5 rounded-full border border-amber-200/50 pointer-events-none" />
-                            {/* Solid Spindle Pin */}
                             <div className="w-3 h-3 rounded-full bg-stone-950 border border-white/60 flex items-center justify-center shadow-inner">
                               <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-amber-200 to-amber-500 shadow" />
                             </div>
@@ -1604,7 +1574,7 @@ export default function App() {
                       </span>
                     </button>
 
-                    {/* --- 4. STATIONARY POLISHED MACHINED SILVER TONARMARM REST CRADLE (Lifted cleanly off the disc when stopped!) --- */}
+                    {/* --- 4. STATIONARY POLISHED MACHINED SILVER TONARMARM REST CRADLE --- */}
                     <div 
                       className="absolute pointer-events-none z-20 flex flex-col items-center"
                       style={{ 
@@ -1614,17 +1584,14 @@ export default function App() {
                       }}
                       title="Tonearm Silver Rest Cradle"
                     >
-                      {/* Silver Cradle Fork with U-notch */}
                       <div className="w-5 h-2 rounded-full bg-gradient-to-r from-stone-300 via-white to-stone-300 border border-stone-200 shadow-[0_2px_4px_rgba(0,0,0,0.85)] flex items-center justify-center relative">
                         <div className="w-3 h-1 bg-stone-700/80 rounded-full" />
                       </div>
-                      {/* Silver Machined Stand Pillar */}
                       <div className="w-1.5 h-4.5 bg-gradient-to-b from-stone-100 via-stone-300 to-stone-500 rounded-b shadow-[0_2px_4px_rgba(0,0,0,0.9)] border-x border-white/70" />
-                      {/* Base Mounting Ring */}
                       <div className="w-3.5 h-1 bg-gradient-to-r from-stone-400 via-stone-200 to-stone-500 rounded-full shadow" />
                     </div>
 
-                    {/* --- 5. ARTICULATED TONEARM ASSEMBLY (Swings to the LEFT onto disc when playing, rests squarely on silver holder when stopped!) --- */}
+                    {/* --- 5. ARTICULATED TONEARM ASSEMBLY --- */}
                     <div 
                       className="absolute pointer-events-none z-30"
                       style={{
@@ -1635,17 +1602,14 @@ export default function App() {
                         transition: 'transform 850ms cubic-bezier(0.25, 0.8, 0.25, 1)'
                       }}
                     >
-                      {/* Gimbal Pivot Base with Ruby Jewel Bearing */}
                       <div className="absolute -left-3 -top-3 w-6 h-6 rounded-full bg-gradient-to-br from-amber-200 via-amber-500 to-amber-800 border border-amber-300 shadow-xl flex items-center justify-center">
                         <div className="w-4 h-4 rounded-full bg-gradient-to-tr from-stone-800 to-stone-950 border border-amber-500/50 flex items-center justify-center">
                           <div className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_6px_#f43f5e]" />
                         </div>
                       </div>
 
-                      {/* Cylindrical Numbered Brass Counterweight extending behind gimbal */}
                       <div className="absolute -top-2.5 left-2.5 w-3.5 h-3 bg-gradient-to-b from-amber-100 via-amber-400 to-amber-700 rounded-2xs border border-amber-300 shadow-[0_2px_4px_rgba(0,0,0,0.8)]" />
 
-                      {/* Polished Champagne Brass & Chrome Curved Tonearm Tube */}
                       <svg 
                         className="absolute -left-[50px] -top-[10px] w-[100px] h-[150px] overflow-visible pointer-events-none filter drop-shadow-[2px_3px_5px_rgba(0,0,0,0.85)]" 
                         viewBox="-50 -10 100 150"
@@ -1667,7 +1631,6 @@ export default function App() {
                         </defs>
                       </svg>
 
-                      {/* Precision Angled Black Headshell & Cartridge (Rests squarely on the silver cradle fork when stopped!) */}
                       <div 
                         className="absolute w-3.5 h-6 bg-gradient-to-b from-stone-950 via-stone-900 to-black border border-amber-500/60 rounded-xs shadow-[0_4px_10px_rgba(0,0,0,0.95)] flex flex-col justify-between p-0.5"
                         style={{
@@ -1676,12 +1639,10 @@ export default function App() {
                           transform: 'translate(-50%, -50%) rotate(-14deg)'
                         }}
                       >
-                        {/* Gold Brand Plate & Finger Lift */}
                         <div className="flex items-center justify-between px-0.5">
                           <div className="w-1.5 h-0.5 bg-amber-400 rounded-2xs" />
                           <div className="w-1 h-1.5 bg-gradient-to-r from-amber-300 to-amber-600 rounded-2xs -mr-0.5" />
                         </div>
-                        {/* Illuminated Stylus Cueing Spotlight */}
                         <div className="flex items-center justify-center pt-0.5">
                           <div className={`w-1.5 h-1.5 rounded-full transition-all duration-300 ${
                             isPlaying 
@@ -1696,7 +1657,7 @@ export default function App() {
 
                 </div>
 
-                {/* 2. COMPACT AURORA GREEN 3D LIQUID GLASS SOUND LIBRARY (Positioned directly under Wood Chassis, Aligned Right Edge) */}
+                {/* 2. COMPACT AURORA GREEN 3D LIQUID GLASS SOUND LIBRARY (Aligned Right Edge, Space Efficient) */}
                 <div className="liquid-glass-aurora-card relative rounded-[28px] sm:rounded-[32px] p-4 sm:p-5 border border-emerald-400/35 backdrop-blur-3xl overflow-hidden space-y-4 transition-all">
                   
                   {/* Aurora Borealis Shimmer, Liquid Waves & Specular Edge Light */}
@@ -2267,6 +2228,30 @@ export default function App() {
               const trk = AURA_TRACKS.find(t => t.id === trackId);
               if (trk) selectAndPlayTrack(trk);
             }}
+          />
+        )}
+
+        {/* ========================================================= */}
+        {/* === VIEW 5: STANDALONE WIDESCREEN MUSIC 2 (PULSE STREAMING) === */}
+        {/* ========================================================= */}
+        {currentWorld === 'music2' && (
+          <MusicV2View 
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+            setIsPlaying={setIsPlaying}
+            trackProgress={trackProgress}
+            currentTrackSeconds={currentTrackSeconds}
+            handleSeek={handleSeek}
+            likedTracks={likedTracks}
+            toggleLikeTrack={toggleLikeTrack}
+            allTracks={AURA_TRACKS}
+            onSelectTrack={(track) => selectAndPlayTrack(track)}
+            onNextTrack={handleNextTrack}
+            onPrevTrack={handlePrevTrack}
+            isShuffle={isShuffle}
+            setIsShuffle={setIsShuffle}
+            isRepeat={isRepeat}
+            setIsRepeat={setIsRepeat}
           />
         )}
 
