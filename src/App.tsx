@@ -23,7 +23,6 @@ import { MovieStreamingView } from './components/MovieStreamingView';
 import { SocialHubView } from './components/SocialHubView';
 import { AudioVidoBrandLogo } from './components/AudioVidoBrandLogo';
 import { MusicV2View } from './components/MusicV2View';
-import { MusicV4View } from './components/MusicV4View';
 import { musicApi } from './services/musicApiService';
 
 // --- BESPOKE 3D SCULPTED EMBLEMS (STANDARD, HARMONIOUS & PROFESSIONAL) ---
@@ -361,8 +360,8 @@ export default function App() {
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const [customAudioUrl, setCustomAudioUrl] = useState<string>('/audio/coffee_bars.mp3');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // Navigation State: 'portal' | 'music' | 'movie' | 'community' | 'music2' | 'music4'
-  const [currentWorld, setCurrentWorld] = useState<'portal' | 'music' | 'movie' | 'community' | 'music2' | 'music4'>('portal');
+  // Navigation State: 'portal' | 'music' | 'movie' | 'community' | 'music2'
+  const [currentWorld, setCurrentWorld] = useState<'portal' | 'music' | 'movie' | 'community' | 'music2'>('portal');
   
   // Transition triggers
   const [isTraveling, setIsTraveling] = useState<boolean>(false);
@@ -715,7 +714,7 @@ export default function App() {
   }, [isPlaying, currentWorld]);
 
   // --- TRANSITIONAL ZOOM PORTAL TRAVEL ---
-  const handleTravel = (destination: 'portal' | 'music' | 'movie' | 'community' | 'music2' | 'music4') => {
+  const handleTravel = (destination: 'portal' | 'music' | 'movie' | 'community' | 'music2') => {
     setIsTraveling(true);
     setTravelDestination(destination);
 
@@ -1273,24 +1272,6 @@ export default function App() {
                   : 'bg-lime-400 shadow-[0_0_8px_#a3e635]'
               }`} />
               <span>MUSIC 2</span>
-            </button>
-
-            {/* 5. MUSIC 4 (Reso Full Desktop & Web Streaming Hub) */}
-            <button 
-              onClick={() => handleTravel('music4')} 
-              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
-                currentWorld === 'music4' 
-                  ? 'bg-gradient-to-b from-pink-300 via-rose-400 to-purple-500 text-slate-950 shadow-[0_4px_18px_rgba(244,63,94,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-pink-100 scale-[1.02]' 
-                  : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-pink-400/40'
-              }`}
-              title="Music 4 (Reso Web Streaming Studio)"
-            >
-              <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
-                currentWorld === 'music4' 
-                  ? 'bg-slate-950 shadow-sm' 
-                  : 'bg-pink-400 shadow-[0_0_8px_#f43f5e]'
-              }`} />
-              <span>MUSIC 4</span>
             </button>
           </nav>
         </div>
@@ -2379,15 +2360,6 @@ export default function App() {
             setIsShuffle={setIsShuffle}
             isRepeat={isRepeat}
             setIsRepeat={setIsRepeat}
-          />
-        )}
-
-        {/* ========================================================= */}
-        {/* === VIEW 6: STANDALONE RESO STREAMING HUB (MUSIC 4)     === */}
-        {/* ========================================================= */}
-        {currentWorld === 'music4' && (
-          <MusicV4View 
-            onNavigatePortal={() => handleTravel('portal')} 
           />
         )}
 
