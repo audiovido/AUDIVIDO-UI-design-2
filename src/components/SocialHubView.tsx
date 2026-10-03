@@ -43,14 +43,11 @@ export const SocialHubView: React.FC<SocialHubViewProps> = ({ onNavigateHome, on
   const [activeNavTab, setActiveNavTab] = useState<'home' | 'clubs' | 'chat' | 'premieres'>('home');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Soft atmospheric ambient pad music state
-  const [isAmbientPadPlaying, setIsAmbientPadPlaying] = useState(true);
+  // Soft atmospheric ambient pad music state (Default: disabled / silent)
+  const [isAmbientPadPlaying, setIsAmbientPadPlaying] = useState(false);
 
-  // Auto-play ambient pad music when entering Social tab, cleanup when leaving
+  // Cleanup when unmounting Social tab
   useEffect(() => {
-    AudioSynth.playSocialAmbientPad();
-    setIsAmbientPadPlaying(true);
-
     return () => {
       if (AudioSynth.getActiveType() === 'social-pad') {
         AudioSynth.stopAll();

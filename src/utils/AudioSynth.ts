@@ -3,8 +3,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-// Aura Studio Ambient Sound & Lo-Fi Synthesizer using Web Audio API
-// High-fidelity, pure harmonic music synthesis with ZERO harsh clicks or needle crackle.
+// Aura Studio Audio Controller
+// Synthetic drone and humming oscillators are completely disabled.
+// Real audio streaming (HTML5 Audio) plays exclusively.
 
 class AudioSynthManager {
   private ctx: AudioContext | null = null;
@@ -12,12 +13,7 @@ class AudioSynthManager {
   private analyser: AnalyserNode | null = null;
   private dataArray: Uint8Array | null = null;
   private timeArray: Uint8Array | null = null;
-  private oscs: { osc: OscillatorNode; gain: GainNode }[] = [];
-  private activeType: 'music' | 'movie' | 'fireplace' | 'aura-lofi' | 'social-pad' | null = null;
   private isInitialized = false;
-  private beatTimer: any = null;
-  private socialPadTimer: any = null;
-  private socialPadChimeTimer: any = null;
 
   constructor() {
     // Lazy initialized on first user interaction
@@ -30,7 +26,7 @@ class AudioSynthManager {
       if (!AudioCtx) return;
       this.ctx = new AudioCtx();
       this.primaryGain = this.ctx.createGain();
-      this.primaryGain.gain.setValueAtTime(0.35, this.ctx.currentTime);
+      this.primaryGain.gain.setValueAtTime(0.5, this.ctx.currentTime);
 
       this.analyser = this.ctx.createAnalyser();
       this.analyser.fftSize = 128;
@@ -42,7 +38,7 @@ class AudioSynthManager {
       this.analyser.connect(this.ctx.destination);
       this.isInitialized = true;
     } catch (e) {
-      console.warn("Web Audio initialization failed:", e);
+      console.warn("Web Audio initialization skipped:", e);
     }
   }
 
@@ -59,34 +55,11 @@ class AudioSynthManager {
   }
 
   public playClick() {
-    this.init();
-    if (!this.ctx || !this.primaryGain) return;
-    try {
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, this.ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(440, this.ctx.currentTime + 0.04);
-      gain.gain.setValueAtTime(0.08, this.ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.04);
-      osc.connect(gain);
-      gain.connect(this.primaryGain);
-      osc.start();
-      osc.stop(this.ctx.currentTime + 0.04);
-    } catch {}
+    // Silent or ultra subtle click without background hum
   }
 
-  public connectMediaElement(element: HTMLAudioElement) {
-    this.init();
-    if (!this.ctx || !this.primaryGain) return;
-    try {
-      if ((element as any)._audioSynthConnected) return;
-      const source = this.ctx.createMediaElementSource(element);
-      source.connect(this.primaryGain);
-      (element as any)._audioSynthConnected = true;
-    } catch (e) {
-      // Audio element might already be connected or restricted by CORS
-    }
+  public connectMediaElement(_element: HTMLAudioElement) {
+    // Media elements play directly to avoid browser CORS/cross-origin muting
   }
 
   public setVolume(volumeFraction: number) {
@@ -96,520 +69,30 @@ class AudioSynthManager {
     this.primaryGain.gain.setTargetAtTime(vol * 0.45, this.ctx.currentTime, 0.08);
   }
 
-  public playTrack(type: 'music' | 'movie' | 'fireplace' | 'aura-lofi' | 'social-pad') {
-    this.init();
-    if (!this.ctx) return;
-
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
-
+  // All synthetic oscillators are disabled: completely silent
+  public playTrack(_type?: string) {
     this.stopAll();
-    this.activeType = type;
-
-    if (type === 'music') {
-      this.playMusicSpace();
-    } else if (type === 'movie') {
-      this.playMovieSpace();
-    } else if (type === 'fireplace') {
-      this.playWarmHearthPad();
-    } else if (type === 'aura-lofi') {
-      this.playAuraLofiBeat();
-    } else if (type === 'social-pad') {
-      this.playSocialAmbientPad();
-    }
   }
 
   public stopAll() {
-    this.activeType = null;
-
-    if (this.beatTimer) {
-      clearInterval(this.beatTimer);
-      this.beatTimer = null;
-    }
-
-    if (this.socialPadTimer) {
-      clearInterval(this.socialPadTimer);
-      this.socialPadTimer = null;
-    }
-
-    if (this.socialPadChimeTimer) {
-      clearInterval(this.socialPadChimeTimer);
-      this.socialPadChimeTimer = null;
-    }
-
-    this.oscs.forEach(({ osc, gain }) => {
-      try {
-        gain.gain.cancelScheduledValues(0);
-        gain.gain.setValueAtTime(0, 0);
-        osc.stop();
-        osc.disconnect();
-      } catch (e) {}
-    });
-    this.oscs = [];
+    // No background oscillators
   }
 
   public isSocialPadActive(): boolean {
-    return this.activeType === 'social-pad';
+    return false;
   }
 
   public toggleSocialPad(): boolean {
-    if (this.activeType === 'social-pad') {
-      this.stopAll();
-      return false;
-    } else {
-      this.playTrack('social-pad');
-      return true;
-    }
+    this.stopAll();
+    return false;
   }
 
   public getActiveType() {
-    return this.activeType;
+    return null;
   }
 
-  // Serene Atmospheric Analog Pad for Social Realm (Warm, soft, dreamy ambient chord progression)
   public playSocialAmbientPad() {
-    this.init();
-    if (!this.ctx || !this.primaryGain) return;
-
-    if (this.ctx.state === 'suspended') {
-      this.ctx.resume();
-    }
-
-    // Dreamy 4-chord open voicings (silky warm floating ambient pads: Fmaj9 -> Dmin11 -> Bbmaj9#11 -> Csus2)
-    const chordProgression = [
-      [110.00, 174.61, 261.63, 329.63, 392.00, 523.25], // F Maj9
-      [146.83, 220.00, 261.63, 349.23, 392.00, 440.00], // D Min11
-      [116.54, 174.61, 233.08, 293.66, 370.00, 440.00], // Bb Maj9 #11
-      [130.81, 196.00, 293.66, 349.23, 392.00, 523.25]  // C Sus2
-    ];
-
-    let chordIndex = 0;
-
-    const playChordStep = () => {
-      if (!this.ctx || !this.primaryGain || this.activeType !== 'social-pad') return;
-
-      const chord = chordProgression[chordIndex % chordProgression.length];
-      chordIndex++;
-
-      const now = this.ctx.currentTime;
-      const chordDuration = 7.8;
-      const attackTime = 2.6;
-      const releaseTime = 3.2;
-
-      // Master lowpass filter with gentle slow analog breath
-      const masterFilter = this.ctx.createBiquadFilter();
-      masterFilter.type = 'lowpass';
-      masterFilter.frequency.setValueAtTime(560, now);
-      masterFilter.frequency.linearRampToValueAtTime(680, now + chordDuration * 0.5);
-      masterFilter.frequency.linearRampToValueAtTime(540, now + chordDuration);
-      masterFilter.Q.setValueAtTime(1.1, now);
-
-      const chordMasterGain = this.ctx.createGain();
-      chordMasterGain.gain.setValueAtTime(0.0001, now);
-      chordMasterGain.gain.linearRampToValueAtTime(0.14, now + attackTime);
-      chordMasterGain.gain.setValueAtTime(0.14, now + chordDuration - releaseTime);
-      chordMasterGain.gain.linearRampToValueAtTime(0.0001, now + chordDuration);
-
-      masterFilter.connect(chordMasterGain);
-      chordMasterGain.connect(this.primaryGain);
-
-      // Synthesize each voice in the chord
-      chord.forEach((freq) => {
-        if (!this.ctx) return;
-
-        // Voice A: Warm Triangle (harmonic base)
-        const oscA = this.ctx.createOscillator();
-        const gainA = this.ctx.createGain();
-        oscA.type = 'triangle';
-        oscA.frequency.setValueAtTime(freq, now);
-
-        // Voice B: Soft detuned Sine (stereo-like analog chorusing)
-        const oscB = this.ctx.createOscillator();
-        const gainB = this.ctx.createGain();
-        oscB.type = 'sine';
-        oscB.frequency.setValueAtTime(freq * 1.0035, now);
-
-        const voiceGain = 1.0 / (chord.length * 1.1);
-        gainA.gain.setValueAtTime(voiceGain * 0.65, now);
-        gainB.gain.setValueAtTime(voiceGain * 0.35, now);
-
-        oscA.connect(gainA);
-        oscB.connect(gainB);
-        gainA.connect(masterFilter);
-        gainB.connect(masterFilter);
-
-        oscA.start(now);
-        oscB.start(now);
-
-        oscA.stop(now + chordDuration + 0.1);
-        oscB.stop(now + chordDuration + 0.1);
-
-        this.oscs.push({ osc: oscA, gain: gainA });
-        this.oscs.push({ osc: oscB, gain: gainB });
-      });
-
-      // Cleanup finished node connections
-      setTimeout(() => {
-        try {
-          chordMasterGain.disconnect();
-          masterFilter.disconnect();
-        } catch (e) {}
-      }, (chordDuration + 0.2) * 1000);
-    };
-
-    // Trigger initial chord immediately
-    playChordStep();
-
-    // Trigger subsequent chords with seamless crossfade overlap (every 5.2s for 7.8s chord = 2.6s overlap)
-    this.socialPadTimer = setInterval(() => {
-      if (this.activeType === 'social-pad') {
-        playChordStep();
-      }
-    }, 5200);
-
-    // Delicate celestial chime notes floating in the background every ~7.5 seconds
-    const chimePitches = [784.0, 880.0, 1046.5, 1174.66, 1318.5, 1568.0];
-    this.socialPadChimeTimer = setInterval(() => {
-      if (this.activeType === 'social-pad' && this.ctx) {
-        const pitch = chimePitches[Math.floor(Math.random() * chimePitches.length)];
-        this.triggerCelestialChime(pitch, this.ctx.currentTime + 0.2);
-      }
-    }, 7500);
-  }
-
-  // Pure Celestial Ambient Chord Pad (silky, warm, peaceful)
-  private playMusicSpace() {
-    if (!this.ctx || !this.primaryGain) return;
-
-    const chords = [
-      [155.56, 196.00, 233.08, 293.66, 349.23], // Eb Maj9
-      [130.81, 155.56, 196.00, 233.08, 311.13], // C Min9
-      [174.61, 207.65, 261.63, 311.13, 392.00], // F Min9
-      [116.54, 146.83, 174.61, 220.00, 261.63]  // Bb 13
-    ];
-
-    const selectedChord = chords[Math.floor(Math.random() * chords.length)];
-    const time = this.ctx.currentTime;
-
-    selectedChord.forEach((freq, idx) => {
-      if (!this.ctx || !this.primaryGain) return;
-
-      const osc = this.ctx.createOscillator();
-      const oscGain = this.ctx.createGain();
-
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, time);
-
-      // Subtle slow chorus
-      if (idx > 0) {
-        osc.frequency.setValueAtTime(freq + (Math.sin(idx) * 0.8), time);
-      }
-
-      const peakVolume = 0.05 / selectedChord.length;
-      oscGain.gain.setValueAtTime(0, time);
-      oscGain.gain.linearRampToValueAtTime(peakVolume, time + 2.5 + idx * 0.3);
-
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(750, time);
-
-      osc.connect(filter);
-      filter.connect(oscGain);
-      oscGain.connect(this.primaryGain);
-
-      osc.start(time);
-      this.oscs.push({ osc, gain: oscGain });
-    });
-  }
-
-  // Deep Cinematic Cosmic Drone
-  private playMovieSpace() {
-    if (!this.ctx || !this.primaryGain) return;
-
-    const droneFrequencies = [55.0, 110.0, 164.81, 220.0];
-    const time = this.ctx.currentTime;
-
-    droneFrequencies.forEach((freq, idx) => {
-      if (!this.ctx || !this.primaryGain) return;
-      const osc = this.ctx.createOscillator();
-      const oscGain = this.ctx.createGain();
-
-      osc.type = idx === 0 ? 'sine' : 'sawtooth';
-      osc.frequency.setValueAtTime(freq, time);
-
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(320 + idx * 40, time);
-
-      const maxGain = 0.035 / droneFrequencies.length;
-      oscGain.gain.setValueAtTime(0, time);
-      oscGain.gain.linearRampToValueAtTime(maxGain, time + 3.0);
-
-      osc.connect(filter);
-      filter.connect(oscGain);
-      oscGain.connect(this.primaryGain);
-
-      osc.start(time);
-      this.oscs.push({ osc, gain: oscGain });
-    });
-  }
-
-  // Serene Warm Hearth Drone (NO harsh needle crackle or static clicks!)
-  private playWarmHearthPad() {
-    if (!this.ctx || !this.primaryGain) return;
-
-    const time = this.ctx.currentTime;
-    const hearthFrequencies = [82.41, 123.47, 164.81]; // E2 chord warm glow
-
-    hearthFrequencies.forEach((freq) => {
-      if (!this.ctx || !this.primaryGain) return;
-      const osc = this.ctx.createOscillator();
-      const oscGain = this.ctx.createGain();
-
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(freq, time);
-
-      const filter = this.ctx.createBiquadFilter();
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(250, time);
-
-      oscGain.gain.setValueAtTime(0, time);
-      oscGain.gain.linearRampToValueAtTime(0.04, time + 2.0);
-
-      osc.connect(filter);
-      filter.connect(oscGain);
-      oscGain.connect(this.primaryGain);
-
-      osc.start(time);
-      this.oscs.push({ osc, gain: oscGain });
-    });
-  }
-
-  // Masterpiece Studio-Quality Lo-Fi Beat Synthesizer
-  // Recreates smooth, relaxing lo-fi music with Rhodes keys, warm bass, mellow beat & chimes
-  private playAuraLofiBeat() {
-    if (!this.ctx || !this.primaryGain) return;
-
-    let step = 0;
-    const tempoBpm = 76;
-    const stepDurationSec = 60 / tempoBpm / 2; // Eighth note interval (~0.395s)
-
-    // Progression: Eb Maj9 -> C Min9 -> F Min9 -> Bb 13
-    const progression = [
-      {
-        chord: [155.56, 196.00, 233.08, 293.66, 349.23], // Eb, G, Bb, D, F
-        bass: 77.78 // Eb2
-      },
-      {
-        chord: [130.81, 155.56, 196.00, 233.08, 293.66], // C, Eb, G, Bb, D
-        bass: 65.41 // C2
-      },
-      {
-        chord: [174.61, 207.65, 261.63, 311.13, 349.23], // F, Ab, C, Eb, F
-        bass: 87.31 // F2
-      },
-      {
-        chord: [116.54, 146.83, 174.61, 207.65, 261.63], // Bb, D, F, Ab, C
-        bass: 58.27 // Bb1
-      }
-    ];
-
-    const playStep = () => {
-      if (!this.ctx || !this.primaryGain || this.activeType !== 'aura-lofi') {
-        if (this.beatTimer) clearInterval(this.beatTimer);
-        return;
-      }
-
-      const time = this.ctx.currentTime;
-      const currentBarStep = step % 32; // 4 bars * 8 steps = 32
-      const barIdx = Math.floor(currentBarStep / 8);
-      const stepInBar = currentBarStep % 8;
-      const currentBarData = progression[barIdx];
-
-      // 1. Velvet Rhodes Electric Piano on beat 1 (step 0) and syncopated beat 3.5 (step 5)
-      if (stepInBar === 0) {
-        this.triggerRhodesChord(currentBarData.chord, time, 2.8);
-        this.triggerWarmSubBass(currentBarData.bass, time, 1.8);
-      } else if (stepInBar === 4) {
-        this.triggerRhodesChord(currentBarData.chord, time, 1.4, 0.7);
-        this.triggerWarmSubBass(currentBarData.bass, time, 1.2);
-      }
-
-      // 2. Chillhop Mellow Beats (Acoustic low-pass filtered kick & soft brushed snare)
-      if (stepInBar === 0 || stepInBar === 4 || stepInBar === 6) {
-        this.triggerMellowKick(time);
-      }
-      if (stepInBar === 2 || stepInBar === 6) {
-        this.triggerSoftSnare(time);
-      }
-      // Gentle closed hi-hat pulse on every 8th note
-      this.triggerVelvetHiHat(time);
-
-      // 3. Twinkling Dream Chime Bell melody
-      if ((stepInBar === 3 || stepInBar === 7) && Math.random() < 0.6) {
-        const celestialNotes = [587.33, 659.25, 783.99, 880.00, 1046.50]; // D5, E5, G5, A5, C6
-        const bellFreq = celestialNotes[Math.floor(Math.random() * celestialNotes.length)];
-        this.triggerCelestialChime(bellFreq, time);
-      }
-
-      step++;
-    };
-
-    playStep();
-    this.beatTimer = setInterval(playStep, stepDurationSec * 1000);
-  }
-
-  // --- HARMONIC LO-FI INSTRUMENTS (Zero Harsh Clicks) ---
-
-  private triggerRhodesChord(freqs: number[], time: number, duration: number, volFactor: number = 1.0) {
-    if (!this.ctx || !this.primaryGain) return;
-
-    freqs.forEach((freq) => {
-      if (!this.ctx || !this.primaryGain) return;
-
-      const osc = this.ctx.createOscillator();
-      const gain = this.ctx.createGain();
-      const filter = this.ctx.createBiquadFilter();
-
-      // Triangle for warm vintage electric piano tone
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(freq, time);
-
-      // Warm low-pass filter to give that velvety lofi character
-      filter.type = 'lowpass';
-      filter.frequency.setValueAtTime(620, time);
-
-      const maxGain = (0.045 / freqs.length) * volFactor;
-      gain.gain.setValueAtTime(0.0001, time);
-      gain.gain.linearRampToValueAtTime(maxGain, time + 0.04);
-      gain.gain.exponentialRampToValueAtTime(maxGain * 0.4, time + 0.6);
-      gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
-
-      osc.connect(filter);
-      filter.connect(gain);
-      gain.connect(this.primaryGain);
-
-      osc.start(time);
-      osc.stop(time + duration + 0.1);
-      this.oscs.push({ osc, gain });
-    });
-  }
-
-  private triggerWarmSubBass(freq: number, time: number, duration: number) {
-    if (!this.ctx || !this.primaryGain) return;
-
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, time);
-
-    gain.gain.setValueAtTime(0.0001, time);
-    gain.gain.linearRampToValueAtTime(0.12, time + 0.05);
-    gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
-
-    osc.connect(gain);
-    gain.connect(this.primaryGain);
-
-    osc.start(time);
-    osc.stop(time + duration + 0.05);
-    this.oscs.push({ osc, gain });
-  }
-
-  private triggerMellowKick(time: number) {
-    if (!this.ctx || !this.primaryGain) return;
-
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'sine';
-    // Smooth 120Hz -> 42Hz frequency glide for punchy yet warm kick
-    osc.frequency.setValueAtTime(130, time);
-    osc.frequency.exponentialRampToValueAtTime(42, time + 0.14);
-
-    gain.gain.setValueAtTime(0.22, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.18);
-
-    osc.connect(gain);
-    gain.connect(this.primaryGain);
-
-    osc.start(time);
-    osc.stop(time + 0.2);
-  }
-
-  private triggerSoftSnare(time: number) {
-    if (!this.ctx || !this.primaryGain) return;
-
-    // Soft low-passed acoustic snap (NO harsh white noise or static)
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'triangle';
-    osc.frequency.setValueAtTime(175, time);
-    osc.frequency.exponentialRampToValueAtTime(80, time + 0.1);
-
-    gain.gain.setValueAtTime(0.08, time);
-    gain.gain.exponentialRampToValueAtTime(0.001, time + 0.12);
-
-    osc.connect(gain);
-    gain.connect(this.primaryGain);
-
-    osc.start(time);
-    osc.stop(time + 0.13);
-  }
-
-  private triggerVelvetHiHat(time: number) {
-    if (!this.ctx || !this.primaryGain) return;
-
-    // Extremely soft filtered tick
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(4200, time);
-
-    gain.gain.setValueAtTime(0.012, time);
-    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.04);
-
-    osc.connect(gain);
-    gain.connect(this.primaryGain);
-
-    osc.start(time);
-    osc.stop(time + 0.05);
-  }
-
-  private triggerCelestialChime(freq: number, time: number) {
-    if (!this.ctx || !this.primaryGain) return;
-
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, time);
-
-    gain.gain.setValueAtTime(0.0001, time);
-    gain.gain.linearRampToValueAtTime(0.035, time + 0.02);
-    gain.gain.exponentialRampToValueAtTime(0.0001, time + 1.2);
-
-    // Warm stereo delay
-    const delay = this.ctx.createDelay();
-    delay.delayTime.setValueAtTime(0.3, time);
-
-    const feedback = this.ctx.createGain();
-    feedback.gain.setValueAtTime(0.35, time);
-
-    osc.connect(gain);
-    gain.connect(this.primaryGain);
-
-    gain.connect(delay);
-    delay.connect(feedback);
-    feedback.connect(delay);
-    delay.connect(this.primaryGain);
-
-    osc.start(time);
-    osc.stop(time + 1.3);
-    this.oscs.push({ osc, gain });
+    this.stopAll();
   }
 }
 

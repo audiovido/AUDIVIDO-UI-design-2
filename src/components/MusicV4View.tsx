@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Play, Pause, SkipBack, SkipForward, Shuffle, Repeat, Heart, 
   Volume2, VolumeX, Volume1, Search, Home, Library, Music, 
@@ -6,9 +6,11 @@ import {
   Sparkles, Disc3, Radio, Share2, Download, Check, Plus, 
   Settings, Grid, List, Clock, Zap, ArrowLeft, Cast, 
   Flame, TrendingUp, X, Filter, Layers, ExternalLink, Maximize2,
-  Minimize2, Mic2, User, Bell, Sliders, ShieldCheck
+  Minimize2, Mic2, User, Bell, Sliders, ShieldCheck,
+  Globe, Database, Loader2, Info, CheckCircle2
 } from 'lucide-react';
 import { AudioSynth } from '../utils/AudioSynth';
+import { musicApi, LyricResult } from '../services/musicApiService';
 
 export interface ResoTrack {
   id: string;
@@ -19,13 +21,17 @@ export interface ResoTrack {
   durationSeconds: number;
   coverUrl: string;
   genre: string;
-  audioSynthType: 'aura-lofi' | 'fireplace' | 'movie' | 'music' | 'social-pad';
+  audioSynthType?: 'aura-lofi' | 'fireplace' | 'movie' | 'music' | 'social-pad';
+  previewUrl?: string;
   lyrics?: string[];
+  syncedLyrics?: { time: number; text: string }[];
   isTopChart?: boolean;
   chartRank?: number;
   isFavorite?: boolean;
   isDownloaded?: boolean;
   plays?: string;
+  source?: 'iTunes' | 'Deezer' | 'Curated' | 'Saavn' | 'Audius' | 'SoundCloud' | 'YouTubeMusic';
+  year?: string;
 }
 
 export interface ResoPlaylist {
@@ -42,208 +48,7 @@ export interface ResoPlaylist {
   isLiked?: boolean;
 }
 
-export const RESO_TRACKS: ResoTrack[] = [
-  {
-    id: 'reso-1',
-    title: 'Midnight Thoughts',
-    artist: 'Reso',
-    album: 'Midnight Thoughts EP',
-    duration: '3:58',
-    durationSeconds: 238,
-    coverUrl: 'https://images.unsplash.com/photo-1518709268805-4e9042af9f23?w=800&auto=format&fit=crop&q=80',
-    genre: 'Synthwave / Lo-Fi',
-    audioSynthType: 'aura-lofi',
-    isFavorite: true,
-    isDownloaded: true,
-    plays: '4.2M',
-    lyrics: [
-      "Cruising down the empty neon avenue",
-      "Streetlights reflecting in the midnight dew",
-      "Lost inside these midnight thoughts with you",
-      "Everything glows in purple and electric blue",
-      "Time stands still as the synth begins to play",
-      "Washing all the daily stress away",
-      "Just you and me under the starry skies",
-      "Lost forever in your cinematic eyes"
-    ]
-  },
-  {
-    id: 'reso-2',
-    title: 'Sunset Lover',
-    artist: 'Petit Biscuit',
-    album: 'Sunset Lover',
-    duration: '3:58',
-    durationSeconds: 238,
-    coverUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&auto=format&fit=crop&q=80',
-    genre: 'Chill / Electronic',
-    audioSynthType: 'social-pad',
-    isFavorite: true,
-    isDownloaded: true,
-    plays: '12.8M',
-    lyrics: [
-      "Golden hour shining warm upon the coast",
-      "Whispering the melodies we love the most",
-      "Sinking low beneath the ocean wave",
-      "All the memories we came to save"
-    ]
-  },
-  {
-    id: 'reso-3',
-    title: 'Space Song',
-    artist: 'Beach House',
-    album: 'Depression Cherry',
-    duration: '5:20',
-    durationSeconds: 320,
-    coverUrl: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?w=800&auto=format&fit=crop&q=80',
-    genre: 'Dream Pop / Indie',
-    audioSynthType: 'aura-lofi',
-    plays: '9.4M',
-    lyrics: [
-      "It was late at night, you held on tight",
-      "From an empty room, a love so bright",
-      "Fall back into place, fall back into space"
-    ]
-  },
-  {
-    id: 'reso-4',
-    title: '505',
-    artist: 'Arctic Monkeys',
-    album: 'Favourite Worst Nightmare',
-    duration: '4:13',
-    durationSeconds: 253,
-    coverUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&auto=format&fit=crop&q=80',
-    genre: 'Indie Rock',
-    audioSynthType: 'music',
-    plays: '18.1M',
-    lyrics: [
-      "I'm going back to 505",
-      "If it's a seven hour flight or a forty-five minute drive",
-      "In my imagination you're waiting lying on your side"
-    ]
-  },
-  {
-    id: 'reso-5',
-    title: 'them changes',
-    artist: 'Thundercat',
-    album: 'Drunk',
-    duration: '3:07',
-    durationSeconds: 187,
-    coverUrl: 'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&auto=format&fit=crop&q=80',
-    genre: 'Funk / R&B',
-    audioSynthType: 'aura-lofi',
-    plays: '6.5M',
-    lyrics: [
-      "Nobody move, there's blood on the floor",
-      "And I can't find my heart",
-      "Where did it go? Did I leave it on the cold floor?"
-    ]
-  },
-  {
-    id: 'reso-6',
-    title: "Nothing's Gonna Hurt You Baby",
-    artist: 'Cigarettes After Sex',
-    album: 'I.',
-    duration: '4:46',
-    durationSeconds: 286,
-    coverUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop&q=80',
-    genre: 'Dream Pop',
-    audioSynthType: 'social-pad',
-    plays: '8.9M',
-    lyrics: [
-      "Whispered in the dark, dancing in the room",
-      "Nothing's gonna hurt you baby",
-      "As long as you're with me, you'll be safe"
-    ]
-  },
-  {
-    id: 'reso-7',
-    title: 'Slow Dancing in the Dark',
-    artist: 'Joji',
-    album: 'BALLADS 1',
-    duration: '3:29',
-    durationSeconds: 209,
-    coverUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=80',
-    genre: 'Alt R&B / Lo-Fi',
-    audioSynthType: 'aura-lofi',
-    plays: '15.3M',
-    lyrics: [
-      "I don't want a friend, I want my life in two",
-      "Give me one more night, slow dancing in the dark"
-    ]
-  },
-  {
-    id: 'reso-8',
-    title: 'Me and Your Mama',
-    artist: 'Childish Gambino',
-    album: '"Awaken, My Love!"',
-    duration: '6:19',
-    durationSeconds: 379,
-    coverUrl: 'https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=800&auto=format&fit=crop&q=80',
-    genre: 'Psychedelic Soul',
-    audioSynthType: 'music',
-    plays: '11.2M',
-    lyrics: [
-      "I'm in love when we are smoking that la-la-la-la-la",
-      "Let me into your heart, do you really love me?"
-    ]
-  },
-  {
-    id: 'reso-9',
-    title: 'Beautiful Things',
-    artist: 'Benson Boone',
-    album: 'Fireworks & Rollerblades',
-    duration: '3:00',
-    durationSeconds: 180,
-    coverUrl: 'https://images.unsplash.com/photo-1487180144351-b8472da7d491?w=800&auto=format&fit=crop&q=80',
-    genre: 'Pop Top Chart',
-    audioSynthType: 'aura-lofi',
-    isTopChart: true,
-    chartRank: 1,
-    plays: '24.5M'
-  },
-  {
-    id: 'reso-10',
-    title: 'Lose Control',
-    artist: 'Teddy Swims',
-    album: "I've Tried Everything But Therapy",
-    duration: '3:30',
-    durationSeconds: 210,
-    coverUrl: 'https://images.unsplash.com/photo-1445985543468-79496ba8821d?w=800&auto=format&fit=crop&q=80',
-    genre: 'Soul / Pop',
-    audioSynthType: 'social-pad',
-    isTopChart: true,
-    chartRank: 2,
-    plays: '21.0M'
-  },
-  {
-    id: 'reso-11',
-    title: 'greedy',
-    artist: 'Tate McRae',
-    album: 'THINK LATER',
-    duration: '2:11',
-    durationSeconds: 131,
-    coverUrl: 'https://images.unsplash.com/photo-1520523839898-5071282543e2?w=800&auto=format&fit=crop&q=80',
-    genre: 'Pop Top Chart',
-    audioSynthType: 'music',
-    isTopChart: true,
-    chartRank: 3,
-    plays: '28.4M'
-  },
-  {
-    id: 'reso-12',
-    title: 'Too Sweet',
-    artist: 'Hozier',
-    album: 'Unheard',
-    duration: '4:11',
-    durationSeconds: 251,
-    coverUrl: 'https://images.unsplash.com/photo-1514306191717-452ec28c7814?w=800&auto=format&fit=crop&q=80',
-    genre: 'Indie Blues Top Chart',
-    audioSynthType: 'aura-lofi',
-    isTopChart: true,
-    chartRank: 4,
-    plays: '19.7M'
-  }
-];
+export const RESO_TRACKS: ResoTrack[] = [];
 
 export const RESO_PLAYLISTS: ResoPlaylist[] = [
   {
@@ -343,6 +148,18 @@ interface MusicV4ViewProps {
   onNavigatePortal: () => void;
 }
 
+const EMPTY_RESO_TRACK: ResoTrack = {
+  id: '',
+  title: 'No Track Selected',
+  artist: 'Search any music to stream',
+  album: 'Global Catalog',
+  duration: '0:00',
+  durationSeconds: 0,
+  coverUrl: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=800&auto=format&fit=crop&q=80',
+  genre: 'Music',
+  audioSynthType: 'music'
+};
+
 export const MusicV4View: React.FC<MusicV4ViewProps> = ({ onNavigatePortal }) => {
   // Navigation View State
   const [activeNav, setActiveNav] = useState<'home' | 'search' | 'library' | 'charts' | 'made_for_you' | 'playlist'>('home');
@@ -353,22 +170,15 @@ export const MusicV4View: React.FC<MusicV4ViewProps> = ({ onNavigatePortal }) =>
   const [libraryLayout, setLibraryLayout] = useState<'grid' | 'list'>('grid');
 
   // Audio Playback Engine States
-  const [currentTrack, setCurrentTrack] = useState<ResoTrack>(RESO_TRACKS[0]);
+  const [currentTrack, setCurrentTrack] = useState<ResoTrack>(EMPTY_RESO_TRACK);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-  const [playbackSeconds, setPlaybackSeconds] = useState<number>(102); // 1:42 matching image
+  const [playbackSeconds, setPlaybackSeconds] = useState<number>(0);
   const [isShuffle, setIsShuffle] = useState<boolean>(false);
   const [isRepeat, setIsRepeat] = useState<boolean>(false);
   const [volume, setVolume] = useState<number>(75);
   const [isMuted, setIsMuted] = useState<boolean>(false);
-  const [likedTrackIds, setLikedTrackIds] = useState<Record<string, boolean>>({
-    'reso-1': true,
-    'reso-2': true,
-    'reso-4': true
-  });
-  const [downloadedTrackIds, setDownloadedTrackIds] = useState<Record<string, boolean>>({
-    'reso-1': true,
-    'reso-2': true
-  });
+  const [likedTrackIds, setLikedTrackIds] = useState<Record<string, boolean>>({});
+  const [downloadedTrackIds, setDownloadedTrackIds] = useState<Record<string, boolean>>({});
 
   // Right Side Panel Drawer: 'nowplaying' | 'lyrics' | 'queue' | 'none'
   const [rightPanel, setRightPanel] = useState<'nowplaying' | 'lyrics' | 'queue'>('nowplaying');
@@ -377,12 +187,24 @@ export const MusicV4View: React.FC<MusicV4ViewProps> = ({ onNavigatePortal }) =>
   // Modals & Popovers
   const [showDeviceModal, setShowDeviceModal] = useState<boolean>(false);
   const [showCreatePlaylistModal, setShowCreatePlaylistModal] = useState<boolean>(false);
+  const [showApiModal, setShowApiModal] = useState<boolean>(false);
   const [newPlaylistTitle, setNewPlaylistTitle] = useState<string>('');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Search state
+  // Search & Multi-Engine API State
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [searchEngine, setSearchEngine] = useState<'all' | 'itunes' | 'deezer'>('all');
   const [selectedGenre, setSelectedGenre] = useState<string>('All');
+  const [apiSearchResults, setApiSearchResults] = useState<ResoTrack[]>([]);
+  const [isSearchingApi, setIsSearchingApi] = useState<boolean>(false);
+  const [savedLibraryTracks, setSavedLibraryTracks] = useState<any[]>(() => musicApi.getSavedLibraryTracks());
+
+  // Real-time Lyrics from LRCLIB API
+  const [lyricsData, setLyricsData] = useState<LyricResult | null>(null);
+  const [isLoadingLyrics, setIsLoadingLyrics] = useState<boolean>(false);
+
+  // Real HTML5 Audio Stream for iTunes & Deezer Previews
+  const audioStreamRef = useRef<HTMLAudioElement | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -390,6 +212,102 @@ export const MusicV4View: React.FC<MusicV4ViewProps> = ({ onNavigatePortal }) =>
       setToastMessage(null);
     }, 2500);
   };
+
+  // Add a track to User's Cloud Library
+  const handleAddToLibrary = (track: ResoTrack, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const success = musicApi.saveTrackToLibrary({
+      id: track.id,
+      title: track.title,
+      artist: track.artist,
+      album: track.album,
+      duration: track.duration,
+      durationSeconds: track.durationSeconds,
+      coverUrl: track.coverUrl,
+      previewUrl: track.previewUrl,
+      genre: track.genre,
+      year: track.year,
+      source: (track.source as any) || 'iTunes'
+    });
+    if (success) {
+      setSavedLibraryTracks(musicApi.getSavedLibraryTracks());
+      showToast(`Added "${track.title}" to My Library 🎵`);
+    } else {
+      showToast(`"${track.title}" is already in your Library`);
+    }
+  };
+
+  const handleRemoveFromLibrary = (trackId: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    musicApi.removeTrackFromLibrary(trackId);
+    setSavedLibraryTracks(musicApi.getSavedLibraryTracks());
+    showToast('Removed track from My Library');
+  };
+
+  // Sync volume with audio stream element & synth
+  useEffect(() => {
+    const effectiveVol = isMuted ? 0 : volume / 100;
+    if (audioStreamRef.current) {
+      audioStreamRef.current.volume = effectiveVol;
+    }
+    AudioSynth.setVolume(effectiveVol);
+  }, [volume, isMuted]);
+
+  // Fetch real lyrics from LRCLIB whenever currentTrack changes
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingLyrics(true);
+
+    musicApi.fetchLyrics(currentTrack.title, currentTrack.artist).then(res => {
+      if (isMounted) {
+        setLyricsData(res);
+        setIsLoadingLyrics(false);
+      }
+    }).catch(() => {
+      if (isMounted) setIsLoadingLyrics(false);
+    });
+
+    return () => { isMounted = false; };
+  }, [currentTrack.title, currentTrack.artist]);
+
+  // Live Debounced Multi-Engine Search (Apple iTunes + Deezer API)
+  useEffect(() => {
+    const q = searchQuery.trim();
+    if (!q || q.length < 2) {
+      setApiSearchResults([]);
+      setIsSearchingApi(false);
+      return;
+    }
+
+    setIsSearchingApi(true);
+    const debounceTimer = setTimeout(async () => {
+      try {
+        const results = await musicApi.searchTracks(q, searchEngine, 24);
+        const mapped: ResoTrack[] = results.map(item => ({
+          id: item.id,
+          title: item.title,
+          artist: item.artist,
+          album: item.album,
+          duration: item.duration,
+          durationSeconds: item.durationSeconds,
+          coverUrl: item.coverUrl,
+          previewUrl: item.previewUrl,
+          genre: item.genre,
+          source: item.source,
+          year: item.year,
+          plays: item.plays,
+          audioSynthType: 'music'
+        }));
+        setApiSearchResults(mapped);
+      } catch (err) {
+        console.warn('Live API search error:', err);
+      } finally {
+        setIsSearchingApi(false);
+      }
+    }, 380);
+
+    return () => clearTimeout(debounceTimer);
+  }, [searchQuery, searchEngine]);
 
   // Playback Timer
   useEffect(() => {
@@ -412,41 +330,66 @@ export const MusicV4View: React.FC<MusicV4ViewProps> = ({ onNavigatePortal }) =>
 
   // Handle Play/Pause
   const togglePlayPause = () => {
+    if (!currentTrack || !currentTrack.id) {
+      showToast('Search any song above to stream live music');
+      return;
+    }
     if (isPlaying) {
       setIsPlaying(false);
-      AudioSynth.stopAll();
+      if (audioStreamRef.current) {
+        audioStreamRef.current.pause();
+      }
       showToast('Playback Paused');
     } else {
       setIsPlaying(true);
-      AudioSynth.playTrack(currentTrack.audioSynthType || 'aura-lofi');
+      if (currentTrack.previewUrl && audioStreamRef.current) {
+        audioStreamRef.current.play().catch(e => {
+          console.warn('Audio stream error:', e);
+        });
+      }
       showToast(`Playing: ${currentTrack.title}`);
     }
   };
 
   const playSpecificTrack = (track: ResoTrack, playlistId?: string) => {
+    if (!track || !track.id) return;
     setCurrentTrack(track);
     setPlaybackSeconds(0);
     setIsPlaying(true);
     if (playlistId) setSelectedPlaylistId(playlistId);
-    AudioSynth.playTrack(track.audioSynthType || 'aura-lofi');
-    showToast(`Now Playing: ${track.title} • ${track.artist}`);
+
+    if (track.previewUrl && audioStreamRef.current) {
+      audioStreamRef.current.src = track.previewUrl;
+      audioStreamRef.current.currentTime = 0;
+      audioStreamRef.current.play().catch(e => {
+        console.warn('Audio stream play warning:', e);
+      });
+      showToast(`Streaming HQ Preview: ${track.title} • ${track.artist}`);
+    } else {
+      if (audioStreamRef.current) audioStreamRef.current.pause();
+      showToast(`Selected: ${track.title} • ${track.artist}`);
+    }
   };
 
   const handleNextTrack = () => {
-    const currentIndex = RESO_TRACKS.findIndex(t => t.id === currentTrack.id);
-    let nextIndex = (currentIndex + 1) % RESO_TRACKS.length;
+    const listToUse = apiSearchResults.length > 0 ? apiSearchResults : RESO_TRACKS;
+    if (listToUse.length === 0) return;
+    const currentIndex = listToUse.findIndex(t => t.id === currentTrack.id);
+    let nextIndex = (currentIndex + 1) % listToUse.length;
     if (isShuffle) {
-      nextIndex = Math.floor(Math.random() * RESO_TRACKS.length);
+      nextIndex = Math.floor(Math.random() * listToUse.length);
     }
-    const nextTrack = RESO_TRACKS[nextIndex];
-    playSpecificTrack(nextTrack);
+    const nextTrack = listToUse[nextIndex];
+    if (nextTrack) playSpecificTrack(nextTrack);
   };
 
   const handlePreviousTrack = () => {
-    const currentIndex = RESO_TRACKS.findIndex(t => t.id === currentTrack.id);
-    const prevIndex = (currentIndex - 1 + RESO_TRACKS.length) % RESO_TRACKS.length;
-    const prevTrack = RESO_TRACKS[prevIndex];
-    playSpecificTrack(prevTrack);
+    const listToUse = apiSearchResults.length > 0 ? apiSearchResults : RESO_TRACKS;
+    if (listToUse.length === 0) return;
+    const currentIndex = listToUse.findIndex(t => t.id === currentTrack.id);
+    const prevIndex = (currentIndex - 1 + listToUse.length) % listToUse.length;
+    const prevTrack = listToUse[prevIndex];
+    if (prevTrack) playSpecificTrack(prevTrack);
   };
 
   const toggleLike = (trackId: string, e?: React.MouseEvent) => {
@@ -470,6 +413,9 @@ export const MusicV4View: React.FC<MusicV4ViewProps> = ({ onNavigatePortal }) =>
   const handleSeek = (fraction: number) => {
     const targetSeconds = Math.floor(fraction * currentTrack.durationSeconds);
     setPlaybackSeconds(targetSeconds);
+    if (audioStreamRef.current && currentTrack.previewUrl) {
+      audioStreamRef.current.currentTime = Math.min(targetSeconds, 29.5);
+    }
   };
 
   const formatTime = (seconds: number) => {
@@ -697,6 +643,16 @@ export const MusicV4View: React.FC<MusicV4ViewProps> = ({ onNavigatePortal }) =>
                 </button>
               ))}
             </div>
+
+            {/* Music APIs Explorer Button */}
+            <button 
+              onClick={() => setShowApiModal(true)}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-2xl bg-gradient-to-r from-pink-500/20 via-purple-500/20 to-indigo-500/20 hover:from-pink-500/30 hover:to-purple-500/30 border border-pink-400/40 text-pink-300 hover:text-white text-xs font-bold transition-all shadow-[0_0_15px_rgba(236,72,153,0.2)] cursor-pointer shrink-0"
+              title="Music APIs Explorer & Guide (Apple iTunes, LRCLIB, Deezer)"
+            >
+              <Globe className="w-3.5 h-3.5 text-pink-400 animate-pulse" />
+              <span className="hidden sm:inline">Music APIs</span>
+            </button>
 
             {/* User Profile & Notification */}
             <div className="flex items-center gap-3">
@@ -965,59 +921,262 @@ export const MusicV4View: React.FC<MusicV4ViewProps> = ({ onNavigatePortal }) =>
             </div>
           )}
 
-          {/* --- 2. SEARCH & EXPLORE VIEW --- */}
+          {/* --- 2. SEARCH & EXPLORE VIEW (POWERED BY APPLE ITUNES SEARCH API & LRCLIB) --- */}
           {activeNav === 'search' && (
             <div className="space-y-6 animate-fadeIn">
-              <h1 className="text-2xl font-black text-white">Search & Explore Catalog</h1>
+              
+              {/* Header with API Indicator */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h1 className="text-2xl font-black text-white flex items-center gap-2.5">
+                    <span>Global Music Search</span>
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[10px] font-mono font-bold">
+                      LIVE API ACTIVE
+                    </span>
+                  </h1>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Powered by Apple iTunes Search API (Global Catalog & Previews) & LRCLIB (Synchronized Lyrics)
+                  </p>
+                </div>
+
+                <button 
+                  onClick={() => setShowApiModal(true)}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 hover:border-pink-400/40 text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer self-start sm:self-auto"
+                >
+                  <Info className="w-4 h-4 text-pink-400" />
+                  <span>Public APIs Guide</span>
+                </button>
+              </div>
+
+              {/* Multi-Engine Selector (Apple iTunes vs Deezer vs All) */}
+              <div className="flex flex-wrap items-center gap-2 p-1.5 rounded-2xl bg-white/[0.04] border border-white/10 w-fit">
+                <span className="text-[10px] font-bold text-slate-400 px-2 uppercase tracking-wider">Search Engine:</span>
+                <button
+                  onClick={() => setSearchEngine('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    searchEngine === 'all'
+                      ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  🌐 Multi-Engine (iTunes + Deezer)
+                </button>
+                <button
+                  onClick={() => setSearchEngine('itunes')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    searchEngine === 'itunes'
+                      ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  🍎 Apple iTunes
+                </button>
+                <button
+                  onClick={() => setSearchEngine('deezer')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                    searchEngine === 'deezer'
+                      ? 'bg-gradient-to-r from-pink-500 to-purple-600 text-white shadow-md'
+                      : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  }`}
+                >
+                  🎧 Deezer API
+                </button>
+              </div>
+
+              {/* Instant Test Search Chips (Directly from User Brief) */}
+              <div className="space-y-2">
+                <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400">
+                  Instant One-Click Public Catalog Tests:
+                </span>
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                  {[
+                    'Queen', 'Coldplay', 'Eminem', 'Taylor Swift', 
+                    'The Weeknd', 'Billie Eilish', 'Daft Punk', 'Imagine Dragons', 'Hans Zimmer'
+                  ].map(artistTag => (
+                    <button
+                      key={artistTag}
+                      onClick={() => setSearchQuery(artistTag)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all cursor-pointer border ${
+                        searchQuery.toLowerCase() === artistTag.toLowerCase()
+                          ? 'bg-gradient-to-r from-pink-500 to-purple-600 border-pink-400 text-white shadow-md shadow-pink-500/40 scale-105'
+                          : 'bg-white/[0.04] hover:bg-white/[0.08] border-white/10 text-slate-300 hover:text-white'
+                      }`}
+                    >
+                      {artistTag}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               {searchQuery ? (
-                <div>
-                  <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-4">
-                    Results for "{searchQuery}" ({filteredTracks.length} tracks found)
-                  </h2>
-                  <div className="space-y-2">
-                    {filteredTracks.map(track => (
-                      <div 
-                        key={track.id}
-                        onClick={() => playSpecificTrack(track)}
-                        className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.08] border border-white/5 transition-all cursor-pointer group"
-                      >
-                        <div className="flex items-center gap-4 min-w-0">
-                          <img src={track.coverUrl} alt={track.title} className="w-12 h-12 rounded-xl object-cover shadow-sm" />
-                          <div className="min-w-0">
-                            <h4 className="text-xs font-bold text-white group-hover:text-pink-300">{track.title}</h4>
-                            <p className="text-[10px] text-slate-400">{track.artist} • {track.album}</p>
-                            <span className="text-[9px] font-semibold text-pink-400">{track.genre}</span>
+                <div className="space-y-4">
+                  {/* Live Search Status Banner */}
+                  <div className="flex items-center justify-between p-3 rounded-2xl bg-white/[0.03] border border-white/10">
+                    <div className="flex items-center gap-2.5 text-xs text-slate-300">
+                      {isSearchingApi ? (
+                        <>
+                          <Loader2 className="w-4 h-4 text-pink-400 animate-spin" />
+                          <span>Searching via <strong>{searchEngine === 'all' ? 'iTunes & Deezer' : searchEngine === 'itunes' ? 'Apple iTunes' : 'Deezer'}</strong> for "{searchQuery}"...</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+                          <span>
+                            Showing {apiSearchResults.length > 0 ? apiSearchResults.length : filteredTracks.length} live tracks for <strong>"{searchQuery}"</strong>
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">
+                      Live Internet Audio Stream Active
+                    </span>
+                  </div>
+
+                  {/* Track Results List */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    {(apiSearchResults.length > 0 ? apiSearchResults : filteredTracks).map(track => {
+                      const isThisPlaying = isPlaying && currentTrack.id === track.id;
+                      const isSaved = savedLibraryTracks.some(t => t.id === track.id || (t.title === track.title && t.artist === track.artist));
+
+                      return (
+                        <div 
+                          key={track.id}
+                          onClick={() => playSpecificTrack(track)}
+                          className={`flex items-center justify-between p-3.5 rounded-2xl transition-all cursor-pointer group ${
+                            isThisPlaying 
+                              ? 'bg-pink-500/20 border border-pink-500/50 shadow-lg shadow-pink-500/20' 
+                              : 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 hover:border-pink-500/30'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3.5 min-w-0">
+                            <div className="relative w-12 h-12 rounded-xl overflow-hidden shadow-sm shrink-0 border border-white/10">
+                              <img src={track.coverUrl} alt={track.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <Play className="w-4 h-4 fill-white text-white ml-0.5" />
+                              </div>
+                            </div>
+
+                            <div className="min-w-0 space-y-0.5">
+                              <h4 className={`text-xs font-bold truncate ${isThisPlaying ? 'text-pink-300' : 'text-white group-hover:text-pink-200'}`}>
+                                {track.title}
+                              </h4>
+                              <p className="text-[11px] text-slate-400 truncate">
+                                {track.artist} • {track.album}
+                              </p>
+                              <div className="flex items-center gap-2 pt-0.5">
+                                <span className={`text-[8.5px] px-1.5 py-0.2 rounded font-mono font-bold ${
+                                  track.source === 'Deezer' 
+                                    ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-400/30' 
+                                    : 'bg-pink-500/20 text-pink-300 border border-pink-400/30'
+                                }`}>
+                                  {track.source === 'Deezer' ? '🎧 Deezer' : '🍎 Apple'}
+                                </span>
+                                {track.previewUrl && (
+                                  <span className="text-[8.5px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono">
+                                    HQ 30s Stream
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs font-mono text-slate-400 mr-1">{track.duration}</span>
+                            
+                            {/* Add to Library Button */}
+                            <button
+                              onClick={(e) => handleAddToLibrary(track, e)}
+                              className={`p-1.5 rounded-xl border transition-all cursor-pointer ${
+                                isSaved 
+                                  ? 'bg-emerald-500/20 border-emerald-400/40 text-emerald-300' 
+                                  : 'bg-white/5 border-white/10 hover:bg-pink-500/20 hover:border-pink-400/40 text-slate-300 hover:text-pink-300'
+                              }`}
+                              title={isSaved ? "Saved in My Library" : "Add to My Library"}
+                            >
+                              {isSaved ? <Check className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                            </button>
+
+                            {/* Favorite Heart */}
+                            <button 
+                              onClick={(e) => toggleLike(track.id, e)}
+                              className="p-1.5 text-slate-400 hover:text-pink-400 transition-colors cursor-pointer"
+                            >
+                              <Heart className={`w-4 h-4 ${likedTrackIds[track.id] ? 'fill-pink-500 text-pink-500' : ''}`} />
+                            </button>
                           </div>
                         </div>
-                        <span className="text-xs font-mono text-slate-400">{track.duration}</span>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               ) : (
                 <div className="space-y-6">
-                  <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Browse Moods & Genres</h2>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {[
-                      { name: 'Lo-Fi Chill', gradient: 'from-purple-900 to-indigo-700' },
-                      { name: 'Synthwave Night', gradient: 'from-pink-600 to-purple-800' },
-                      { name: 'Dream Pop', gradient: 'from-blue-600 to-teal-700' },
-                      { name: 'Workout Energy', gradient: 'from-rose-600 to-amber-600' },
-                      { name: 'Acoustic Soul', gradient: 'from-emerald-700 to-teal-800' },
-                      { name: 'Top Billboard', gradient: 'from-amber-600 to-red-700' },
-                      { name: 'Late Night Drives', gradient: 'from-indigo-900 to-pink-700' },
-                      { name: 'Focus Study', gradient: 'from-teal-800 to-blue-900' }
-                    ].map(cat => (
-                      <div 
-                        key={cat.name}
-                        onClick={() => setSearchQuery(cat.name)}
-                        className={`p-5 rounded-3xl bg-gradient-to-br ${cat.gradient} h-32 flex flex-col justify-between cursor-pointer active:scale-95 transition-all shadow-lg border border-white/10 hover:border-white/30 group`}
-                      >
-                        <span className="text-sm font-black text-white group-hover:text-pink-200 transition-colors">{cat.name}</span>
-                        <Music className="w-6 h-6 text-white/50 self-end group-hover:scale-110 transition-transform" />
+                  {/* Public Music APIs Architectural Overview Cards */}
+                  <div>
+                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">
+                      Integrated Public Music APIs (No Key / Instant Access)
+                    </h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {/* 1. Apple iTunes Search API */}
+                      <div className="p-4 rounded-3xl bg-gradient-to-br from-pink-950/60 to-purple-950/40 border border-pink-500/30 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-pink-300 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            Apple iTunes Search API (Live)
+                          </span>
+                          <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">
+                            Integrated & Live
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                          Worldwide music database with instant full metadata, crystal-clear 600x600 artwork, and official 30-second audio stream previews. No registration or API key required.
+                        </p>
                       </div>
-                    ))}
+
+                      {/* 2. LRCLIB Synced Lyrics API */}
+                      <div className="p-4 rounded-3xl bg-gradient-to-br from-purple-950/60 to-indigo-950/40 border border-purple-500/30 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-purple-300 flex items-center gap-1.5">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                            LRCLIB Synced Lyrics API (Live)
+                          </span>
+                          <span className="text-[9px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">
+                            Integrated & Live
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-300 leading-relaxed">
+                          Open community-driven lyrics database delivering timestamped LRC karaoke lyrics and plain text with zero API keys or rate-limit barriers.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Browse Moods & Genres Grid */}
+                  <div className="space-y-3">
+                    <h2 className="text-xs font-bold text-slate-400 uppercase tracking-wider">Browse Moods & Genres</h2>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                      {[
+                        { name: 'Lo-Fi Chill', gradient: 'from-purple-900 to-indigo-700' },
+                        { name: 'Synthwave Night', gradient: 'from-pink-600 to-purple-800' },
+                        { name: 'Dream Pop', gradient: 'from-blue-600 to-teal-700' },
+                        { name: 'Workout Energy', gradient: 'from-rose-600 to-amber-600' },
+                        { name: 'Acoustic Soul', gradient: 'from-emerald-700 to-teal-800' },
+                        { name: 'Top Billboard', gradient: 'from-amber-600 to-red-700' },
+                        { name: 'Late Night Drives', gradient: 'from-indigo-900 to-pink-700' },
+                        { name: 'Focus Study', gradient: 'from-teal-800 to-blue-900' }
+                      ].map(cat => (
+                        <div 
+                          key={cat.name}
+                          onClick={() => setSearchQuery(cat.name)}
+                          className={`p-5 rounded-3xl bg-gradient-to-br ${cat.gradient} h-32 flex flex-col justify-between cursor-pointer active:scale-95 transition-all shadow-lg border border-white/10 hover:border-white/30 group`}
+                        >
+                          <span className="text-sm font-black text-white group-hover:text-pink-200 transition-colors">{cat.name}</span>
+                          <Music className="w-6 h-6 text-white/50 self-end group-hover:scale-110 transition-transform" />
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               )}
@@ -1080,6 +1239,134 @@ export const MusicV4View: React.FC<MusicV4ViewProps> = ({ onNavigatePortal }) =>
                     {tab}
                   </button>
                 ))}
+              </div>
+
+              {/* My Saved Online Tracks (Persisted from Deezer / iTunes APIs) */}
+              <div className="p-5 rounded-3xl bg-slate-900/80 border border-pink-500/30 backdrop-blur-2xl shadow-xl space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-pink-500/20 border border-pink-400/40 flex items-center justify-center text-pink-300">
+                      <Music className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm font-bold text-white flex items-center gap-2">
+                        <span>My Saved Online Tracks</span>
+                        <span className="px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 text-[10px] font-mono font-bold">
+                          {savedLibraryTracks.length} Saved
+                        </span>
+                      </h2>
+                      <p className="text-[11px] text-slate-400">Added from Apple iTunes & Deezer Live APIs • Playable over the Internet</p>
+                    </div>
+                  </div>
+
+                  {savedLibraryTracks.length > 0 && (
+                    <button
+                      onClick={() => {
+                        const first = savedLibraryTracks[0];
+                        if (first) {
+                          playSpecificTrack({
+                            id: first.id,
+                            title: first.title,
+                            artist: first.artist,
+                            album: first.album,
+                            duration: first.duration,
+                            durationSeconds: first.durationSeconds,
+                            coverUrl: first.coverUrl,
+                            previewUrl: first.previewUrl,
+                            genre: first.genre,
+                            source: first.source,
+                            year: first.year,
+                            plays: first.plays
+                          });
+                        }
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-pink-500 hover:bg-pink-400 text-white text-xs font-bold transition-all shadow-md shadow-pink-500/30 cursor-pointer"
+                    >
+                      <Play className="w-3.5 h-3.5 fill-white" />
+                      <span>Play All Saved</span>
+                    </button>
+                  )}
+                </div>
+
+                {savedLibraryTracks.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-72 overflow-y-auto no-scrollbar pr-1">
+                    {savedLibraryTracks.map((t: any) => {
+                      const isThisPlaying = isPlaying && currentTrack.id === t.id;
+
+                      return (
+                        <div
+                          key={t.id}
+                          onClick={() => {
+                            playSpecificTrack({
+                              id: t.id,
+                              title: t.title,
+                              artist: t.artist,
+                              album: t.album,
+                              duration: t.duration,
+                              durationSeconds: t.durationSeconds,
+                              coverUrl: t.coverUrl,
+                              previewUrl: t.previewUrl,
+                              genre: t.genre,
+                              source: t.source,
+                              year: t.year,
+                              plays: t.plays
+                            });
+                          }}
+                          className={`flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer group ${
+                            isThisPlaying
+                              ? 'bg-pink-500/20 border border-pink-400/50 shadow-md'
+                              : 'bg-white/[0.04] hover:bg-white/[0.08] border border-white/5'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <img src={t.coverUrl} alt={t.title} className="w-11 h-11 rounded-xl object-cover shrink-0" />
+                            <div className="min-w-0">
+                              <h4 className={`text-xs font-bold truncate ${isThisPlaying ? 'text-pink-300' : 'text-white group-hover:text-pink-200'}`}>
+                                {t.title}
+                              </h4>
+                              <p className="text-[10px] text-slate-400 truncate">{t.artist} • {t.album}</p>
+                              <div className="flex items-center gap-1.5 pt-0.5">
+                                <span className={`text-[8.5px] px-1.5 py-0.2 rounded font-mono font-bold ${
+                                  t.source === 'Deezer' ? 'bg-cyan-500/20 text-cyan-300' : 'bg-pink-500/20 text-pink-300'
+                                }`}>
+                                  {t.source === 'Deezer' ? '🎧 Deezer' : '🍎 Apple'}
+                                </span>
+                                <span className="text-[8.5px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-mono">
+                                  Live Audio
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs font-mono text-slate-400">{t.duration}</span>
+                            <button
+                              onClick={(e) => handleRemoveFromLibrary(t.id, e)}
+                              className="p-1.5 text-slate-400 hover:text-rose-400 transition-colors"
+                              title="Remove from My Library"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center rounded-2xl bg-white/[0.02] border border-dashed border-white/10 space-y-2">
+                    <Music className="w-8 h-8 text-slate-500 mx-auto" />
+                    <p className="text-xs font-bold text-slate-300">No tracks added to your cloud library yet</p>
+                    <p className="text-[11px] text-slate-400 max-w-sm mx-auto">
+                      Search for any artist or song (e.g. Queen, Coldplay, Eminem, Taylor Swift) in the Search tab and click <Plus className="w-3 h-3 inline mx-0.5 text-pink-400" /> to add it here!
+                    </p>
+                    <button
+                      onClick={() => setActiveNav('search')}
+                      className="px-4 py-2 rounded-xl bg-pink-500/20 hover:bg-pink-500/30 border border-pink-400/40 text-pink-300 text-xs font-bold transition-all cursor-pointer"
+                    >
+                      Go to Search
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* Grid of Playlists */}
@@ -1464,28 +1751,83 @@ export const MusicV4View: React.FC<MusicV4ViewProps> = ({ onNavigatePortal }) =>
                 </div>
               )}
 
-              {/* TAB 2: LIVE SYNCHRONIZED KARAOKE LYRICS VIEW */}
+              {/* TAB 2: LIVE SYNCHRONIZED KARAOKE LYRICS VIEW (POWERED BY LRCLIB API) */}
               {rightPanel === 'lyrics' && (
                 <div className="space-y-4 animate-fadeIn h-96 overflow-y-auto no-scrollbar py-2 text-center">
-                  <div className="flex items-center justify-center gap-2 text-xs text-pink-400 font-bold mb-3">
-                    <Mic2 className="w-4 h-4" />
-                    <span>Real-Time Lyrics</span>
+                  <div className="flex items-center justify-center gap-2 text-xs font-bold mb-3">
+                    <Mic2 className="w-4 h-4 text-pink-400" />
+                    <span className="text-white">Live Karaoke Lyrics</span>
+                    <span className="px-2 py-0.5 rounded-full bg-pink-500/20 text-pink-300 text-[9px] font-mono">
+                      LRCLIB API
+                    </span>
                   </div>
 
-                  {(currentTrack.lyrics || [
-                    "Instrumental melody playing...",
-                    "Feel the synthesized rhythm and warm ambient pads...",
-                    "Pure sonic atmosphere by Reso..."
-                  ]).map((line, idx) => (
-                    <p 
-                      key={idx}
-                      className={`text-sm sm:text-base font-bold transition-all py-1.5 ${
-                        idx === 2 ? 'text-pink-300 scale-105 drop-shadow-[0_0_12px_rgba(236,72,153,0.8)]' : 'text-slate-400 hover:text-white cursor-pointer'
-                      }`}
-                    >
-                      {line}
-                    </p>
-                  ))}
+                  {isLoadingLyrics ? (
+                    <div className="flex flex-col items-center justify-center py-12 gap-3 text-slate-400">
+                      <Loader2 className="w-6 h-6 text-pink-400 animate-spin" />
+                      <p className="text-xs">Searching LRCLIB for synchronized lyrics...</p>
+                    </div>
+                  ) : lyricsData?.syncedLyrics && lyricsData.syncedLyrics.length > 0 ? (
+                    <div className="space-y-2 px-2">
+                      {lyricsData.syncedLyrics.map((line, idx) => {
+                        const nextTime = lyricsData.syncedLyrics![idx + 1]?.time ?? 999999;
+                        const isCurrentLine = playbackSeconds >= line.time && playbackSeconds < nextTime;
+
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => handleSeek(line.time / currentTrack.durationSeconds)}
+                            className={`transition-all duration-300 rounded-xl px-3 py-2 cursor-pointer ${
+                              isCurrentLine
+                                ? 'bg-gradient-to-r from-pink-500/20 via-purple-500/25 to-pink-500/20 border border-pink-400/50 scale-[1.03] text-pink-300 font-black shadow-[0_0_20px_rgba(236,72,153,0.4)]'
+                                : 'text-slate-400 hover:text-white hover:bg-white/[0.04]'
+                            }`}
+                          >
+                            <span className="text-sm sm:text-base leading-relaxed block">
+                              {line.text}
+                            </span>
+                            <span className="text-[9px] font-mono text-slate-400/70 mt-0.5 block">
+                              {Math.floor(line.time / 60)}:{(Math.floor(line.time % 60)).toString().padStart(2, '0')}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : lyricsData?.plainLyrics && lyricsData.plainLyrics.length > 0 ? (
+                    <div className="space-y-2.5 px-2">
+                      {lyricsData.plainLyrics.map((line, idx) => (
+                        <p 
+                          key={idx}
+                          className="text-xs sm:text-sm font-medium text-slate-300 hover:text-white transition-colors"
+                        >
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+                  ) : lyricsData?.instrumental ? (
+                    <div className="py-16 text-center space-y-2 text-slate-400">
+                      <Disc3 className="w-8 h-8 text-pink-400 mx-auto animate-spin" />
+                      <p className="text-sm font-bold text-white">Instrumental Track</p>
+                      <p className="text-xs text-slate-400">No lyrical vocals in this production.</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-2 px-2">
+                      {(currentTrack.lyrics || [
+                        "Instrumental melody playing...",
+                        "Feel the synthesized rhythm and warm ambient pads...",
+                        "Pure sonic atmosphere by Reso..."
+                      ]).map((line, idx) => (
+                        <p 
+                          key={idx}
+                          className={`text-sm sm:text-base font-bold transition-all py-1.5 ${
+                            idx === 2 ? 'text-pink-300 scale-105 drop-shadow-[0_0_12px_rgba(236,72,153,0.8)]' : 'text-slate-400 hover:text-white cursor-pointer'
+                          }`}
+                        >
+                          {line}
+                        </p>
+                      ))}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1777,6 +2119,156 @@ export const MusicV4View: React.FC<MusicV4ViewProps> = ({ onNavigatePortal }) =>
           </div>
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* PUBLIC MUSIC APIS GUIDE & EXPLORER MODAL                                  */}
+      {/* ========================================================================= */}
+      {showApiModal && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-xl flex items-center justify-center p-4 overflow-y-auto no-scrollbar">
+          <div className="w-full max-w-2xl rounded-3xl bg-slate-900/95 border border-pink-500/40 p-6 shadow-2xl space-y-6 my-8 animate-fadeIn">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-4">
+              <div className="flex items-center gap-2.5">
+                <Globe className="w-5 h-5 text-pink-400 animate-pulse" />
+                <div>
+                  <h3 className="text-base font-black text-white">Music APIs Architecture Guide</h3>
+                  <p className="text-[11px] text-slate-400">Classification & Integration Details for Global Music Search</p>
+                </div>
+              </div>
+              <button 
+                onClick={() => setShowApiModal(false)}
+                className="p-1.5 rounded-full bg-white/10 text-slate-300 hover:text-white"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Category 1: Public / No-Key APIs (Instantly Usable) */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5" />
+                  ۱. سرویس‌های باز بدون نیاز به کلید (استفاده فوری و فعال در برنامه)
+                </span>
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300">
+                  Ready & Live
+                </span>
+              </div>
+
+              <div className="space-y-2 text-xs">
+                {/* Apple iTunes Search API */}
+                <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white">Apple iTunes Search API</span>
+                    <span className="text-[10px] text-emerald-300 font-mono">CORS Open • Active Live</span>
+                  </div>
+                  <p className="text-slate-300 text-[11px]">
+                    پایگاه داده آزاد آیتونز و اپل موزیک. کاملاً رایگان و بدون نیاز به کلید. بازگرداننده متادیتای قطعه، نام خواننده، آلبوم، کاور ۶۰۰×۶۰۰ و پیش‌نمایش صوتی ۳۰ ثانیه‌ای با فرمت استریم رسمی.
+                  </p>
+                  <code className="block text-[10px] font-mono text-pink-300/90 bg-black/40 p-1.5 rounded-lg mt-1 overflow-x-auto">
+                    https://itunes.apple.com/search?term=coldplay&entity=song&limit=10
+                  </code>
+                </div>
+
+                {/* LRCLIB API */}
+                <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white">LRCLIB API (متن شعر همگام‌شده)</span>
+                    <span className="text-[10px] text-purple-300 font-mono">Synced LRC • Active Live</span>
+                  </div>
+                  <p className="text-slate-300 text-[11px]">
+                    سرویس کاملاً رایگان و آزاد برای دریافت متن آهنگ و لیریکس کارائوکه با زمان‌بندی همگام (Synced LRC). بدون محدودیت سختگیرانه و بدون نیاز به توکن.
+                  </p>
+                  <code className="block text-[10px] font-mono text-purple-300/90 bg-black/40 p-1.5 rounded-lg mt-1 overflow-x-auto">
+                    https://lrclib.net/api/get?track_name=imagine&artist_name=john%20lennon
+                  </code>
+                </div>
+
+                {/* Deezer API */}
+                <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white">Deezer API</span>
+                    <span className="text-[10px] text-cyan-300 font-mono">No Key Required</span>
+                  </div>
+                  <p className="text-slate-300 text-[11px]">
+                    کاتالوگ جامع جهانی دیزر با متادیتای کامل (خواننده، آلبوم، کاور، مدت‌زمان) و لینک پیش‌نمایش MP3 ۳۰ ثانیه‌ای بدون احراز هویت.
+                  </p>
+                  <code className="block text-[10px] font-mono text-cyan-300/90 bg-black/40 p-1.5 rounded-lg mt-1 overflow-x-auto">
+                    https://api.deezer.com/search?q=queen
+                  </code>
+                </div>
+
+                {/* MusicBrainz API */}
+                <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/10 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="font-bold text-white">MusicBrainz API (پایگاه متن‌باز جهانی)</span>
+                    <span className="text-[10px] text-amber-300 font-mono">Open Encyclopedia</span>
+                  </div>
+                  <p className="text-slate-300 text-[11px]">
+                    بزرگترین دانشنامه متادیتای آزاد با کدهای استاندارد بین‌المللی ISRC و شناسه‌های استاندارد.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Category 2: Platforms with API Key */}
+            <div className="space-y-2 border-t border-white/10 pt-4">
+              <span className="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <Database className="w-3.5 h-3.5 text-pink-400" />
+                ۲. پلتفرم‌های اصلی (نیازمند ثبت‌نام و دریافت API Key)
+              </span>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11px]">
+                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10">
+                  <span className="font-bold text-white block">Spotify Web API</span>
+                  <p className="text-slate-400 text-[10px] mt-0.5">نیازمند ساخت پروژه در Spotify Dashboard و دریافت OAuth Client Credentials.</p>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10">
+                  <span className="font-bold text-white block">YouTube Data API v3</span>
+                  <p className="text-slate-400 text-[10px] mt-0.5">نیازمند فعال‌سازی در Google Cloud Console و سهمیه کوئری روزانه.</p>
+                </div>
+                <div className="p-2.5 rounded-xl bg-white/[0.03] border border-white/10">
+                  <span className="font-bold text-white block">Last.fm API</span>
+                  <p className="text-slate-400 text-[10px] mt-0.5">مناسب بیوگرافی و قطعات مشابه؛ دریافت API Key رایگان در چند ثانیه.</p>
+                </div>
+              </div>
+            </div>
+
+            {/* One-Click Live Test Action Buttons */}
+            <div className="border-t border-white/10 pt-4 space-y-2">
+              <span className="text-xs font-bold text-white block">
+                تست فوری جستجو با APIهای زنده:
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {['Queen', 'Coldplay', 'Eminem', 'Taylor Swift', 'The Weeknd'].map(artist => (
+                  <button
+                    key={artist}
+                    onClick={() => {
+                      setSearchQuery(artist);
+                      setActiveNav('search');
+                      setShowApiModal(false);
+                      showToast(`Searching live for: ${artist}`);
+                    }}
+                    className="px-3 py-1.5 rounded-xl bg-pink-500/20 hover:bg-pink-500/30 border border-pink-400/40 text-pink-300 text-xs font-bold transition-all cursor-pointer"
+                  >
+                    جستجوی «{artist}»
+                  </button>
+                ))}
+              </div>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* Real HTML5 Audio Stream for iTunes Previews */}
+      <audio 
+        ref={audioStreamRef} 
+        onEnded={handleNextTrack} 
+        className="hidden" 
+        preload="auto" 
+      />
 
     </div>
   );

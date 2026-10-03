@@ -24,6 +24,7 @@ import { SocialHubView } from './components/SocialHubView';
 import { AudioVidoBrandLogo } from './components/AudioVidoBrandLogo';
 import { MusicV2View } from './components/MusicV2View';
 import { MusicV4View } from './components/MusicV4View';
+import { musicApi } from './services/musicApiService';
 
 // --- BESPOKE 3D SCULPTED EMBLEMS (STANDARD, HARMONIOUS & PROFESSIONAL) ---
 function AudioEmblem3D() {
@@ -380,9 +381,9 @@ export default function App() {
   // Sandro-inspired Left Sidebar active filter state
   const [activeMusicCategory, setActiveMusicCategory] = useState<'all' | 'lofi' | 'ambient' | 'fireplace'>('all');
 
-  // Unified Playing State
-  const [currentTrack, setCurrentTrack] = useState<Track>(AURA_TRACKS[0]);
-  const [likedTracks, setLikedTracks] = useState<Record<string, boolean>>({ 'track-coffee-bars': true, 'track-1': true });
+  // Unified Playing State (Empty / silent by default - no default hardcoded tracks)
+  const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
+  const [likedTracks, setLikedTracks] = useState<Record<string, boolean>>({});
   const [isShuffle, setIsShuffle] = useState<boolean>(false);
   const [isRepeat, setIsRepeat] = useState<boolean>(false);
   const [turntableSpeed, setTurntableSpeed] = useState<'33' | '45'>('33');
@@ -522,7 +523,19 @@ export default function App() {
   const [isPlayingFireplace, setIsPlayingFireplace] = useState<boolean>(false);
   const [trackProgress, setTrackProgress] = useState<number>(0); // %
   const [currentTrackSeconds, setCurrentTrackSeconds] = useState<number>(0); // elapsed seconds
+  const [audioDuration, setAudioDuration] = useState<number>(180); // actual playable audio duration in seconds
+  const [isScrubbingApp, setIsScrubbingApp] = useState<boolean>(false);
   const [movieProgress, setMovieProgress] = useState<number>(60); // %
+
+  // Helper to parse duration string like "3:45" or "5:42" into seconds
+  const parseDurationStringToSeconds = (durStr?: string): number => {
+    if (!durStr) return 180;
+    const parts = durStr.split(':').map(p => parseInt(p, 10));
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      return parts[0] * 60 + parts[1];
+    }
+    return 180;
+  };
 
   // Glass Connect Controllers
   const [lightDimmers, setLightDimmers] = useState<number>(100); 
@@ -550,13 +563,25 @@ export default function App() {
     if (file) {
       const url = URL.createObjectURL(file);
       setCustomAudioUrl(url);
-      setCurrentTrack(prev => ({
-        ...prev,
+      setCurrentTrack({
+        id: `uploaded-${Date.now()}`,
         title: file.name.replace(/\.[^/.]+$/, ''),
-        artist: 'Your Uploaded Music (Local File)'
-      }));
+        artist: 'Your Uploaded Music (Local File)',
+        album: 'Local Upload',
+        duration: '3:00',
+        durationSeconds: 180,
+        genre: 'Custom Audio',
+        vibes: ['Local Master'],
+        cozyIndex: 90,
+        colorFrom: 'from-emerald-500',
+        colorTo: 'to-teal-600',
+        audioSynthType: 'music',
+        previewUrl: url,
+        artistPhoto: 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80'
+      });
       setCurrentTrackSeconds(0);
       setTrackProgress(0);
+      setAudioDuration(180);
       setIsPlaying(true);
       AudioSynth.stopAll();
       setTimeout(() => {
@@ -571,24 +596,68 @@ export default function App() {
   const handleTimeUpdate = () => {
     if (audioPlayerRef.current) {
       const cur = audioPlayerRef.current.currentTime;
-      const dur = audioPlayerRef.current.duration || parseDurationToSeconds(currentTrack.duration);
-      setCurrentTrackSeconds(cur);
-      if (dur > 0) {
-        setTrackProgress((cur / dur) * 100);
+      const rawDur = audioPlayerRef.current.duration;
+      const dur = (rawDur && !isNaN(rawDur) && isFinite(rawDur) && rawDur > 0)
+        ? rawDur
+        : (audioDuration || currentTrack?.durationSeconds || 180);
+      
+      if (!isScrubbingApp) {
+        setCurrentTrackSeconds(cur);
+        if (dur > 0) {
+          setTrackProgress(Math.min(100, Math.max(0, (cur / dur) * 100)));
+        }
+      }
+      if (rawDur && !isNaN(rawDur) && isFinite(rawDur) && rawDur > 0 && Math.abs(rawDur - audioDuration) > 0.5) {
+        setAudioDuration(rawDur);
       }
     }
   };
 
   const handleSeek = (newPct: number) => {
-    setTrackProgress(newPct);
-    const totalSec = (audioPlayerRef.current && audioPlayerRef.current.duration && !isNaN(audioPlayerRef.current.duration))
-      ? audioPlayerRef.current.duration
-      : parseDurationToSeconds(currentTrack.duration);
-    const targetSec = (newPct / 100) * totalSec;
+    const clampedPct = Math.min(100, Math.max(0, newPct));
+    setTrackProgress(clampedPct);
+    const audio = audioPlayerRef.current;
+    const rawDur = audio?.duration;
+    const totalSec = (rawDur && !isNaN(rawDur) && isFinite(rawDur) && rawDur > 0)
+      ? rawDur
+      : (audioDuration || currentTrack?.durationSeconds || 180);
+    const targetSec = (clampedPct / 100) * totalSec;
     setCurrentTrackSeconds(targetSec);
-    if (audioPlayerRef.current && customAudioUrl.startsWith('blob:')) {
-      audioPlayerRef.current.currentTime = targetSec;
+    if (audio) {
+      audio.currentTime = targetSec;
     }
+  };
+
+  const calculateScrubberPctApp = (clientX: number, target: HTMLElement): number => {
+    const rect = target.getBoundingClientRect();
+    if (rect.width <= 0) return 0;
+    const clickX = clientX - rect.left;
+    return Math.min(100, Math.max(0, (clickX / rect.width) * 100));
+  };
+
+  const handlePointerDownScrubberApp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!currentTrack) return;
+    const target = e.currentTarget;
+    try {
+      target.setPointerCapture(e.pointerId);
+    } catch {}
+    setIsScrubbingApp(true);
+    const newPct = calculateScrubberPctApp(e.clientX, target);
+    handleSeek(newPct);
+  };
+
+  const handlePointerMoveScrubberApp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isScrubbingApp || !currentTrack) return;
+    const newPct = calculateScrubberPctApp(e.clientX, e.currentTarget);
+    handleSeek(newPct);
+  };
+
+  const handlePointerUpScrubberApp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isScrubbingApp) return;
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {}
+    setIsScrubbingApp(false);
   };
 
   // Sync volume with Web Audio synth & HTML5 Audio
@@ -599,60 +668,39 @@ export default function App() {
     }
   }, [ambientVolume]);
 
-  // Sync playing states with real audio and ambient generators
+  // Sync playing states with real HTML5 audio player
   useEffect(() => {
     const audio = audioPlayerRef.current;
-    if (isPlaying) {
-      if (currentWorld === 'music' || currentWorld === 'music2') {
-        if (customAudioUrl && customAudioUrl.startsWith('blob:') && audio) {
-          AudioSynth.stopAll();
-          AudioSynth.connectMediaElement(audio);
-          audio.play().catch(e => console.log('Audio autoplay handled:', e));
-        } else {
-          if (audio) audio.pause();
-          AudioSynth.playTrack(currentTrack.audioSynthType || 'aura-lofi');
+    if (!audio) return;
+    if (isPlaying && currentTrack) {
+      if (currentTrack.previewUrl && !currentTrack.previewUrl.startsWith('/api/resolve-stream')) {
+        if (!audio.src || !audio.src.includes(currentTrack.previewUrl)) {
+          audio.src = currentTrack.previewUrl;
+          audio.load();
         }
-      } else if (currentWorld === 'movie') {
-        if (audio) audio.pause();
-        AudioSynth.playTrack('movie');
-      } else if (currentWorld === 'community') {
-        if (audio) audio.pause();
-        AudioSynth.playTrack('social-pad');
+        audio.play().catch(e => {
+          if (e.name !== 'AbortError') console.warn('HTML5 audio play error:', e);
+        });
       } else {
-        if (audio) audio.pause();
-        AudioSynth.playTrack('music');
+        // Resolve stream dynamically if not resolved yet
+        musicApi.resolveFullTrackAudio(currentTrack.title, currentTrack.artist).then(res => {
+          if (res?.streamUrl) {
+            audio.src = res.streamUrl;
+            audio.load();
+            if (res.durationSeconds) setAudioDuration(res.durationSeconds);
+            currentTrack.previewUrl = res.streamUrl;
+            currentTrack.isFullTrack = true;
+            audio.play().catch(e => {
+              if (e.name !== 'AbortError') console.warn('HTML5 audio play error after resolve:', e);
+            });
+          }
+        }).catch(err => console.warn('Failed to resolve audio on play:', err));
       }
     } else {
-      if (audio) audio.pause();
-      AudioSynth.stopAll();
+      audio.pause();
       setIsPlayingFireplace(false);
     }
-  }, [isPlaying, currentWorld, currentTrack, customAudioUrl]);
-
-  // High-precision synchronized timer for synthesized audio tracks
-  useEffect(() => {
-    let interval: any;
-    if (isPlaying && (currentWorld === 'music' || currentWorld === 'music2') && (!customAudioUrl || !customAudioUrl.startsWith('blob:'))) {
-      const totalSec = parseDurationToSeconds(currentTrack.duration);
-      interval = setInterval(() => {
-        setCurrentTrackSeconds(prev => {
-          const next = prev + 0.5;
-          if (next >= totalSec) {
-            if (isRepeat) {
-              setTrackProgress(0);
-              return 0;
-            } else {
-              handleNextTrack();
-              return 0;
-            }
-          }
-          setTrackProgress((next / totalSec) * 100);
-          return next;
-        });
-      }, 500);
-    }
-    return () => clearInterval(interval);
-  }, [isPlaying, currentWorld, currentTrack, customAudioUrl, isRepeat]);
+  }, [isPlaying, currentTrack]);
 
   // Track progress timers for non-audio sources (movie world)
   useEffect(() => {
@@ -671,38 +719,12 @@ export default function App() {
     setIsTraveling(true);
     setTravelDestination(destination);
 
-    if (destination !== 'portal') {
-      if (destination === 'music') {
-        // Normal music tab entry: Needle points down in silver rest, disc still, music waits for selection
-        if (audioPlayerRef.current) audioPlayerRef.current.pause();
-        AudioSynth.stopAll();
-        setIsPlaying(false);
-      } else if (destination === 'music2') {
-        if (audioPlayerRef.current) audioPlayerRef.current.pause();
-        AudioSynth.playTrack(currentTrack.audioSynthType || 'aura-lofi');
-        setIsPlaying(true);
-      } else if (destination === 'movie') {
-        if (audioPlayerRef.current) audioPlayerRef.current.pause();
-        AudioSynth.playTrack('movie');
-        setIsPlaying(true);
-      } else if (destination === 'community') {
-        if (audioPlayerRef.current) audioPlayerRef.current.pause();
-        AudioSynth.playTrack('social-pad');
-        setIsPlaying(true);
-      } else if (destination === 'music4') {
-        if (audioPlayerRef.current) audioPlayerRef.current.pause();
-        AudioSynth.playTrack('aura-lofi');
-        setIsPlaying(true);
-      } else {
-        if (audioPlayerRef.current) audioPlayerRef.current.pause();
-        AudioSynth.playTrack('music');
-        setIsPlaying(true);
-      }
-    } else {
-      if (audioPlayerRef.current) audioPlayerRef.current.pause();
-      setIsPlaying(false);
-      AudioSynth.stopAll();
-    }
+    // Completely silent by default: Never auto-play audio on page navigation.
+    // Audio will only play when user explicitly searches/selects a song and hits play.
+    if (audioPlayerRef.current) audioPlayerRef.current.pause();
+    AudioSynth.stopAll();
+    setIsPlaying(false);
+    setIsPlayingFireplace(false);
 
     setTimeout(() => {
       setCurrentWorld(destination);
@@ -780,37 +802,73 @@ export default function App() {
     );
   };
 
-  const selectAndPlayTrack = (track: Track) => {
+  const selectAndPlayTrack = async (track: Track) => {
     setCurrentTrack(track);
     setCurrentTrackSeconds(0);
     setTrackProgress(0);
-    if (audioPlayerRef.current && customAudioUrl.startsWith('blob:') && track.id === 'track-coffee-bars') {
-      AudioSynth.stopAll();
-      audioPlayerRef.current.currentTime = 0;
-      audioPlayerRef.current.play().catch(e => console.log('Audio play error:', e));
-    } else {
-      if (audioPlayerRef.current) audioPlayerRef.current.pause();
-      AudioSynth.playTrack(track.audioSynthType);
+
+    const initialDur = track.durationSeconds || (track.duration ? parseDurationStringToSeconds(track.duration) : 180);
+    setAudioDuration(initialDur);
+
+    let streamUrl = track.previewUrl || '';
+
+    // If track doesn't have a direct full stream or has an unresolved API endpoint, resolve high-fidelity stream
+    if (!streamUrl || streamUrl.startsWith('/api/resolve-stream') || (!track.isFullTrack && !streamUrl.startsWith('blob:') && !streamUrl.includes('/api/audio-proxy'))) {
+      try {
+        const fullRes = await musicApi.resolveFullTrackAudio(track.title, track.artist);
+        if (fullRes?.streamUrl) {
+          streamUrl = fullRes.streamUrl;
+          if (fullRes.durationSeconds) {
+            setAudioDuration(fullRes.durationSeconds);
+            track.durationSeconds = fullRes.durationSeconds;
+          }
+          track.previewUrl = streamUrl;
+          track.isFullTrack = true;
+          setCurrentTrack({ ...track, previewUrl: streamUrl, isFullTrack: true });
+        }
+      } catch (err) {
+        console.warn('Full stream lookup:', err);
+      }
     }
-    setIsPlaying(true);
+
+    const audio = audioPlayerRef.current;
+    if (audio && streamUrl && !streamUrl.startsWith('/api/resolve-stream')) {
+      if (audio.src !== streamUrl) {
+        audio.src = streamUrl;
+      }
+      audio.currentTime = 0;
+      setIsPlaying(true);
+      audio.play().then(() => {
+        setIsPlaying(true);
+      }).catch(err => {
+        if (err.name !== 'AbortError') {
+          console.warn('Direct stream play error:', err);
+        }
+      });
+    } else if (audio) {
+      audio.pause();
+      setIsPlaying(false);
+    }
   };
 
   const handleNextTrack = () => {
+    if (!currentTrack || AURA_TRACKS.length === 0) return;
     if (isShuffle) {
-      const remainingTracks = AURA_TRACKS.filter(t => t.id !== currentTrack.id);
+      const remainingTracks = AURA_TRACKS.filter(t => t.id !== currentTrack?.id);
       const randomTrack = remainingTracks[Math.floor(Math.random() * remainingTracks.length)];
-      selectAndPlayTrack(randomTrack || AURA_TRACKS[0]);
+      if (randomTrack) selectAndPlayTrack(randomTrack);
     } else {
-      const currentIdx = AURA_TRACKS.findIndex(t => t.id === currentTrack.id);
+      const currentIdx = AURA_TRACKS.findIndex(t => t.id === currentTrack?.id);
       const nextIdx = (currentIdx + 1) % AURA_TRACKS.length;
-      selectAndPlayTrack(AURA_TRACKS[nextIdx]);
+      if (AURA_TRACKS[nextIdx]) selectAndPlayTrack(AURA_TRACKS[nextIdx]);
     }
   };
 
   const handlePrevTrack = () => {
-    const currentIdx = AURA_TRACKS.findIndex(t => t.id === currentTrack.id);
+    if (!currentTrack || AURA_TRACKS.length === 0) return;
+    const currentIdx = AURA_TRACKS.findIndex(t => t.id === currentTrack?.id);
     const prevIdx = (currentIdx - 1 + AURA_TRACKS.length) % AURA_TRACKS.length;
-    selectAndPlayTrack(AURA_TRACKS[prevIdx]);
+    if (AURA_TRACKS[prevIdx]) selectAndPlayTrack(AURA_TRACKS[prevIdx]);
   };
 
   const selectAndPlayMovie = (movie: Movie) => {
@@ -1241,12 +1299,37 @@ export default function App() {
         <div className="hidden md:flex items-center shrink-0 w-[140px] pointer-events-none" />
       </header>
 
-      {/* Real HTML5 Audio Player */}
+      {/* Real HTML5 Audio Player for Web Streaming Previews & Uploads */}
       <audio 
         ref={audioPlayerRef} 
-        src={customAudioUrl} 
+        src={currentTrack?.previewUrl || customAudioUrl} 
         onTimeUpdate={handleTimeUpdate} 
-        onEnded={() => setIsPlaying(false)} 
+        onLoadedMetadata={() => {
+          if (audioPlayerRef.current) {
+            const raw = audioPlayerRef.current.duration;
+            if (raw && !isNaN(raw) && isFinite(raw) && raw > 0) {
+              setAudioDuration(raw);
+            }
+          }
+        }}
+        onDurationChange={() => {
+          if (audioPlayerRef.current) {
+            const raw = audioPlayerRef.current.duration;
+            if (raw && !isNaN(raw) && isFinite(raw) && raw > 0) {
+              setAudioDuration(raw);
+            }
+          }
+        }}
+        onEnded={() => {
+          if (isRepeat) {
+            if (audioPlayerRef.current) {
+              audioPlayerRef.current.currentTime = 0;
+              audioPlayerRef.current.play().catch(e => console.warn(e));
+            }
+          } else {
+            handleNextTrack();
+          }
+        }} 
         className="hidden" 
         preload="auto" 
       />
@@ -1486,8 +1569,8 @@ export default function App() {
                       {/* Artist / Album Cover Art with Circular Gold-Beveled Frame */}
                       <div className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden shrink-0 shadow-[0_10px_25px_rgba(0,0,0,0.85)] border-2 border-amber-300/60 ring-2 ring-amber-500/20 group">
                         <img 
-                          src={currentTrack.artistPhoto || 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=300&q=80'} 
-                          alt={currentTrack.artist} 
+                          src={currentTrack?.artistPhoto || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=300&q=80'} 
+                          alt={currentTrack?.artist || 'Music'} 
                           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
@@ -1499,16 +1582,16 @@ export default function App() {
                       {/* Song Title, Artist & Album Clean Typography */}
                       <div className="space-y-1 min-w-0 flex-1 pt-0.5">
                         <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-amber-50 font-sans drop-shadow-[0_2px_6px_rgba(0,0,0,0.9)] truncate">
-                          {currentTrack.title}
+                          {currentTrack?.title || 'No Track Selected'}
                         </h2>
 
                         <p className="text-sm sm:text-base text-amber-200 font-sans font-bold truncate drop-shadow-sm">
-                          {currentTrack.artist}
+                          {currentTrack?.artist || 'Search any song in Music 2 to play'}
                         </p>
 
                         <div className="flex items-center gap-1.5 text-xs text-amber-100/75 font-medium truncate pt-0.5">
                           <Disc3 className="w-3.5 h-3.5 text-amber-400 shrink-0" />
-                          <span className="truncate">{currentTrack.album || 'Single Edition'}</span>
+                          <span className="truncate">{currentTrack?.album || 'Ready to Stream'}</span>
                         </div>
                       </div>
                     </div>
@@ -1516,7 +1599,7 @@ export default function App() {
                     {/* Bottom Controls Row: Coherent Uniform Audio Plaque Buttons */}
                     <div className="flex items-center gap-2 pt-1 flex-wrap">
                       <span className="px-3 py-1.5 rounded-full wood-chassis-badge text-[11px] font-sans font-bold text-amber-200 tracking-wide">
-                        {currentTrack.genre}
+                        {currentTrack?.genre || 'Global Catalog'}
                       </span>
 
                       <span className="px-3 py-1.5 rounded-full wood-chassis-badge text-[10.5px] font-mono font-bold text-amber-100 flex items-center gap-1.5">
@@ -1586,7 +1669,7 @@ export default function App() {
                           <div className="absolute inset-7 rounded-full border border-stone-700/40 pointer-events-none" />
                           <div className="absolute inset-10 rounded-full border border-stone-800/50 pointer-events-none" />
 
-                          <div className={`w-9 h-9 rounded-full bg-gradient-to-tr ${currentTrack.colorFrom} ${currentTrack.colorTo} border border-amber-300/70 flex flex-col items-center justify-center shadow-xl relative z-10 text-center select-none`}>
+                          <div className={`w-9 h-9 rounded-full bg-gradient-to-tr ${currentTrack ? `${currentTrack.colorFrom} ${currentTrack.colorTo}` : 'from-emerald-500 to-teal-700'} border border-amber-300/70 flex flex-col items-center justify-center shadow-xl relative z-10 text-center select-none`}>
                             <div className="absolute inset-0.5 rounded-full border border-amber-200/50 pointer-events-none" />
                             <div className="w-3 h-3 rounded-full bg-stone-950 border border-white/60 flex items-center justify-center shadow-inner">
                               <div className="w-1.5 h-1.5 rounded-full bg-gradient-to-br from-amber-200 to-amber-500 shadow" />
@@ -1796,7 +1879,7 @@ export default function App() {
                     {musicNavTab === 'library' && (
                       <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
                         {AURA_TRACKS.map(track => {
-                          const isCurrent = currentTrack.id === track.id;
+                          const isCurrent = currentTrack?.id === track.id;
                           const isLiked = likedTracks[track.id];
                           return (
                             <div 
@@ -1854,7 +1937,7 @@ export default function App() {
                         {Object.values(likedTracks).filter(Boolean).length > 0 ? (
                           <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
                             {AURA_TRACKS.filter(t => likedTracks[t.id]).map(track => {
-                              const isCurrent = currentTrack.id === track.id;
+                              const isCurrent = currentTrack?.id === track.id;
                               return (
                                 <div 
                                   key={track.id}
@@ -1911,7 +1994,7 @@ export default function App() {
                     {musicNavTab === 'playlists' && (
                       <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1 scrollbar-thin">
                         {getFilteredTracks().map(track => {
-                          const isCurrent = currentTrack.id === track.id;
+                          const isCurrent = currentTrack?.id === track.id;
                           const isLiked = likedTracks[track.id];
                           return (
                             <div 
@@ -1975,7 +2058,7 @@ export default function App() {
                 {/* Track List - Rounded & Compact */}
                 <div className="space-y-1.5 max-h-[520px] overflow-y-auto pr-1 scrollbar-thin flex-1">
                   {getFilteredTracks().map((track, idx) => {
-                    const isCurrent = currentTrack.id === track.id;
+                    const isCurrent = currentTrack?.id === track.id;
                     const isLiked = likedTracks[track.id];
                     return (
                       <div 
@@ -2059,17 +2142,17 @@ export default function App() {
                 <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 max-w-[95px] sm:max-w-[190px] text-left relative z-10 shrink-0">
                   <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden shrink-0 border border-amber-300/40 shadow-sm relative ring-1 ring-amber-500/20">
                     <img 
-                      src={currentTrack.artistPhoto || 'https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=300&q=80'} 
-                      alt={currentTrack.title} 
+                      src={currentTrack?.artistPhoto || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=300&q=80'} 
+                      alt={currentTrack?.title || 'Music'} 
                       className="w-full h-full object-cover" 
                     />
                   </div>
                   <div className="min-w-0 flex-1">
                     <h4 className="text-[11px] sm:text-sm font-bold text-white truncate font-sans">
-                      {currentTrack.title}
+                      {currentTrack?.title || 'No Track Selected'}
                     </h4>
                     <p className="text-[9.5px] sm:text-xs text-slate-300 font-sans font-medium truncate">
-                      {currentTrack.artist}
+                      {currentTrack?.artist || 'Search music in Music 2'}
                     </p>
                   </div>
                 </div>
@@ -2137,30 +2220,37 @@ export default function App() {
                   </div>
 
                   {/* Track Progress Scrubber with Precision Synchronized Time */}
-                  <div className="w-full h-5 flex items-center gap-1.5 sm:gap-2.5">
+                  <div className="w-full h-6 sm:h-7 flex items-center gap-1.5 sm:gap-2.5">
                     <span className="text-[9px] sm:text-[10px] font-mono font-bold text-amber-200/90 w-7 sm:w-8 text-right shrink-0 select-none">
                       {formatSecondsToDisplay(currentTrackSeconds)}
                     </span>
                     
                     <div 
-                      onClick={(e) => {
-                        const rect = e.currentTarget.getBoundingClientRect();
-                        const clickX = e.clientX - rect.left;
-                        const newPct = Math.min(100, Math.max(0, (clickX / rect.width) * 100));
-                        handleSeek(newPct);
-                      }}
-                      className="flex-1 h-1.5 sm:h-2 bg-white/10 hover:bg-white/20 rounded-full overflow-hidden cursor-pointer relative group/scrubber transition-all"
+                      onPointerDown={handlePointerDownScrubberApp}
+                      onPointerMove={handlePointerMoveScrubberApp}
+                      onPointerUp={handlePointerUpScrubberApp}
+                      onPointerCancel={handlePointerUpScrubberApp}
+                      className="flex-1 py-2 sm:py-2.5 cursor-pointer relative group/scrubber select-none touch-none"
+                      title="Click or drag to seek forward / backward"
                     >
-                      <div 
-                        className="h-full bg-gradient-to-r from-amber-500 via-amber-300 to-yellow-200 rounded-full relative transition-all duration-150" 
-                        style={{ width: `${Math.min(100, Math.max(0, trackProgress))}%` }}
-                      >
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-2 sm:w-2.5 h-2 sm:h-2.5 rounded-full bg-white shadow-[0_0_10px_#fef08a] opacity-0 group-hover/scrubber:opacity-100 transition-opacity" />
+                      {/* Rail */}
+                      <div className="w-full h-1.5 sm:h-2 bg-white/10 group-hover/scrubber:bg-white/20 rounded-full overflow-hidden transition-colors">
+                        <div 
+                          className="h-full bg-gradient-to-r from-amber-500 via-amber-300 to-yellow-200 rounded-full" 
+                          style={{ width: `${Math.min(100, Math.max(0, trackProgress))}%` }}
+                        />
                       </div>
+                      {/* Knob */}
+                      <div 
+                        className={`absolute top-1/2 -translate-y-1/2 -translate-x-1/2 w-3 sm:w-3.5 h-3 sm:h-3.5 rounded-full bg-white shadow-[0_0_12px_#fef08a] pointer-events-none transition-all ${
+                          isScrubbingApp ? 'scale-125 opacity-100 ring-2 ring-amber-400' : 'opacity-0 group-hover/scrubber:opacity-100 group-hover/scrubber:scale-110'
+                        }`}
+                        style={{ left: `${Math.min(100, Math.max(0, trackProgress))}%` }}
+                      />
                     </div>
 
                     <span className="text-[9px] sm:text-[10px] font-mono font-medium text-stone-400 w-7 sm:w-8 text-left shrink-0 select-none">
-                      {currentTrack.duration}
+                      {currentTrack ? formatSecondsToDisplay(audioDuration || currentTrack.durationSeconds || 180) : '0:00'}
                     </span>
                   </div>
                 </div>
@@ -2277,6 +2367,7 @@ export default function App() {
             setIsPlaying={setIsPlaying}
             trackProgress={trackProgress}
             currentTrackSeconds={currentTrackSeconds}
+            audioDuration={audioDuration}
             handleSeek={handleSeek}
             likedTracks={likedTracks}
             toggleLikeTrack={toggleLikeTrack}
