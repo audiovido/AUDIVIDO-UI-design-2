@@ -10,9 +10,9 @@ import {
   Headphones, Radio, Disc3, Sparkles, Volume2, VolumeX, ChevronDown, ChevronUp,
   ListMusic, Flame, Check, Mic2, Compass, Layers, Monitor,
   Laptop, Share2, Plus, ArrowUpRight, TrendingUp, CheckCircle2,
-  X, Clock, Music, Loader2, Globe
+  X, Clock, Music, Loader2, Globe, Library, Disc, Calendar, User, ChevronLeft
 } from 'lucide-react';
-import { Track } from '../data/auraStore';
+import { Track, AURA_TRACKS } from '../data/auraStore';
 import { musicApi } from '../services/musicApiService';
 import { AudioSynth } from '../utils/AudioSynth';
 
@@ -25,9 +25,11 @@ export interface MusicV2Playlist {
   category: string;
   accentColor: string;
   featured?: boolean;
+  trackId?: string;
 }
 
 export const MUSIC_V2_PLAYLISTS: MusicV2Playlist[] = [
+  // --- CHILL VIBE PLAYLISTS ---
   {
     id: 'pl-chill-study',
     title: 'Chill Study Beats',
@@ -35,70 +37,92 @@ export const MUSIC_V2_PLAYLISTS: MusicV2Playlist[] = [
     songCount: 24,
     coverUrl: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=600&q=80',
     category: 'Chill',
-    accentColor: 'from-emerald-500 to-teal-700'
+    accentColor: 'from-emerald-500 to-teal-700',
+    trackId: 'track-chill-1'
   },
   {
-    id: 'pl-running-hits',
-    title: 'Running Hits',
-    subtitle: 'High Energy Cardio & EDM',
-    songCount: 30,
-    coverUrl: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=600&q=80',
-    category: 'Workout',
-    accentColor: 'from-lime-500 to-emerald-600'
-  },
-  {
-    id: 'pl-romantic-evening',
-    title: 'Romantic Evening',
-    subtitle: 'Acoustic Love & Soul',
+    id: 'pl-chill-rain',
+    title: 'Rainy Cafe Lo-Fi',
+    subtitle: 'Coffee, Rain & Warm Guitars',
     songCount: 18,
     coverUrl: 'https://images.unsplash.com/photo-1518895949257-7621c3c786d7?auto=format&fit=crop&w=600&q=80',
     category: 'Chill',
-    accentColor: 'from-rose-500 to-pink-700'
+    accentColor: 'from-teal-500 to-cyan-700',
+    trackId: 'track-chill-2'
   },
   {
-    id: 'pl-party-anthems',
-    title: 'Party Anthems',
-    subtitle: 'Club Bangers & Festival Hits',
-    songCount: 50,
-    coverUrl: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?auto=format&fit=crop&w=600&q=80',
-    category: 'Party',
-    accentColor: 'from-purple-500 to-indigo-700'
-  },
-  {
-    id: 'pl-acoustic-mornings',
-    title: 'Acoustic Mornings',
-    subtitle: 'Warm Coffee & Gentle Guitars',
-    songCount: 22,
-    coverUrl: 'https://images.unsplash.com/photo-1510915361894-db8b60106cb1?auto=format&fit=crop&w=600&q=80',
-    category: 'Acoustic',
-    accentColor: 'from-amber-500 to-orange-700'
-  },
-  {
-    id: 'pl-ocean-drive',
-    title: 'Ocean Drive',
-    subtitle: 'Sunset Melodic Chill Vibes',
-    songCount: 36,
-    coverUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80',
+    id: 'pl-chill-tokyo',
+    title: 'Tokyo Night Walk',
+    subtitle: 'Shibuya Neon & Soul Beats',
+    songCount: 20,
+    coverUrl: 'https://images.unsplash.com/photo-1503899036084-c55cdd92da26?auto=format&fit=crop&w=600&q=80',
     category: 'Chill',
-    accentColor: 'from-cyan-500 to-blue-600'
+    accentColor: 'from-lime-500 to-emerald-700',
+    trackId: 'track-chill-3'
+  },
+
+  // --- RELAX VIBE PLAYLISTS ---
+  {
+    id: 'pl-relax-sunset',
+    title: 'Ocean Sunset Whispers',
+    subtitle: 'Ambient Melodic Waves & Serenity',
+    songCount: 30,
+    coverUrl: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=600&q=80',
+    category: 'Relax',
+    accentColor: 'from-cyan-500 to-blue-600',
+    trackId: 'track-relax-1'
   },
   {
-    id: 'pl-energy-boost',
-    title: 'Energy Boost',
-    subtitle: 'Power Workout & Synthwave',
-    songCount: 42,
+    id: 'pl-relax-forest',
+    title: 'Deep Forest Solitude',
+    subtitle: 'Calming Nature Drone & Mindfulness',
+    songCount: 22,
+    coverUrl: 'https://images.unsplash.com/photo-1448375240586-882707db888b?auto=format&fit=crop&w=600&q=80',
+    category: 'Relax',
+    accentColor: 'from-violet-500 to-purple-800',
+    trackId: 'track-relax-2'
+  },
+  {
+    id: 'pl-relax-stars',
+    title: 'Starlit Horizon Sanctuary',
+    subtitle: 'Cosmic Relaxation & Deep Sleep',
+    songCount: 26,
+    coverUrl: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=600&q=80',
+    category: 'Relax',
+    accentColor: 'from-purple-500 to-indigo-700',
+    trackId: 'track-relax-3'
+  },
+
+  // --- WORKOUT VIBE PLAYLISTS ---
+  {
+    id: 'pl-workout-cyber',
+    title: 'Cyberpunk Nitro Run',
+    subtitle: 'High Energy Cardio & 130 BPM Drive',
+    songCount: 32,
     coverUrl: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=600&q=80',
     category: 'Workout',
-    accentColor: 'from-emerald-400 to-lime-500'
+    accentColor: 'from-rose-500 to-red-700',
+    trackId: 'track-workout-1'
   },
   {
-    id: 'pl-late-night-lofi',
-    title: 'Late Night Lo-Fi',
-    subtitle: 'Relax & Unwind Beats',
+    id: 'pl-workout-pulse',
+    title: 'Peak Cardio Pulse',
+    subtitle: 'High Energy EDM & Festival Bangers',
     songCount: 28,
-    coverUrl: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?auto=format&fit=crop&w=600&q=80',
-    category: 'Lo-Fi',
-    accentColor: 'from-violet-500 to-purple-800'
+    coverUrl: 'https://images.unsplash.com/photo-1538805060514-97d9cc17730c?auto=format&fit=crop&w=600&q=80',
+    category: 'Workout',
+    accentColor: 'from-lime-500 to-emerald-600',
+    trackId: 'track-workout-2'
+  },
+  {
+    id: 'pl-workout-titan',
+    title: 'Titan Force 180',
+    subtitle: 'Heavy Lifting & Hard Electro Bass',
+    songCount: 35,
+    coverUrl: 'https://images.unsplash.com/photo-1518611012118-696072aa579a?auto=format&fit=crop&w=600&q=80',
+    category: 'Workout',
+    accentColor: 'from-emerald-400 to-lime-500',
+    trackId: 'track-workout-4'
   }
 ];
 
@@ -145,8 +169,52 @@ export function MusicV2View({
   const [activeTab, setActiveTab] = useState<'discover' | 'library'>('discover');
   const [isPlayerExpanded, setIsPlayerExpanded] = useState<boolean>(false);
   const [selectedGenre, setSelectedGenre] = useState<string>('All');
-  const [libraryCategory, setLibraryCategory] = useState<'Playlists' | 'Artists' | 'Albums' | 'Songs'>('Playlists');
+  // Sub-tabs in Samantha's Library
+  const [libraryCategory, setLibraryCategory] = useState<'Liked Songs' | 'Playlists' | 'Artists' | 'Suggestions'>('Liked Songs');
+  const [activeVibe, setActiveVibe] = useState<'chill' | 'relax' | 'workout'>('chill');
   const [searchQuery, setSearchQuery] = useState<string>('');
+
+  // Persistent liked tracks repository (saved in localStorage across sessions)
+  const [savedLibraryTracks, setSavedLibraryTracks] = useState<Track[]>(() => {
+    try {
+      const saved = localStorage.getItem('audiovido_saved_liked_tracks_catalog_v2');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    // Seed with initial tracks matching initial liked tracks (Chill, Relax, Workout flagship tracks)
+    return [AURA_TRACKS[0], AURA_TRACKS[4], AURA_TRACKS[8]];
+  });
+
+  const handleToggleLikeTrack = (track: Track, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    toggleLikeTrack(track.id, e);
+    setSavedLibraryTracks(prev => {
+      const exists = prev.some(t => t.id === track.id);
+      let next: Track[];
+      if (exists) {
+        next = prev.filter(t => t.id !== track.id);
+      } else {
+        next = [track, ...prev];
+      }
+      try {
+        localStorage.setItem('audiovido_saved_liked_tracks_catalog_v2', JSON.stringify(next));
+      } catch (err) {}
+      return next;
+    });
+  };
+
+  // Immediate selection, playback, and dismissal of search overlay (preserves user query)
+  const handlePlayFromSearch = (track: Track) => {
+    onSelectTrack(track);
+    setIsPlaying(true);
+    setIsSearchDropdownOpen(false);
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
+  };
+
   const [apiTracks, setApiTracks] = useState<Track[]>([]);
   const [isSearchingApi, setIsSearchingApi] = useState<boolean>(false);
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState<boolean>(false);
@@ -231,7 +299,7 @@ export function MusicV2View({
           colorFrom: '#10b981',
           colorTo: '#84cc16',
           audioSynthType: 'music',
-          artistBio: `Official track "${item.title}" by ${item.artist} from the album "${item.album}" (${item.year || 'Official Release'}). Genre: ${item.genre}. Source: Apple iTunes Global Catalog.`
+          artistBio: `Official track "${item.title}" by ${item.artist} from the album "${item.album}" (${item.year || 'Official Release'}). Genre: ${item.genre}. Source: Apple iTunes Catalog.`
         }));
         setApiTracks(mapped);
       } catch (err) {
@@ -270,10 +338,81 @@ export function MusicV2View({
            track.genre.toLowerCase().includes(q);
   });
 
+  // Complete persistent collection of liked tracks
+  const likedSongsList = React.useMemo(() => {
+    const list: Track[] = [];
+    const seen = new Set<string>();
+
+    savedLibraryTracks.forEach(t => {
+      if (!seen.has(t.id)) {
+        seen.add(t.id);
+        list.push(t);
+      }
+    });
+
+    allTracks.forEach(t => {
+      if (likedTracks[t.id] && !seen.has(t.id)) {
+        seen.add(t.id);
+        list.push(t);
+      }
+    });
+
+    return list;
+  }, [savedLibraryTracks, allTracks, likedTracks]);
+
+  // Dynamically aggregated Albums from liked and saved songs
+  const albumGroups = React.useMemo(() => {
+    const map = new Map<string, { album: string; artist: string; cover: string; year: string; tracks: Track[] }>();
+    const sourceTracks = likedSongsList.length > 0 ? likedSongsList : allTracks;
+    sourceTracks.forEach(t => {
+      const albumName = t.album || `${t.title} - Single`;
+      if (!map.has(albumName)) {
+        map.set(albumName, {
+          album: albumName,
+          artist: t.artist,
+          cover: t.artistPhoto || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=300&q=80',
+          year: t.year || '2024',
+          tracks: []
+        });
+      }
+      map.get(albumName)!.tracks.push(t);
+    });
+    return Array.from(map.values());
+  }, [likedSongsList, allTracks]);
+
+  // Dynamically aggregated Artists from liked and saved songs
+  const artistGroups = React.useMemo(() => {
+    const map = new Map<string, { artist: string; photo: string; genres: string[]; tracks: Track[] }>();
+    const sourceTracks = likedSongsList.length > 0 ? likedSongsList : allTracks;
+    sourceTracks.forEach(t => {
+      if (!map.has(t.artist)) {
+        map.set(t.artist, {
+          artist: t.artist,
+          photo: t.artistPhoto || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80',
+          genres: [],
+          tracks: []
+        });
+      }
+      const g = map.get(t.artist)!;
+      g.tracks.push(t);
+      if (t.genre && !g.genres.includes(t.genre)) {
+        g.genres.push(t.genre);
+      }
+    });
+    return Array.from(map.values());
+  }, [likedSongsList, allTracks]);
+
+  // Curated Suggestions for Samantha: tracks not yet in liked songs
+  const suggestedTracks = React.useMemo(() => {
+    const likedSet = new Set(likedSongsList.map(t => t.id));
+    const unliked = AURA_TRACKS.filter(t => !likedSet.has(t.id));
+    return unliked.length > 0 ? unliked : AURA_TRACKS.slice(0, 8);
+  }, [likedSongsList]);
+
   const isCurrentLiked = currentTrack ? !!likedTracks[currentTrack.id] : false;
 
   return (
-    <div className="w-full max-w-7xl mx-auto space-y-6 animate-fadeIn py-2 pb-44 select-none font-sans relative">
+    <div className="w-full max-w-full overflow-x-hidden space-y-6 animate-fadeIn py-2 pb-44 select-none font-sans relative box-border">
       
       {/* Fullscreen Backdrop for Floating Search Dropdown - Blurs & Dims background exactly like bottom player */}
       {isSearchDropdownOpen && searchQuery.trim().length > 0 && (
@@ -284,110 +423,171 @@ export function MusicV2View({
       )}
 
       {/* ========================================================================= */}
-      {/* 1. TOP APP BAR: SAMANTHA (LEFT) | SEARCH (CENTER) | NOTIFICATIONS (RIGHT) */}
+      {/* 1. TOP APP BAR & NAVIGATION CONSOLE (CLEAN, 100% RESPONSIVE, ZERO OVERLAP) */}
       {/* ========================================================================= */}
-      <div className={`sticky top-16 ${isSearchDropdownOpen && searchQuery.trim().length > 0 ? 'z-[9990]' : 'z-40'} flex flex-col md:flex-row items-center justify-between gap-4 p-3.5 sm:p-4 rounded-[32px] bg-slate-950/95 border border-white/20 backdrop-blur-3xl shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.15),_0_15px_40px_rgba(0,0,0,0.9)]`}>
+      <div className={`relative ${isSearchDropdownOpen && searchQuery.trim().length > 0 ? 'z-[9990]' : 'z-30'} flex flex-col gap-3 sm:gap-4 p-3.5 sm:p-5 rounded-3xl sm:rounded-[36px] bg-slate-950/95 border border-white/20 backdrop-blur-3xl shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.15),_0_20px_50px_rgba(0,0,0,0.9)]`}>
         
-        {/* LEFT ZONE: User Profile Greeting (Samantha) */}
-        <div className="flex items-center gap-3 shrink-0 self-start md:self-auto">
-          <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-lime-400/80 shadow-[0_0_16px_rgba(163,230,53,0.4)] shrink-0 ring-2 ring-lime-500/20">
-            <img 
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80" 
-              alt="Samantha" 
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-lime-400 border-2 border-black" />
-          </div>
-          <div className="text-left">
-            <span className="text-[10px] font-medium text-slate-400 block tracking-wide">Good Morning</span>
-            <h2 className="text-sm font-black text-white tracking-tight flex items-center gap-1">
-              <span>Samantha</span>
-              <Sparkles className="w-3 h-3 text-lime-400 animate-pulse" />
-            </h2>
-          </div>
-        </div>
-
-        {/* CENTER ZONE: Expanded Search Input with Floating Vertical Dropdown */}
-        <div className="relative flex-1 max-w-2xl sm:max-w-3xl w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-lime-400/70 pointer-events-none" />
-          <input 
-            type="text"
-            value={searchQuery}
-            onFocus={() => setIsSearchDropdownOpen(true)}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setIsSearchDropdownOpen(true);
+        {/* ROW 1: USER PROFILE GREETING (SAMANTHA) + SEARCH INPUT + NOTIFICATION BELL */}
+        <div className="flex items-center justify-between gap-2.5 sm:gap-4 w-full">
+          
+          {/* LEFT ZONE: Samantha Profile & Personal Library View Trigger (In-Place Page Switch) */}
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTab(activeTab === 'library' ? 'discover' : 'library');
+              setIsSearchDropdownOpen(false);
+              setShowNotificationModal(false);
             }}
-            placeholder="Search tracks, artists, or genres..."
-            className="w-full pl-11 pr-10 py-2.5 rounded-full bg-white/[0.07] hover:bg-white/[0.12] focus:bg-slate-900 border border-white/15 focus:border-lime-400 text-white placeholder-slate-400 text-xs sm:text-sm font-medium focus:outline-none transition-all shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.08)] focus:shadow-[0_0_24px_rgba(163,230,53,0.3)]"
-          />
-          {searchQuery && (
-            <button 
-              onClick={() => {
-                setSearchQuery('');
-                setIsSearchDropdownOpen(false);
-              }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white px-1.5 py-0.5 rounded-full bg-white/10 cursor-pointer"
-            >
-              ✕
-            </button>
-          )}
+            className={`flex items-center gap-2.5 sm:gap-3 shrink-0 p-1 sm:p-1.5 -ml-1 sm:-ml-1.5 rounded-2xl sm:rounded-3xl transition-all cursor-pointer group active:scale-95 text-left border select-none ${
+              activeTab === 'library'
+                ? 'bg-lime-400/20 border-lime-400/60 shadow-[0_0_22px_rgba(163,230,53,0.35)] ring-1 ring-lime-400/40'
+                : 'hover:bg-white/[0.08] border-transparent hover:border-lime-400/30'
+            }`}
+            title="Samantha · My Profile & Personal Library"
+          >
+            <div className={`relative w-11 h-11 xs:w-12 xs:h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 shadow-[0_0_20px_rgba(163,230,53,0.5)] shrink-0 ring-2 transition-transform duration-300 group-hover:scale-105 ${
+              activeTab === 'library' ? 'border-lime-300 ring-lime-400' : 'border-lime-400 ring-lime-500/30'
+            }`}>
+              <img 
+                src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80" 
+                alt="Samantha" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="text-left hidden xs:block">
+              <h2 className="text-xs sm:text-sm font-bold text-white tracking-tight group-hover:text-lime-300 transition-colors font-sans">
+                Samantha
+              </h2>
+              <span className="text-[10px] text-lime-400 font-bold font-sans">
+                {likedSongsList.length} Liked Tracks
+              </span>
+            </div>
+          </button>
 
-          {/* FLOATING DROPDOWN SEARCH RESULTS PANEL (PAYS RESPECT TO BACKGROUND LAYOUT) */}
-          {isSearchDropdownOpen && searchQuery.trim().length > 0 && (
-            <div 
-              onClick={(e) => e.stopPropagation()}
-              className="absolute top-full mt-2.5 left-0 right-0 z-[9995] bg-slate-950/98 border border-lime-400/60 rounded-3xl p-3.5 sm:p-4 shadow-[0_30px_80px_rgba(0,0,0,0.95),_0_0_35px_rgba(163,230,53,0.25)] backdrop-blur-3xl space-y-2.5 animate-fadeIn"
-            >
-                
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-white/10 pb-2.5 px-1">
-                  <div className="flex items-center gap-2">
-                    <Search className="w-3.5 h-3.5 text-lime-400" />
-                    <span className="text-xs font-bold text-white">
-                      Search Results for "{searchQuery}"
-                    </span>
-                  </div>
-                  {isSearchingApi ? (
-                    <span className="text-[10px] font-mono text-lime-300 flex items-center gap-1.5 bg-lime-400/10 px-2.5 py-0.5 rounded-full border border-lime-400/30">
-                      <Loader2 className="w-3 h-3 animate-spin text-lime-400" />
-                      Searching...
-                    </span>
-                  ) : (
-                    <span className="text-[10px] font-mono text-slate-400">
-                      {(apiTracks.length > 0 ? apiTracks : filteredTracks).length} matches
-                    </span>
-                  )}
-                </div>
+          {/* CENTER ZONE: Search Input */}
+          <div className="relative flex-1 min-w-0">
+            <div className="relative w-full">
+              <Search className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-lime-400/70 pointer-events-none" />
+              <input 
+                type="text"
+                value={searchQuery}
+                onFocus={() => {
+                  setIsSearchDropdownOpen(true);
+                  setShowNotificationModal(false);
+                }}
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setIsSearchDropdownOpen(true);
+                  setShowNotificationModal(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    const results = apiTracks.length > 0 ? apiTracks : filteredTracks;
+                    if (results.length > 0) {
+                      handlePlayFromSearch(results[0]);
+                    }
+                  }
+                  if (e.key === 'Escape') {
+                    setIsSearchDropdownOpen(false);
+                    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+                      document.activeElement.blur();
+                    }
+                  }
+                }}
+                placeholder="Search here"
+                className="w-full pl-10 sm:pl-11 pr-8 sm:pr-9 py-2 sm:py-2.5 rounded-full bg-white/[0.07] hover:bg-white/[0.12] focus:bg-slate-900 border border-white/15 focus:border-lime-400 text-white placeholder-slate-400 text-xs sm:text-sm font-medium focus:outline-none transition-all shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.08)] focus:shadow-[0_0_24px_rgba(163,230,53,0.3)]"
+              />
+              {searchQuery && (
+                <button 
+                  onClick={() => {
+                    setSearchQuery('');
+                    setIsSearchDropdownOpen(false);
+                    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+                      document.activeElement.blur();
+                    }
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white px-1.5 py-0.5 rounded-full bg-white/10 cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
 
-                {/* Vertical Ranked List (Most Relevant at Top) - Keeps dropdown open when playing track */}
-                <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1 scrollbar-thin">
-                  {(apiTracks.length > 0 ? apiTracks : filteredTracks).map((t, idx) => {
-                    const isCurrent = currentTrack?.id === t.id;
-                    const isTrackPlaying = isCurrent && isPlaying;
-                    return (
-                      <div
-                        key={t.id || idx}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (isCurrent) {
-                            setIsPlaying(!isPlaying);
-                          } else {
-                            onSelectTrack(t);
-                          }
-                          // DO NOT close dropdown on item click! Dropdown stays open as user requested.
+            {/* FLOATING DROPDOWN SEARCH RESULTS & SUGGESTIONS PANEL */}
+            {isSearchDropdownOpen && searchQuery.trim().length > 0 && (
+              <div 
+                onClick={(e) => e.stopPropagation()}
+                className="absolute top-full mt-2.5 left-0 right-0 max-w-full z-[9995] bg-slate-950/98 border border-lime-400/60 rounded-3xl p-3 sm:p-4 shadow-[0_30px_80px_rgba(0,0,0,0.95),_0_0_35px_rgba(163,230,53,0.25)] backdrop-blur-3xl space-y-2.5 animate-fadeIn overflow-hidden box-border"
+              >
+                  {/* Header */}
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2.5 px-1 min-w-0 gap-2">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <Search className="w-3.5 h-3.5 text-lime-400 shrink-0" />
+                      <span className="text-xs font-bold text-white truncate">
+                        Search Results for "{searchQuery}"
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {isSearchingApi ? (
+                        <span className="text-[10px] font-mono text-lime-300 flex items-center gap-1.5 bg-lime-400/10 px-2.5 py-0.5 rounded-full border border-lime-400/30">
+                          <Loader2 className="w-3 h-3 animate-spin text-lime-400" />
+                          <span className="hidden xs:inline">Searching...</span>
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-mono text-slate-400">
+                          {(apiTracks.length > 0 ? apiTracks : filteredTracks).length} matches
+                        </span>
+                      )}
+                      <button 
+                        onClick={() => {
+                          setIsSearchDropdownOpen(false);
                         }}
-                        className={`flex items-center justify-between p-2.5 rounded-2xl transition-all group cursor-pointer border ${
-                          isCurrent 
-                            ? 'bg-lime-500/20 border-lime-400/80 shadow-[0_0_16px_rgba(163,230,53,0.3)]' 
-                            : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/5 hover:border-lime-400/40'
-                        }`}
+                        className="text-slate-400 hover:text-white p-1 rounded-full hover:bg-white/10 cursor-pointer"
+                        title="Close"
                       >
-                        <div className="flex items-center gap-3 min-w-0">
-                          {/* Artwork */}
-                          <div className="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 shadow-md">
-                            <img src={t.artistPhoto} alt={t.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
-                            <div className={`absolute inset-0 bg-black/45 flex items-center justify-center transition-opacity ${
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Suggestions Quick Vibes Row */}
+                  <div className="flex items-center gap-1.5 py-1 px-1 overflow-x-auto scrollbar-none border-b border-white/5 max-w-full">
+                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-wider shrink-0">Suggestions:</span>
+                    {(['Chill', 'Relax', 'Workout'] as const).map(vibeName => (
+                      <button
+                        key={vibeName}
+                        onClick={() => {
+                          setSearchQuery(vibeName);
+                        }}
+                        className="px-2.5 py-0.5 rounded-full bg-white/5 hover:bg-lime-400/20 text-slate-300 hover:text-lime-300 text-[10px] font-semibold border border-white/10 hover:border-lime-400/30 transition-all cursor-pointer shrink-0"
+                      >
+                        {vibeName}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Vertical Ranked List */}
+                  <div className="space-y-1.5 max-h-80 overflow-y-auto pr-1 scrollbar-thin">
+                    {(apiTracks.length > 0 ? apiTracks : filteredTracks).map((t, idx) => {
+                      const isCurrent = currentTrack?.id === t.id;
+                      const isTrackPlaying = isCurrent && isPlaying;
+                      return (
+                        <div
+                          key={t.id || idx}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handlePlayFromSearch(t);
+                          }}
+                          className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl transition-all group cursor-pointer border min-w-0 gap-3 backdrop-blur-md ${
+                            isCurrent 
+                              ? 'bg-lime-500/20 border-lime-400/80 shadow-[0_0_16px_rgba(163,230,53,0.3)]' 
+                              : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/5 hover:border-lime-400/40'
+                          }`}
+                        >
+                          {/* LEFT: Single Play Button / Artwork Thumbnail */}
+                          <div className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full overflow-hidden shrink-0 shadow-md border border-lime-400/40 ring-2 ring-lime-500/15 group-hover:scale-105 transition-transform flex items-center justify-center">
+                            <img src={t.artistPhoto} alt={t.title} className="w-full h-full object-cover rounded-full" />
+                            <div className={`absolute inset-0 bg-black/45 flex items-center justify-center transition-opacity rounded-full ${
                               isTrackPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                             }`}>
                               {isTrackPlaying ? (
@@ -398,374 +598,403 @@ export function MusicV2View({
                             </div>
                           </div>
 
-                          {/* Details */}
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <p className={`text-xs sm:text-sm font-bold truncate transition-colors ${isCurrent ? 'text-lime-300' : 'text-white group-hover:text-lime-300'}`}>
+                          {/* RIGHT (REST OF ROW): Track Name & Artist Name with ample space */}
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <div className="flex items-center gap-1.5 min-w-0">
+                              <h4 className={`text-xs sm:text-sm font-bold truncate transition-colors ${
+                                isCurrent ? 'text-lime-300' : 'text-white group-hover:text-lime-300'
+                              }`}>
                                 {t.title}
-                              </p>
+                              </h4>
                               {idx === 0 && (
-                                <span className="text-[8px] font-mono font-bold bg-lime-400/20 text-lime-300 border border-lime-400/40 px-1 py-0.2 rounded shrink-0">
+                                <span className="text-[8px] font-mono font-bold bg-lime-400/20 text-lime-300 border border-lime-400/40 px-1 py-0.2 rounded shrink-0 hidden xs:inline">
                                   BEST MATCH
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] text-slate-400 truncate font-medium">{t.artist}</p>
+                            <p className="text-[11px] sm:text-xs text-slate-400 truncate font-medium">
+                              {t.artist}
+                            </p>
+                          </div>
+
+                          {/* RIGHT EDGE: Time / Duration */}
+                          <div className="shrink-0 flex items-center gap-1.5 pl-2">
+                            <span className="text-[11px] sm:text-xs font-mono font-semibold text-slate-400 group-hover:text-lime-300 transition-colors">
+                              {t.duration}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                </div>
+            )}
+          </div>
+
+          {/* RIGHT ZONE: Notification Bell (Visible on desktop; on mobile it is in the top header next to menu) */}
+          <div className="hidden md:flex relative shrink-0 items-center justify-end">
+            <button 
+              onClick={() => {
+                const next = !showNotificationModal;
+                setShowNotificationModal(next);
+                if (next) setIsSearchDropdownOpen(false);
+              }}
+              className="relative p-2 sm:p-2.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 hover:border-lime-400/50 text-slate-200 hover:text-white transition-all cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.5)] active:scale-95"
+              title="Notifications"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-lime-400 shadow-[0_0_8px_#a3e635]" />
+            </button>
+
+            {showNotificationModal && (
+              <>
+                {/* Transparent click-outside dismiss backdrop */}
+                <div 
+                  className="fixed inset-0 z-[9998] cursor-default" 
+                  onClick={() => setShowNotificationModal(false)} 
+                />
+                <div className="absolute top-full mt-3.5 right-0 w-[calc(100vw-2.5rem)] sm:w-96 max-w-sm p-4 rounded-3xl bg-slate-950/98 border border-lime-400/50 shadow-[0_30px_70px_rgba(0,0,0,0.95),_0_0_30px_rgba(163,230,53,0.15)] z-[9999] space-y-3 backdrop-blur-3xl animate-fadeIn">
+                  
+                  {/* Header */}
+                  <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black uppercase tracking-[0.18em] text-lime-400">
+                        Notifications
+                      </span>
+                      <span className="px-2 py-0.5 rounded-full bg-lime-400/20 border border-lime-400/30 text-lime-300 text-[10px] font-mono font-bold">
+                        3 New
+                      </span>
+                    </div>
+                    <button 
+                      onClick={() => setShowNotificationModal(false)}
+                      className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Notifications List */}
+                  <div className="space-y-2 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
+                    <div className="p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.07] border border-white/5 hover:border-lime-400/30 transition-all space-y-1.5 cursor-pointer">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-lime-400 font-bold uppercase tracking-wide flex items-center gap-1">
+                          <Music className="w-3 h-3" />
+                          <span>Fresh Drop</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400">20m ago</span>
+                      </div>
+                      <p className="text-xs text-white font-bold leading-snug">
+                        🎧 New Release: "Neon Fields - Better Days" is now live in Synthwave!
+                      </p>
+                    </div>
+
+                    <div className="p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.07] border border-white/5 hover:border-lime-400/30 transition-all space-y-1.5 cursor-pointer">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wide flex items-center gap-1">
+                          <Flame className="w-3 h-3" />
+                          <span>Playlist Updated</span>
+                        </span>
+                        <span className="text-[10px] font-mono text-slate-400">2h ago</span>
+                      </div>
+                      <p className="text-xs text-white font-bold leading-snug">
+                        🔥 "Running Hits" refreshed with 10 high-energy workout tracks.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Footer Action */}
+                  <div className="border-t border-white/10 pt-2 flex items-center justify-between text-[11px]">
+                    <span className="text-slate-400">AudioVido Notifications</span>
+                    <button 
+                      onClick={() => setShowNotificationModal(false)}
+                      className="text-lime-400 font-bold hover:text-lime-300 transition-colors cursor-pointer"
+                    >
+                      Mark all as read
+                    </button>
+                  </div>
+
+                </div>
+              </>
+            )}
+          </div>
+
+        </div>
+
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 2. MAIN VIEW CONTENT: DISCOVER / LIBRARY / EXPANDED PLAYER                */}
+      {/* ========================================================================= */}
+      
+      {/* --- SUB-VIEW A: DISCOVER (3 CLEAN 3D VIBE SPHERES HORIZONTAL + WORKING VIBE PLAYLIST) --- */}
+      {activeTab === 'discover' && (() => {
+        const VIBES_CONFIG = [
+          {
+            id: 'chill' as const,
+            title: 'Chill',
+            vibe: 'Lo-Fi Beats',
+            activeRing: 'border-2 sm:border-[3px] border-emerald-300 ring-4 ring-emerald-400/50 shadow-[0_0_30px_rgba(52,211,153,0.6),0_15px_35px_rgba(0,0,0,0.9)] scale-105',
+            inactiveRing: 'border-2 border-white/40 ring-1 ring-white/10 hover:border-emerald-300 hover:ring-emerald-400/30 shadow-[0_12px_30px_rgba(0,0,0,0.8)] hover:scale-102 opacity-85 hover:opacity-100',
+            trackId: 'track-chill-1',
+            image: 'https://images.unsplash.com/photo-1501386761578-eac5c94b800a?auto=format&fit=crop&w=700&q=85',
+            accentColor: 'text-emerald-300',
+          },
+          {
+            id: 'relax' as const,
+            title: 'Relax',
+            vibe: 'Ambient & Soul',
+            activeRing: 'border-2 sm:border-[3px] border-sky-300 ring-4 ring-sky-400/50 shadow-[0_0_30px_rgba(56,189,248,0.6),0_15px_35px_rgba(0,0,0,0.9)] scale-105',
+            inactiveRing: 'border-2 border-white/40 ring-1 ring-white/10 hover:border-sky-300 hover:ring-sky-400/30 shadow-[0_12px_30px_rgba(0,0,0,0.8)] hover:scale-102 opacity-85 hover:opacity-100',
+            trackId: 'track-relax-1',
+            image: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=700&q=85',
+            accentColor: 'text-sky-300',
+          },
+          {
+            id: 'workout' as const,
+            title: 'Workout',
+            vibe: 'Cardio & Energy',
+            activeRing: 'border-2 sm:border-[3px] border-lime-300 ring-4 ring-lime-400/50 shadow-[0_0_30px_rgba(163,230,53,0.6),0_15px_35px_rgba(0,0,0,0.9)] scale-105',
+            inactiveRing: 'border-2 border-white/40 ring-1 ring-white/10 hover:border-lime-300 hover:ring-lime-400/30 shadow-[0_12px_30px_rgba(0,0,0,0.8)] hover:scale-102 opacity-85 hover:opacity-100',
+            trackId: 'track-workout-1',
+            image: 'https://images.unsplash.com/photo-1517838277536-f5f99be501cd?auto=format&fit=crop&w=700&q=85',
+            accentColor: 'text-lime-300',
+          }
+        ];
+
+        const renderVibeSphere = (vibe: typeof VIBES_CONFIG[number]) => {
+          const isActive = activeVibe === vibe.id;
+          return (
+            <div
+              key={vibe.id}
+              onClick={() => {
+                setActiveVibe(vibe.id);
+                const target = AURA_TRACKS.find(t => t.id === vibe.trackId) || AURA_TRACKS.find(t => t.vibes.some(v => v.toLowerCase() === vibe.id));
+                if (target) {
+                  onSelectTrack(target);
+                  setIsPlaying(true);
+                }
+              }}
+              className={`relative w-24 h-24 xs:w-28 xs:h-28 sm:w-36 sm:h-36 md:w-44 md:h-44 rounded-full overflow-hidden transition-all duration-300 cursor-pointer group flex flex-col justify-end p-2 xs:p-2.5 sm:p-4 text-center select-none shrink-0 active:scale-95 ${
+                isActive ? vibe.activeRing : vibe.inactiveRing
+              }`}
+            >
+              <img 
+                src={vibe.image} 
+                alt={vibe.title} 
+                className="absolute inset-0 w-full h-full object-cover rounded-full group-hover:scale-108 transition-transform duration-500 pointer-events-none brightness-105 contrast-105" 
+              />
+              <div className="absolute inset-x-0 bottom-0 h-14 sm:h-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent rounded-b-full pointer-events-none" />
+              
+              {/* 3D Bubble Specular Light Effect */}
+              <div className="absolute inset-0 rounded-full bg-[radial-gradient(circle_at_32%_22%,rgba(255,255,255,0.45)_0%,rgba(255,255,255,0.08)_30%,transparent_60%)] pointer-events-none" />
+              <div className="absolute inset-0 rounded-full shadow-[inset_0_3px_8px_rgba(255,255,255,0.45),inset_0_-6px_14px_rgba(0,0,0,0.7)] pointer-events-none" />
+
+              {isActive && (
+                <div className="absolute top-1.5 sm:top-2.5 right-1.5 sm:right-2.5 z-20 flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full bg-slate-950/85 backdrop-blur-md border border-lime-400/60 shadow-[0_0_10px_rgba(163,230,53,0.5)]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-lime-400 animate-pulse" />
+                  <span className="text-[8px] sm:text-[9px] font-mono font-bold text-lime-300 uppercase tracking-wider hidden xs:inline">Active</span>
+                </div>
+              )}
+
+              <div className="relative z-10 flex flex-col items-center justify-center space-y-0.5 w-full pointer-events-none">
+                <h3 className="text-sm xs:text-base sm:text-xl md:text-2xl font-black text-white tracking-tight drop-shadow-[0_2px_6px_rgba(0,0,0,0.95)] group-hover:text-lime-300 transition-colors">
+                  {vibe.title}
+                </h3>
+                <span className={`px-1.5 sm:px-2 py-0.2 sm:py-0.5 rounded-full bg-slate-950/70 backdrop-blur-sm border border-white/20 text-[8px] xs:text-[9px] sm:text-[10px] font-mono font-bold tracking-wider uppercase ${vibe.accentColor} shadow-sm truncate max-w-[90%]`}>
+                  {vibe.vibe}
+                </span>
+              </div>
+            </div>
+          );
+        };
+
+        const renderVibePlaylistContent = (vibeId: 'chill' | 'relax' | 'workout') => {
+          const vibeTracks = AURA_TRACKS.filter(t => t.vibes.some(v => v.toLowerCase() === vibeId));
+
+          return (
+            <div className="w-full space-y-4 animate-fadeIn">
+              {/* Curated Songs List for the Selected Vibe */}
+              <div className="rounded-[28px] p-4 sm:p-6 bg-slate-950/85 border border-white/10 backdrop-blur-3xl shadow-[0_20px_45px_rgba(0,0,0,0.85)] space-y-3.5">
+                <div className="flex items-center justify-between flex-wrap gap-2.5 border-b border-white/10 pb-3">
+                  <div className="flex items-center gap-2">
+                    <ListMusic className="w-4 h-4 text-lime-400" />
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider font-sans">
+                      {vibeId.toUpperCase()} VIBE PLAYLIST
+                    </h3>
+                    <span className="text-xs text-slate-400 font-mono">
+                      {vibeTracks.length} Tracks
+                    </span>
+                  </div>
+
+                  {/* Functional Action Buttons */}
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button
+                      onClick={() => {
+                        if (vibeTracks.length > 0) {
+                          onSelectTrack(vibeTracks[0]);
+                          setIsPlaying(true);
+                        }
+                      }}
+                      className="px-3.5 py-1.5 rounded-full bg-gradient-to-r from-lime-400 to-emerald-400 text-slate-950 font-black text-xs flex items-center gap-1.5 shadow-[0_2px_12px_rgba(163,230,53,0.4)] hover:shadow-[0_0_20px_rgba(163,230,53,0.7)] transition-all cursor-pointer active:scale-95 border border-lime-200"
+                    >
+                      <Play className="w-3 h-3 fill-slate-950 text-slate-950" />
+                      <span>Play All</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (vibeTracks.length > 0) {
+                          const rand = vibeTracks[Math.floor(Math.random() * vibeTracks.length)];
+                          onSelectTrack(rand);
+                          setIsPlaying(true);
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-xs flex items-center gap-1.5 border border-white/15 transition-all cursor-pointer active:scale-95"
+                      title="Shuffle this playlist"
+                    >
+                      <Shuffle className="w-3 h-3 text-lime-400" />
+                      <span className="hidden xs:inline">Shuffle</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  {vibeTracks.map((track, idx) => {
+                    const isCurrent = currentTrack?.id === track.id;
+                    const isTrackPlaying = isCurrent && isPlaying;
+                    const isLiked = savedLibraryTracks.some(t => t.id === track.id) || !!likedTracks[track.id];
+
+                    return (
+                      <div
+                        key={track.id}
+                        onClick={() => {
+                          onSelectTrack(track);
+                          setIsPlaying(true);
+                        }}
+                        className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl transition-all cursor-pointer border group ${
+                          isCurrent 
+                            ? 'bg-lime-400/20 border-lime-400/60 shadow-[0_0_18px_rgba(163,230,53,0.25)]' 
+                            : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/5 hover:border-lime-400/35'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3 sm:gap-3.5 min-w-0 flex-1">
+                          <span className="w-5 text-center text-xs font-mono text-slate-400">
+                            {isTrackPlaying ? (
+                              <span className="text-lime-400 font-bold animate-pulse">▶</span>
+                            ) : (
+                              idx + 1
+                            )}
+                          </span>
+
+                          <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden shrink-0 shadow-md border-2 border-lime-400/40 ring-2 ring-lime-500/20 group-hover:scale-105 transition-transform flex items-center justify-center">
+                            <img src={track.artistPhoto} alt={track.title} className="w-full h-full object-cover rounded-full" />
+                            <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity rounded-full ${
+                              isTrackPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                            }`}>
+                              <Play className="w-3.5 h-3.5 fill-lime-400 text-lime-400 ml-0.5" />
+                            </div>
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <h4 className={`text-xs sm:text-sm font-bold truncate transition-colors font-sans ${isCurrent ? 'text-lime-300' : 'text-white group-hover:text-lime-300'}`}>
+                              {track.title}
+                            </h4>
+                            <p className="text-[11px] sm:text-xs text-slate-400 truncate font-sans">
+                              {track.artist} · <span className="text-slate-500">{track.album}</span>
+                            </p>
                           </div>
                         </div>
 
-                        {/* Right: Genre / Duration & Play Button */}
-                        <div className="flex items-center gap-2.5 shrink-0">
-                          <span className="text-[10px] font-mono text-slate-400 hidden sm:inline">{t.genre}</span>
-                          <span className="text-[10px] font-mono text-slate-400">{t.duration}</span>
-                          <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer border ${
-                            isTrackPlaying 
-                              ? 'bg-lime-400 text-slate-950 border-lime-300 shadow-[0_0_12px_rgba(163,230,53,0.8)]' 
-                              : 'bg-lime-400/20 text-lime-300 border-lime-400/30 group-hover:bg-lime-400 group-hover:text-slate-950'
-                          }`}>
-                            {isTrackPlaying ? <Pause className="w-3.5 h-3.5 fill-current" /> : <Play className="w-3.5 h-3.5 fill-current ml-0.5" />}
-                          </div>
+                        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 ml-3">
+                          <span className="text-[10px] font-sans px-2.5 py-0.5 rounded-full bg-white/5 border border-white/10 text-lime-300 hidden sm:inline">
+                            {track.genre}
+                          </span>
+                          <button
+                            onClick={(e) => handleToggleLikeTrack(track, e)}
+                            className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                            title={isLiked ? "Saved in Library" : "Save to Library"}
+                          >
+                            <Heart className={`w-4 h-4 ${isLiked ? 'fill-rose-500 text-rose-500 filter drop-shadow-[0_0_6px_rgba(244,63,94,0.6)]' : ''}`} />
+                          </button>
+                          <span className="font-sans text-xs text-slate-400 w-10 text-right">{track.duration}</span>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-
               </div>
-          )}
-        </div>
+            </div>
+          );
+        };
 
-        {/* RIGHT ZONE: Notification Bell */}
-        <div className="relative shrink-0 self-end md:self-auto flex items-center justify-end">
-          <button 
-            onClick={() => setShowNotificationModal(!showNotificationModal)}
-            className="relative p-2.5 rounded-full bg-white/[0.06] hover:bg-white/[0.12] border border-white/10 hover:border-lime-400/50 text-slate-200 hover:text-white transition-all cursor-pointer shadow-[0_4px_12px_rgba(0,0,0,0.5)]"
-            title="Notifications"
-          >
-            <Bell className="w-4 h-4" />
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-lime-400 shadow-[0_0_8px_#a3e635]" />
-          </button>
-
-          {showNotificationModal && (
-            <>
-              {/* Transparent click-outside dismiss backdrop */}
-              <div 
-                className="fixed inset-0 z-[9998] cursor-default" 
-                onClick={() => setShowNotificationModal(false)} 
-              />
-              <div className="absolute top-full mt-3.5 right-0 w-[calc(100vw-2.5rem)] sm:w-96 max-w-sm p-4 rounded-3xl bg-slate-950/98 border border-lime-400/50 shadow-[0_30px_70px_rgba(0,0,0,0.95),_0_0_30px_rgba(163,230,53,0.15)] z-[9999] space-y-3 backdrop-blur-3xl animate-fadeIn">
-                
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-white/10 pb-3">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black uppercase tracking-[0.18em] text-lime-400">
-                      Notifications
-                    </span>
-                    <span className="px-2 py-0.5 rounded-full bg-lime-400/20 border border-lime-400/30 text-lime-300 text-[10px] font-mono font-bold">
-                      3 New
-                    </span>
-                  </div>
-                  <button 
-                    onClick={() => setShowNotificationModal(false)}
-                    className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
-
-                {/* Notifications List */}
-                <div className="space-y-2 max-h-72 overflow-y-auto pr-1 scrollbar-thin">
-                  <div className="p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.07] border border-white/5 hover:border-lime-400/30 transition-all space-y-1.5 cursor-pointer">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono text-lime-400 font-bold uppercase tracking-wide flex items-center gap-1">
-                        <Music className="w-3 h-3" />
-                        <span>Fresh Drop</span>
-                      </span>
-                      <span className="text-[10px] font-mono text-slate-400">20m ago</span>
-                    </div>
-                    <p className="text-xs text-white font-bold leading-snug">
-                      🎧 New Release: "Neon Fields - Better Days" is now live in Synthwave!
-                    </p>
-                  </div>
-
-                  <div className="p-3 rounded-2xl bg-white/[0.04] hover:bg-white/[0.07] border border-white/5 hover:border-lime-400/30 transition-all space-y-1.5 cursor-pointer">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wide flex items-center gap-1">
-                        <Flame className="w-3 h-3" />
-                        <span>Playlist Updated</span>
-                      </span>
-                      <span className="text-[10px] font-mono text-slate-400">2h ago</span>
-                    </div>
-                    <p className="text-xs text-white font-bold leading-snug">
-                      🔥 "Running Hits" refreshed with 10 high-energy workout tracks.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Footer Action */}
-                <div className="border-t border-white/10 pt-2 flex items-center justify-between text-[11px]">
-                  <span className="text-slate-400">AudioVido Notifications</span>
-                  <button 
-                    onClick={() => setShowNotificationModal(false)}
-                    className="text-lime-400 font-bold hover:text-lime-300 transition-colors cursor-pointer"
-                  >
-                    Mark all as read
-                  </button>
-                </div>
-
-              </div>
-            </>
-          )}
-        </div>
-
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 2. SUB-VIEW NAVIGATION (DISCOVER, LIBRARY) IN 3D LIQUID GLASS              */}
-      {/* ========================================================================= */}
-      <div className="flex items-center justify-start">
-        <div className="flex items-center p-1 rounded-full bg-slate-900/90 border border-lime-400/25 backdrop-blur-2xl shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.15),_0_10px_25px_rgba(0,0,0,0.7)]">
-          <button
-            onClick={() => setActiveTab('discover')}
-            className={`px-4 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer ${
-              activeTab === 'discover' 
-                ? 'bg-gradient-to-r from-lime-400 to-emerald-400 text-slate-950 shadow-[0_0_18px_rgba(163,230,53,0.7)] border border-white/60' 
-                : 'text-slate-300 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            Discover
-          </button>
-          <button
-            onClick={() => setActiveTab('library')}
-            className={`px-4 py-1.5 rounded-full text-xs font-black transition-all cursor-pointer ${
-              activeTab === 'library' 
-                ? 'bg-gradient-to-r from-lime-400 to-emerald-400 text-slate-950 shadow-[0_0_18px_rgba(163,230,53,0.7)] border border-white/60' 
-                : 'text-slate-300 hover:text-white hover:bg-white/5'
-            }`}
-          >
-            Library
-          </button>
-        </div>
-      </div>
-
-      {/* ========================================================================= */}
-      {/* 3. MAIN VIEW CONTENT: DISCOVER / LIBRARY / EXPANDED PLAYER */}
-      {/* ========================================================================= */}
-      
-      {/* --- SUB-VIEW A: DISCOVER (HARMONIOUS 2-COLUMN HERO + LIQUID GLASS PLAYLISTS) --- */}
-      {activeTab === 'discover' && (
-        <div className="space-y-5">
-
-          {/* 2-COLUMN MAIN DISCOVERY GRID */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-            
-            {/* LEFT COLUMN: 1) "Feel the vibe" Hero Banner + 2) "Popular Playlists" List */}
-            <div className="space-y-5">
-              
-              {/* 1. "Feel the vibe" Featured Hero Banner */}
-              <div className="relative rounded-[32px] overflow-hidden p-6 sm:p-7 bg-gradient-to-br from-teal-500 via-emerald-400 to-lime-300 shadow-[0_20px_45px_rgba(16,185,129,0.3)] flex flex-col sm:flex-row items-center justify-between gap-5 group min-h-[290px]">
-                
-                {/* Decorative Holographic Specular Sheen */}
-                <div className="absolute inset-0 bg-gradient-to-tr from-black/25 via-transparent to-white/20 pointer-events-none" />
-                <div className="absolute -right-20 -top-20 w-80 h-80 rounded-full bg-white/20 blur-3xl pointer-events-none" />
-
-                {/* Text Plate on Left */}
-                <div className="relative z-10 space-y-2.5 max-w-xs text-center sm:text-left flex-1">
-                  <span className="text-[10.5px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full bg-black/35 text-white border border-white/20 backdrop-blur-md inline-block">
-                    FEATURED FOR YOU
-                  </span>
-                  
-                  <h3 className="text-2xl sm:text-3xl font-black text-slate-950 tracking-tight leading-tight">
-                    Feel the vibe
-                  </h3>
-
-                  <p className="text-xs sm:text-sm font-semibold text-slate-900/85">
-                    Fresh playlists curated every week to keep your rhythm flowing smoothly.
-                  </p>
-
-                  {/* Big Circular Dark Play Button */}
-                  <div className="pt-2 flex items-center justify-center sm:justify-start gap-3">
-                    <button 
-                      onClick={() => {
-                        setSearchQuery('Michael Jackson Billie Jean');
-                      }}
-                      className="w-12 h-12 rounded-full bg-slate-950 text-white hover:text-lime-300 flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all cursor-pointer border border-white/20 group/play"
-                      title="Search & Play Worldwide Hits"
-                    >
-                      <Play className="w-5 h-5 fill-white ml-0.5 group-hover/play:fill-lime-300 transition-colors" />
-                    </button>
-                    <span className="text-xs font-black text-slate-950">Search Global Hits</span>
-                  </div>
-                </div>
-
-                {/* Girl with Headphones Cutout Visual Art */}
-                <div className="relative z-10 w-40 h-40 sm:w-48 sm:h-48 shrink-0 rounded-2xl overflow-hidden shadow-[0_15px_30px_rgba(0,0,0,0.45)] border-2 border-white/40 group-hover:scale-105 transition-transform duration-500">
-                  <img 
-                    src="https://images.unsplash.com/photo-1516280440614-37939bbacd81?auto=format&fit=crop&w=600&q=80" 
-                    alt="Feel the vibe" 
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-                  <div className="absolute bottom-2.5 left-2.5 right-2.5 text-center">
-                    <span className="text-[9.5px] font-bold text-white uppercase tracking-wider bg-black/60 px-2.5 py-0.5 rounded-full border border-white/20">
-                      Curated Mix #42
-                    </span>
-                  </div>
-                </div>
-
-              </div>
-
-              {/* 2. "Popular Playlists" List (Left Half, Below Feel the Vibe) */}
-              <div className="rounded-[32px] p-5 sm:p-6 bg-slate-950/80 border border-white/10 backdrop-blur-3xl shadow-[0_20px_45px_rgba(0,0,0,0.85)] space-y-3.5">
-                <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                  <h3 className="text-sm font-black text-lime-400 uppercase tracking-wider flex items-center gap-2">
-                    <Flame className="w-4 h-4 text-lime-400" />
-                    <span>Popular Playlists</span>
-                  </h3>
-                  <button 
-                    onClick={() => setActiveTab('library')}
-                    className="text-xs font-bold text-lime-400 hover:text-lime-300 transition-colors cursor-pointer"
-                  >
-                    See all ({filteredPlaylists.length})
-                  </button>
-                </div>
-
-                {/* Playlists List Rows with Medium Sized Album Thumbnails */}
-                <div className="space-y-2 max-h-[380px] overflow-y-auto pr-1 scrollbar-thin">
-                  {filteredPlaylists.map(playlist => (
-                    <div 
-                      key={playlist.id}
-                      onClick={() => {
-                        setSearchQuery(playlist.title);
-                      }}
-                      className="group flex items-center justify-between p-2.5 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-transparent hover:border-lime-400/35 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-[0_0_15px_rgba(163,230,53,0.12)]"
-                    >
-                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                        {/* Thumbnail: Medium sized (larger than track icons, sleek for lists) */}
-                        <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl overflow-hidden shrink-0 shadow-md border border-white/10 group-hover:scale-105 transition-transform duration-300">
-                          <img 
-                            src={playlist.coverUrl} 
-                            alt={playlist.title} 
-                            className="w-full h-full object-cover"
-                          />
-                          <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                            <div className="w-7 h-7 rounded-full bg-lime-400 text-slate-950 flex items-center justify-center shadow-lg">
-                              <Play className="w-3.5 h-3.5 fill-slate-950 ml-0.5" />
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Info */}
-                        <div className="min-w-0 flex-1 space-y-0.5">
-                          <h4 className="text-sm font-bold text-white group-hover:text-lime-300 transition-colors truncate">
-                            {playlist.title}
-                          </h4>
-                          <p className="text-xs text-slate-400 truncate">
-                            {playlist.subtitle}
-                          </p>
-                          <div className="flex items-center gap-2 pt-0.5">
-                            <span className="text-[10px] font-mono font-bold text-lime-400">
-                              {playlist.category}
-                            </span>
-                            <span className="text-[10px] text-slate-400 font-mono">
-                              • {playlist.songCount} songs
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Right Heart Action */}
-                      <div className="flex items-center gap-2 shrink-0 ml-2">
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleLikeTrack(playlist.id, e);
-                          }}
-                          className="p-1.5 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-                          title="Favorite"
-                        >
-                          <Heart className={`w-4 h-4 ${likedTracks[playlist.id] ? 'fill-rose-500 text-rose-500' : ''}`} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
+        return (
+          <div className="space-y-6 pt-1">
+            {/* 3 HORIZONTAL 3D VIBE SPHERES (CHILL, RELAX, WORKOUT) IN ONE ROW */}
+            <div className="flex flex-row items-center justify-center gap-2.5 xs:gap-3.5 sm:gap-6 md:gap-8 w-full max-w-full py-2">
+              {VIBES_CONFIG.map(vibe => renderVibeSphere(vibe))}
             </div>
 
-            {/* RIGHT COLUMN: "Trending Hits & Worldwide Search" */}
-            <div className="rounded-[32px] p-5 sm:p-6 bg-slate-950/85 border border-white/10 backdrop-blur-3xl shadow-[0_20px_45px_rgba(0,0,0,0.85)] flex flex-col justify-between space-y-4 min-h-[300px]">
-              
-              <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
-                <h3 className="text-sm font-black text-lime-400 uppercase tracking-wider flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4" />
-                  <span>Instant Worldwide Search</span>
-                </h3>
-                <span className="text-xs text-lime-300 font-mono">Live Catalog</span>
+            {/* CURATED VIBE PLAYLIST FOR SELECTED VIBE (UNDERNEATH THE 3 CIRCLES) */}
+            {renderVibePlaylistContent(activeVibe)}
+          </div>
+        );
+      })()}
+
+      {/* --- SUB-VIEW B: SAMANTHA'S PERSONAL LIBRARY & PROFILE (IN-PLACE FULL VIEW REPLACING VIBE SPHERES) --- */}
+      {activeTab === 'library' && (
+        <div className="space-y-5 animate-fadeIn">
+          
+          {/* SAMANTHA PROFILE BANNER WITH CONCISE REAL STATS & "BACK TO DISCOVER" BUTTON */}
+          <div className="relative p-4 sm:p-6 rounded-[28px] sm:rounded-[36px] bg-slate-950/90 border border-lime-400/35 backdrop-blur-3xl shadow-[0_20px_50px_rgba(0,0,0,0.9),inset_0_1.5px_2px_rgba(255,255,255,0.15)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            
+            {/* Left: Samantha Profile Identity & Concise Real Stats (Matched typography, zero clutter) */}
+            <div className="flex items-center gap-3.5 sm:gap-4">
+              <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden border-2 border-lime-400 shadow-[0_0_25px_rgba(163,230,53,0.5)] shrink-0 ring-4 ring-lime-400/20">
+                <img 
+                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=300&q=80" 
+                  alt="Samantha" 
+                  className="w-full h-full object-cover"
+                />
               </div>
-
-              <div className="space-y-3">
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  Search any song, artist, or album worldwide. All results feature official HD cover art, full metadata, and authentic 30-second live audio previews:
-                </p>
-
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {[
-                    "Billie Jean Michael Jackson",
-                    "High Hopes Pink Floyd",
-                    "Bohemian Rhapsody Queen",
-                    "Viva La Vida Coldplay",
-                    "Blinding Lights The Weeknd",
-                    "Lose Yourself Eminem",
-                    "Interstellar Hans Zimmer",
-                    "Someone Like You Adele",
-                    "Get Lucky Daft Punk"
-                  ].map(term => (
-                    <button
-                      key={term}
-                      onClick={() => setSearchQuery(term)}
-                      className="px-3 py-1.5 rounded-full bg-white/[0.06] hover:bg-lime-400 hover:text-slate-950 border border-white/10 hover:border-lime-400 text-xs font-semibold text-slate-200 transition-all cursor-pointer flex items-center gap-1.5 shadow-sm active:scale-95"
-                    >
-                      <Search className="w-3 h-3 text-lime-400 group-hover:text-slate-950" />
-                      <span>{term}</span>
-                    </button>
-                  ))}
+              <div className="space-y-1">
+                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight font-sans">
+                  Samantha
+                </h2>
+                <div className="flex items-center gap-2 text-xs sm:text-sm font-sans font-bold text-lime-300">
+                  <span>{likedSongsList.length} Liked Tracks</span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-slate-300">{MUSIC_V2_PLAYLISTS.length + 1} Playlists</span>
                 </div>
               </div>
+            </div>
 
-              <div className="p-3.5 rounded-2xl bg-white/[0.03] border border-white/5 space-y-1">
-                <span className="text-[10px] font-mono uppercase tracking-wider text-lime-400 font-bold block">
-                  Public Music Stream Architecture
-                </span>
-                <p className="text-[11px] text-slate-400 leading-normal">
-                  Connected directly to Apple iTunes Global Catalog & Deezer public audio streams. Zero synthetic sound. Real music playback.
-                </p>
-              </div>
-
+            {/* Right: Prominent "Back to Discover" Button */}
+            <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-center">
+              <button
+                type="button"
+                onClick={() => setActiveTab('discover')}
+                className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 rounded-full bg-gradient-to-r from-lime-400 via-lime-300 to-emerald-400 text-slate-950 font-black text-xs sm:text-sm tracking-wide shadow-[0_0_25px_rgba(163,230,53,0.5),inset_0_1.5px_2px_rgba(255,255,255,0.7)] hover:scale-105 active:scale-95 transition-all cursor-pointer border border-white"
+                title="Back to Discover (Chill, Relax, Workout Vibes)"
+              >
+                <ChevronLeft className="w-4 h-4 stroke-[3]" />
+                <span>Back to Discover</span>
+              </button>
             </div>
 
           </div>
 
-        </div>
-      )}
-
-      {/* --- SUB-VIEW B: MY LIBRARY (SCREEN 3 IN IMAGE) --- */}
-      {activeTab === 'library' && (
-        <div className="space-y-6">
-          
-          {/* Library Category Pill Switcher (Screen 3 Top Pills: Playlists, Artists, Albums, Songs) */}
-          <div className="flex items-center justify-between flex-wrap gap-4 p-4 rounded-2xl bg-slate-950/80 border border-white/10">
-            <div className="flex items-center gap-2 overflow-x-auto">
-              {(['Playlists', 'Artists', 'Albums', 'Songs'] as const).map(cat => (
+          {/* Library Category Pill Switcher: Liked Songs, Playlists, Artists, Suggestions */}
+          <div className="flex items-center justify-between flex-wrap gap-3 p-3 sm:p-4 rounded-3xl bg-slate-950/90 border border-lime-400/30 backdrop-blur-2xl shadow-[0_15px_40px_rgba(0,0,0,0.85),inset_0_1.5px_2px_rgba(255,255,255,0.12)]">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none py-1">
+              {(['Liked Songs', 'Playlists', 'Artists', 'Suggestions'] as const).map(cat => (
                 <button
                   key={cat}
                   onClick={() => setLibraryCategory(cat)}
-                  className={`px-5 py-2 rounded-full text-xs font-bold transition-all cursor-pointer select-none active:scale-95 ${
+                  className={`px-4 sm:px-5 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-200 cursor-pointer select-none active:scale-95 ${
                     libraryCategory === cat 
-                      ? 'bg-lime-400 text-slate-950 shadow-[0_0_16px_rgba(163,230,53,0.55)] font-black border border-lime-300' 
-                      : 'bg-slate-900 text-slate-300 hover:text-white border border-white/10 hover:border-lime-400/40'
+                      ? 'bg-gradient-to-r from-lime-400 to-emerald-400 text-slate-950 shadow-[0_4px_16px_rgba(163,230,53,0.65),inset_0_1.5px_2px_rgba(255,255,255,0.9),inset_0_-2px_3px_rgba(0,0,0,0.35)] border border-lime-200 scale-[1.02]' 
+                      : 'bg-slate-900/80 hover:bg-slate-800 text-slate-300 hover:text-white border border-white/10 hover:border-lime-400/40 shadow-[inset_0_1px_1.5px_rgba(255,255,255,0.08)]'
                   }`}
                 >
                   {cat}
@@ -774,48 +1003,366 @@ export function MusicV2View({
             </div>
 
             <div className="flex items-center gap-3 text-xs text-slate-400">
-              <span className="font-semibold">Sort by: Recently Liked ∨</span>
-              <span className="px-2.5 py-1 rounded-lg bg-lime-400/15 border border-lime-400/30 text-lime-300 font-mono text-[11px] font-bold">
-                {allTracks.filter(t => likedTracks[t.id]).length} Liked Tracks
+              <span className="font-semibold">
+                {libraryCategory === 'Liked Songs' && `${likedSongsList.length} Liked Songs`}
+                {libraryCategory === 'Playlists' && `${MUSIC_V2_PLAYLISTS.length + 1} Playlists`}
+                {libraryCategory === 'Artists' && `${artistGroups.length} Artists`}
+                {libraryCategory === 'Suggestions' && `${suggestedTracks.length} Recommendations`}
               </span>
+              {libraryCategory === 'Liked Songs' && likedSongsList.length > 0 && (
+                <button
+                  onClick={() => {
+                    if (likedSongsList.length > 0) {
+                      onSelectTrack(likedSongsList[0]);
+                      setIsPlaying(true);
+                    }
+                  }}
+                  className="px-3 py-1 rounded-full bg-lime-400/20 hover:bg-lime-400 text-lime-300 hover:text-slate-950 border border-lime-400/40 text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                  <span>Play All</span>
+                </button>
+              )}
             </div>
           </div>
 
-          {/* LIKED SONGS & FAVORITES COLLECTION TABLE */}
-          <div className="rounded-[28px] p-5 sm:p-6 bg-slate-950/85 border border-lime-400/30 shadow-[0_20px_50px_rgba(0,0,0,0.9)] space-y-4">
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-8 h-8 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.4)]">
-                  <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
+          {/* 1. LIKED SONGS TAB */}
+          {libraryCategory === 'Liked Songs' && (
+            <div className="rounded-[28px] p-5 sm:p-6 bg-slate-950/85 border border-lime-400/30 shadow-[0_20px_50px_rgba(0,0,0,0.9)] space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-rose-500/20 border border-rose-500/40 flex items-center justify-center text-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.4)]">
+                    <Heart className="w-4 h-4 fill-rose-500 text-rose-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                      Your Liked Songs
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Saved persistently in your personal library ({likedSongsList.length} tracks)
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="text-sm font-black text-white uppercase tracking-wider">
-                    {libraryCategory === 'Songs' ? 'Your Favorite Songs' : `Library ${libraryCategory}`}
-                  </h3>
-                  <p className="text-[11px] text-slate-400">
-                    Saved persistently in your personal library
-                  </p>
+
+                <span className="px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-mono font-bold">
+                  {likedSongsList.length} Saved
+                </span>
+              </div>
+
+              <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1 scrollbar-thin">
+                {likedSongsList.length === 0 ? (
+                  <div className="py-12 text-center space-y-3">
+                    <div className="w-12 h-12 rounded-full bg-white/5 border border-white/10 flex items-center justify-center mx-auto text-slate-500">
+                      <Heart className="w-6 h-6 text-slate-500" />
+                    </div>
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-bold text-white">No liked songs yet</h4>
+                      <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                        Tap the heart icon on any song from Chill, Relax, or Workout vibes, or search to save tracks permanently here!
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setActiveTab('discover')}
+                      className="px-4 py-2 rounded-full bg-lime-400 text-slate-950 font-bold text-xs hover:bg-lime-300 transition-all cursor-pointer shadow-[0_0_15px_rgba(163,230,53,0.4)]"
+                    >
+                      Explore Vibes
+                    </button>
+                  </div>
+                ) : (
+                  likedSongsList.map((track, idx) => {
+                    const isCurrent = currentTrack?.id === track.id;
+                    const isTrackPlaying = isCurrent && isPlaying;
+                    return (
+                      <div
+                        key={track.id}
+                        onClick={() => {
+                          onSelectTrack(track);
+                          setIsPlaying(true);
+                        }}
+                        className={`flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer border group ${
+                          isCurrent 
+                            ? 'bg-lime-400/20 border-lime-400/60 shadow-[0_0_18px_rgba(163,230,53,0.25)]' 
+                            : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/5 hover:border-lime-400/40'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
+                          <span className="w-5 text-center text-xs font-mono text-slate-400">
+                            {isTrackPlaying ? (
+                              <span className="text-lime-400 font-bold animate-pulse">▶</span>
+                            ) : (
+                              idx + 1
+                            )}
+                          </span>
+
+                          <div className="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 shadow border border-white/10 group-hover:scale-105 transition-transform">
+                            <img src={track.artistPhoto} alt={track.title} className="w-full h-full object-cover" />
+                            <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${
+                              isTrackPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                            }`}>
+                              {isTrackPlaying ? (
+                                <Pause className="w-3.5 h-3.5 fill-lime-400 text-lime-400" />
+                              ) : (
+                                <Play className="w-3.5 h-3.5 fill-lime-400 text-lime-400 ml-0.5" />
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="min-w-0 flex-1">
+                            <h5 className={`text-xs sm:text-sm font-bold truncate transition-colors ${isCurrent ? 'text-lime-300' : 'text-white group-hover:text-lime-300'}`}>
+                              {track.title}
+                            </h5>
+                            <p className="text-[11px] text-slate-400 truncate">
+                              {track.artist} · <span className="font-mono text-slate-500">{track.album || 'Single'}</span>
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-3 shrink-0 ml-3">
+                          <span className="text-[10px] font-mono px-2.5 py-0.5 rounded-full bg-black/40 border border-white/10 text-lime-300 hidden sm:inline">
+                            {track.genre}
+                          </span>
+                          <button
+                            onClick={(e) => handleToggleLikeTrack(track, e)}
+                            className="p-1.5 text-rose-500 hover:text-rose-400 transition-colors cursor-pointer"
+                            title="Remove from favorites"
+                          >
+                            <Heart className="w-4 h-4 fill-rose-500 text-rose-500 filter drop-shadow-[0_0_6px_rgba(244,63,94,0.6)]" />
+                          </button>
+                          <span className="font-mono text-xs text-slate-400 w-10 text-right">{track.duration}</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* 2. PLAYLISTS TAB */}
+          {libraryCategory === 'Playlists' && (
+            <div className="rounded-[28px] p-5 sm:p-6 bg-slate-950/85 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.9)] space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-lime-400/20 border border-lime-400/40 flex items-center justify-center text-lime-400">
+                    <ListMusic className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                      Playlists Collection
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Curated & personal playlists ({MUSIC_V2_PLAYLISTS.length + 1} playlists)
+                    </p>
+                  </div>
                 </div>
               </div>
 
-              <span className="px-3 py-1 rounded-full bg-rose-500/10 border border-rose-500/30 text-rose-300 text-xs font-mono font-bold">
-                {allTracks.filter(t => likedTracks[t.id]).length} Saved
-              </span>
-            </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Special Favorites Playlist Card */}
+                <div 
+                  onClick={() => {
+                    if (likedSongsList.length > 0) {
+                      onSelectTrack(likedSongsList[0]);
+                      setIsPlaying(true);
+                    }
+                  }}
+                  className="group flex items-center justify-between p-3.5 rounded-2xl bg-gradient-to-r from-rose-950/60 to-purple-950/60 hover:from-rose-900/70 hover:to-purple-900/70 border border-rose-500/30 hover:border-rose-400/60 transition-all cursor-pointer shadow-lg"
+                >
+                  <div className="flex items-center gap-4 min-w-0 flex-1">
+                    <div className="relative w-16 h-16 rounded-2xl overflow-hidden shrink-0 shadow-md bg-gradient-to-br from-rose-500 to-purple-600 flex items-center justify-center text-white border border-white/20 group-hover:scale-105 transition-transform">
+                      <Heart className="w-8 h-8 fill-white text-white filter drop-shadow-md" />
+                    </div>
 
-            <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1 scrollbar-thin">
-              {allTracks.filter(t => likedTracks[t.id]).length === 0 ? (
-                <div className="py-10 text-center space-y-2">
-                  <Heart className="w-8 h-8 text-slate-600 mx-auto" />
-                  <p className="text-xs text-slate-400 font-medium">No liked songs yet. Click the heart icon on any song to save it here!</p>
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <h4 className="text-sm font-bold text-white group-hover:text-rose-300 transition-colors truncate">
+                        Your Liked Songs Playlist
+                      </h4>
+                      <p className="text-xs text-slate-300 truncate">
+                        All tracks marked with a heart across sessions
+                      </p>
+                      <span className="text-[11px] font-mono text-rose-300 font-bold block">
+                        {likedSongsList.length} saved songs
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3 shrink-0 ml-3">
+                    <button 
+                      className="w-10 h-10 rounded-full bg-rose-500 hover:bg-rose-400 text-white flex items-center justify-center transition-all cursor-pointer group-hover:scale-110 shadow-md"
+                      title="Play Liked Songs"
+                    >
+                      <Play className="w-4 h-4 fill-current ml-0.5" />
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                allTracks.filter(t => likedTracks[t.id]).map((track, idx) => {
+
+                {/* All Curated Playlists */}
+                {MUSIC_V2_PLAYLISTS.map(playlist => (
+                  <div 
+                    key={playlist.id}
+                    onClick={() => {
+                      const matched = AURA_TRACKS.find(t => t.id === playlist.trackId) || 
+                                      AURA_TRACKS.find(t => t.genre.toLowerCase().includes(playlist.category.toLowerCase())) || 
+                                      AURA_TRACKS[0];
+                      if (matched) {
+                        onSelectTrack(matched);
+                        setIsPlaying(true);
+                      }
+                    }}
+                    className="group flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/60 hover:bg-slate-800/80 border border-white/10 hover:border-lime-400/40 transition-all cursor-pointer shadow-lg hover:shadow-lime-500/10"
+                  >
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      <div className="relative w-16 h-16 rounded-2xl overflow-hidden shrink-0 shadow-md border border-white/10 group-hover:scale-105 transition-transform">
+                        <img 
+                          src={playlist.coverUrl} 
+                          alt={playlist.title} 
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
+                      </div>
+
+                      <div className="min-w-0 flex-1 space-y-0.5">
+                        <h4 className="text-sm font-bold text-white group-hover:text-lime-300 transition-colors truncate">
+                          {playlist.title}
+                        </h4>
+                        <p className="text-xs text-slate-400 truncate">
+                          {playlist.subtitle}
+                        </p>
+                        <span className="text-[11px] font-mono text-lime-400 font-bold block">
+                          {playlist.songCount} songs · {playlist.category}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 shrink-0 ml-3">
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const matched = AURA_TRACKS.find(t => t.id === playlist.trackId) || 
+                                          AURA_TRACKS.find(t => t.genre.toLowerCase().includes(playlist.category.toLowerCase())) || 
+                                          AURA_TRACKS[0];
+                          if (matched) {
+                            onSelectTrack(matched);
+                            setIsPlaying(true);
+                          }
+                        }}
+                        className="w-10 h-10 rounded-full bg-white/10 hover:bg-lime-400 hover:text-slate-950 text-white flex items-center justify-center transition-all cursor-pointer group-hover:scale-110 shadow-md"
+                        title="Play Playlist"
+                      >
+                        <Play className="w-4 h-4 fill-current ml-0.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 3. ARTISTS TAB */}
+          {libraryCategory === 'Artists' && (
+            <div className="rounded-[28px] p-5 sm:p-6 bg-slate-950/85 border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.9)] space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400">
+                    <Mic2 className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                      Library Artists
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Artists from your liked songs and library ({artistGroups.length} artists)
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                {artistGroups.map((artist, idx) => (
+                  <div
+                    key={`${artist.artist}-${idx}`}
+                    onClick={() => {
+                      if (artist.tracks.length > 0) {
+                        onSelectTrack(artist.tracks[0]);
+                        setIsPlaying(true);
+                      }
+                    }}
+                    className="group flex flex-col items-center text-center p-4 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/10 hover:border-lime-400/40 transition-all cursor-pointer space-y-2.5"
+                  >
+                    <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full overflow-hidden shadow-lg border-2 border-white/15 group-hover:border-lime-400 group-hover:scale-105 transition-all">
+                      <img src={artist.photo} alt={artist.artist} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/25 group-hover:bg-black/10 transition-colors" />
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="w-8 h-8 rounded-full bg-lime-400 text-slate-950 flex items-center justify-center shadow-lg">
+                          <Play className="w-3.5 h-3.5 fill-slate-950 ml-0.5" />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-0.5 w-full">
+                      <h4 className="text-sm font-bold text-white group-hover:text-lime-300 transition-colors truncate">
+                        {artist.artist}
+                      </h4>
+                      <p className="text-[11px] font-mono text-lime-400">
+                        {artist.tracks.length} {artist.tracks.length === 1 ? 'track' : 'tracks'}
+                      </p>
+                      {artist.genres.length > 0 && (
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {artist.genres.slice(0, 2).join(' · ')}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* 4. SUGGESTIONS TAB (CURATED RECOMMENDATIONS FOR SAMANTHA) */}
+          {libraryCategory === 'Suggestions' && (
+            <div className="rounded-[28px] p-5 sm:p-6 bg-slate-950/85 border border-lime-400/30 shadow-[0_20px_50px_rgba(0,0,0,0.9)] space-y-4">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-lime-400/20 border border-lime-400/40 flex items-center justify-center text-lime-400 shadow-[0_0_12px_rgba(163,230,53,0.4)]">
+                    <Sparkles className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                      Suggested For You
+                    </h3>
+                    <p className="text-[11px] text-slate-400">
+                      Curated recommendations tailored to your taste ({suggestedTracks.length} tracks)
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => {
+                    if (suggestedTracks.length > 0) {
+                      onSelectTrack(suggestedTracks[0]);
+                      setIsPlaying(true);
+                    }
+                  }}
+                  className="px-3 py-1 rounded-full bg-lime-400 text-slate-950 text-[11px] font-bold transition-all flex items-center gap-1.5 cursor-pointer hover:bg-lime-300 shadow-md"
+                >
+                  <Play className="w-3 h-3 fill-current" />
+                  <span>Play Suggestions</span>
+                </button>
+              </div>
+
+              <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1 scrollbar-thin">
+                {suggestedTracks.map((track, idx) => {
                   const isCurrent = currentTrack?.id === track.id;
+                  const isTrackPlaying = isCurrent && isPlaying;
+                  const isLiked = !!likedTracks[track.id];
+
                   return (
                     <div
                       key={track.id}
-                      onClick={() => onSelectTrack(track)}
+                      onClick={() => {
+                        onSelectTrack(track);
+                        setIsPlaying(true);
+                      }}
                       className={`flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer border group ${
                         isCurrent 
                           ? 'bg-lime-400/20 border-lime-400/60 shadow-[0_0_18px_rgba(163,230,53,0.25)]' 
@@ -824,7 +1371,7 @@ export function MusicV2View({
                     >
                       <div className="flex items-center gap-3.5 min-w-0 flex-1">
                         <span className="w-5 text-center text-xs font-mono text-slate-400">
-                          {isCurrent && isPlaying ? (
+                          {isTrackPlaying ? (
                             <span className="text-lime-400 font-bold animate-pulse">▶</span>
                           ) : (
                             idx + 1
@@ -833,13 +1380,24 @@ export function MusicV2View({
 
                         <div className="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 shadow border border-white/10 group-hover:scale-105 transition-transform">
                           <img src={track.artistPhoto} alt={track.title} className="w-full h-full object-cover" />
+                          <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${
+                            isTrackPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                          }`}>
+                            {isTrackPlaying ? (
+                              <Pause className="w-3.5 h-3.5 fill-lime-400 text-lime-400" />
+                            ) : (
+                              <Play className="w-3.5 h-3.5 fill-lime-400 text-lime-400 ml-0.5" />
+                            )}
+                          </div>
                         </div>
 
                         <div className="min-w-0 flex-1">
                           <h5 className={`text-xs sm:text-sm font-bold truncate transition-colors ${isCurrent ? 'text-lime-300' : 'text-white group-hover:text-lime-300'}`}>
                             {track.title}
                           </h5>
-                          <p className="text-[11px] text-slate-400 truncate">{track.artist}</p>
+                          <p className="text-[11px] text-slate-400 truncate">
+                            {track.artist} · <span className="font-mono text-slate-500">{track.album || 'Single'}</span>
+                          </p>
                         </div>
                       </div>
 
@@ -848,71 +1406,20 @@ export function MusicV2View({
                           {track.genre}
                         </span>
                         <button
-                          onClick={(e) => toggleLikeTrack(track.id, e)}
-                          className="p-1.5 text-rose-500 hover:text-rose-400 transition-colors cursor-pointer"
-                          title="Remove from favorites"
+                          onClick={(e) => handleToggleLikeTrack(track, e)}
+                          className="p-1.5 transition-colors cursor-pointer"
+                          title={isLiked ? "Remove from favorites" : "Save to library"}
                         >
-                          <Heart className="w-4 h-4 fill-rose-500 text-rose-500 filter drop-shadow-[0_0_6px_rgba(244,63,94,0.6)]" />
+                          <Heart className={`w-4 h-4 ${isLiked ? 'fill-rose-500 text-rose-500 filter drop-shadow-[0_0_6px_rgba(244,63,94,0.6)]' : 'text-slate-400 hover:text-rose-400'}`} />
                         </button>
                         <span className="font-mono text-xs text-slate-400 w-10 text-right">{track.duration}</span>
                       </div>
                     </div>
                   );
-                })
-              )}
-            </div>
-          </div>
-
-          {/* Library Playlist Rows */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {filteredPlaylists.map(playlist => (
-              <div 
-                key={playlist.id}
-                onClick={() => {
-                  const matched = allTracks.find(t => t.genre.toLowerCase().includes(playlist.category.toLowerCase())) || allTracks[0];
-                  if (matched) onSelectTrack(matched);
-                }}
-                className="group flex items-center justify-between p-3.5 rounded-2xl bg-slate-900/60 hover:bg-slate-800/80 border border-white/10 hover:border-lime-400/40 transition-all cursor-pointer shadow-lg hover:shadow-lime-500/10"
-              >
-                <div className="flex items-center gap-4 min-w-0 flex-1">
-                  <div className="relative w-16 h-16 rounded-2xl overflow-hidden shrink-0 shadow-md border border-white/10 group-hover:scale-105 transition-transform">
-                    <img 
-                      src={playlist.coverUrl} 
-                      alt={playlist.title} 
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/20 group-hover:bg-black/0 transition-colors" />
-                  </div>
-
-                  <div className="min-w-0 flex-1 space-y-0.5">
-                    <h4 className="text-sm font-bold text-white group-hover:text-lime-300 transition-colors truncate">
-                      {playlist.title}
-                    </h4>
-                    <p className="text-xs text-slate-400 truncate">
-                      {playlist.subtitle}
-                    </p>
-                    <span className="text-[11px] font-mono text-lime-400 font-bold block">
-                      {playlist.songCount} songs
-                    </span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 shrink-0 ml-3">
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const matched = allTracks.find(t => t.genre.toLowerCase().includes(playlist.category.toLowerCase())) || allTracks[0];
-                      if (matched) onSelectTrack(matched);
-                    }}
-                    className="w-10 h-10 rounded-full bg-white/10 hover:bg-lime-400 hover:text-slate-950 text-white flex items-center justify-center transition-all cursor-pointer group-hover:scale-110 shadow-md"
-                    title="Play Playlist"
-                  >
-                    <Play className="w-4 h-4 fill-current ml-0.5" />
-                  </button>
-                </div>
+                })}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
 
         </div>
       )}
@@ -931,142 +1438,89 @@ export function MusicV2View({
       <div className="fixed bottom-3 sm:bottom-6 left-1/2 -translate-x-1/2 w-[calc(100%-1rem)] sm:w-[calc(100%-3rem)] max-w-3xl z-[990] pointer-events-auto">
         
         {/* ========================================================================= */}
-        {/* EXPANDED FULL TRACK INFO & ARTIST SPOTLIGHT (OPENS UPWARDS ON CIRCLE TAP) */}
+        {/* EXPANDED FULL-CARD TRACK POSTER (FULL PHOTO BACKGROUND, MINIMAL & SLEEK)  */}
         {/* ========================================================================= */}
         {isPlayerExpanded && (
           <div 
             onClick={(e) => e.stopPropagation()}
-            className="relative z-[995] w-full mb-3 p-5 sm:p-6 rounded-[28px] sm:rounded-[36px] backdrop-blur-3xl bg-slate-950/98 border border-lime-400/50 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_35px_rgba(163,230,53,0.25)] animate-fadeIn"
+            className="relative z-[995] w-full mb-2 sm:mb-3 h-80 sm:h-96 md:h-[440px] rounded-[28px] sm:rounded-[36px] overflow-hidden border border-white/20 sm:border-lime-400/40 shadow-[0_25px_70px_rgba(0,0,0,0.95),0_0_35px_rgba(163,230,53,0.2)] animate-fadeIn select-none"
           >
-            
-            {/* Top Bar of Expanded Card */}
-            <div className="flex items-center justify-between pb-3.5 mb-4 border-b border-white/10">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-lime-400 animate-pulse shadow-[0_0_8px_#a3e635]" />
-                <span className="text-[11px] font-mono font-bold uppercase tracking-widest text-lime-300">
-                  Track Details & Artist Spotlight
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-lime-400/15 border border-lime-400/30 text-[9.5px] font-mono text-lime-300">
-                  Lossless 24-bit/96kHz
-                </span>
-              </div>
-              
+            {/* FULL BACKGROUND PHOTO OF THE CURRENT MUSIC */}
+            <img 
+              src={currentTrack?.artistPhoto || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=1200&q=85'} 
+              alt={currentTrack?.title || 'Music Track'} 
+              className="absolute inset-0 w-full h-full object-cover brightness-[0.9] contrast-105 pointer-events-none" 
+            />
+
+            {/* Gradient Overlays for High Legibility & Cinematic Mood */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/35 to-black/50 pointer-events-none" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.18)_0%,transparent_50%)] pointer-events-none" />
+
+            {/* TOP-LEFT: PROMINENT LIKE (HEART) BUTTON */}
+            {currentTrack && (
               <button
-                onClick={() => setIsPlayerExpanded(false)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white text-xs font-bold transition-all cursor-pointer"
-                title="Collapse Details"
+                type="button"
+                onClick={(e) => handleToggleLikeTrack(currentTrack, e)}
+                className={`absolute top-4 left-4 sm:top-5 sm:left-5 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center backdrop-blur-2xl border transition-all cursor-pointer shadow-[0_6px_25px_rgba(0,0,0,0.8)] active:scale-90 ${
+                  isCurrentLiked
+                    ? 'bg-rose-500/90 text-white border-rose-300 shadow-[0_0_25px_rgba(244,63,94,0.7)]'
+                    : 'bg-black/60 hover:bg-black/85 text-white border-white/20 hover:border-white/40'
+                }`}
+                title={isCurrentLiked ? "Remove from Liked Songs" : "Like this Track"}
               >
-                <ChevronDown className="w-4 h-4 text-lime-300" />
-                <span className="hidden sm:inline text-[11px]">Close</span>
+                <Heart className={`w-5 h-5 sm:w-6 sm:h-6 ${isCurrentLiked ? 'fill-white text-white filter drop-shadow-[0_0_6px_rgba(255,255,255,0.8)]' : ''}`} />
               </button>
-            </div>
+            )}
 
-            {/* Main Content: Large Rectangular Artwork (Curved Corners) + Comprehensive Clean Metadata */}
-            <div className="flex flex-col md:flex-row items-center gap-5 sm:gap-7">
-              
-              {/* Large Interactive Rectangular Artwork with Curved Corners (Click to Collapse) */}
-              <div 
-                onClick={() => setIsPlayerExpanded(false)}
-                className="relative w-36 h-36 sm:w-48 sm:h-48 rounded-2xl sm:rounded-3xl overflow-hidden shrink-0 border-2 border-lime-300/80 shadow-[0_0_35px_rgba(163,230,53,0.35)] ring-2 ring-lime-500/25 group/bigcov cursor-pointer active:scale-95 transition-all hover:scale-102"
-                title="Click artwork to collapse"
-              >
-                <img 
-                  src={currentTrack?.artistPhoto || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80'} 
-                  alt={currentTrack?.title || 'Music'} 
-                  className="w-full h-full object-cover group-hover/bigcov:scale-105 transition-transform duration-500" 
-                />
-                <div className="absolute inset-0 bg-gradient-to-tr from-black/40 via-transparent to-lime-400/20 pointer-events-none" />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/bigcov:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
-                  <ChevronDown className="w-8 h-8 text-lime-300 animate-bounce" />
-                </div>
+            {/* TOP-RIGHT: MINIMAL CLOSE BUTTON */}
+            <button
+              type="button"
+              onClick={() => setIsPlayerExpanded(false)}
+              className="absolute top-4 right-4 sm:top-5 sm:right-5 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full flex items-center justify-center bg-black/60 hover:bg-black/85 border border-white/20 text-white hover:text-lime-300 transition-all cursor-pointer backdrop-blur-2xl shadow-lg active:scale-90"
+              title="Close view"
+            >
+              <ChevronDown className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
+            </button>
+
+            {/* BOTTOM: ONLY TRACK NAME, ARTIST NAME, ALBUM NAME & YEAR */}
+            <div className="absolute inset-x-0 bottom-0 p-5 sm:p-7 md:p-8 bg-gradient-to-t from-slate-950 via-slate-950/75 to-transparent flex flex-col justify-end space-y-1.5 z-10 pointer-events-none">
+              <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-white tracking-tight drop-shadow-[0_2px_14px_rgba(0,0,0,0.95)] truncate font-sans">
+                {currentTrack?.title || 'No Track Selected'}
+              </h3>
+              <p className="text-base sm:text-xl font-bold text-lime-300 drop-shadow-[0_1px_8px_rgba(0,0,0,0.9)] truncate font-sans">
+                {currentTrack?.artist || 'Unknown Artist'}
+              </p>
+              <div className="flex items-center gap-2 pt-1 text-xs sm:text-sm text-slate-300 font-sans font-medium">
+                <span className="truncate max-w-[240px] sm:max-w-md">
+                  {currentTrack?.album || `${currentTrack?.title || 'Single'} (Album)`}
+                </span>
+                <span className="text-slate-500">•</span>
+                <span className="font-mono text-slate-300 font-bold">
+                  {currentTrack?.year || '2024'}
+                </span>
               </div>
-
-              {/* Comprehensive Track Metadata Grid (Clean, Balanced, No Clutter) */}
-              <div className="flex-1 min-w-0 space-y-3 text-left w-full">
-                <div>
-                  <h3 className="text-lg sm:text-2xl font-black text-white tracking-tight leading-tight">
-                    {currentTrack?.title || 'No Track Selected'}
-                  </h3>
-                  <p className="text-sm sm:text-base font-bold text-lime-300 mt-0.5">
-                    {currentTrack?.artist || 'Search any song in the search bar above'}
-                  </p>
-                </div>
-
-                {/* Tag Pills: Album, Year, Genre, Duration */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
-                  <div className="p-2 sm:p-2.5 rounded-2xl bg-white/[0.04] border border-white/10">
-                    <span className="text-[9px] font-mono uppercase tracking-wider text-slate-400 block">Album</span>
-                    <span className="text-xs font-bold text-white truncate block mt-0.5" title={currentTrack?.album}>
-                      {currentTrack?.album || `${currentTrack?.title || 'Single'} (Album)`}
-                    </span>
-                  </div>
-
-                  <div className="p-2 sm:p-2.5 rounded-2xl bg-white/[0.04] border border-white/10">
-                    <span className="text-[9px] font-mono uppercase tracking-wider text-slate-400 block">Year</span>
-                    <span className="text-xs font-bold text-white block mt-0.5">
-                      {currentTrack?.year || '2024'}
-                    </span>
-                  </div>
-
-                  <div className="p-2 sm:p-2.5 rounded-2xl bg-white/[0.04] border border-white/10">
-                    <span className="text-[9px] font-mono uppercase tracking-wider text-slate-400 block">Genre</span>
-                    <span className="text-xs font-bold text-lime-300 truncate block mt-0.5">
-                      {currentTrack?.genre || 'Worldwide Streaming'}
-                    </span>
-                  </div>
-
-                  <div className="p-2 sm:p-2.5 rounded-2xl bg-white/[0.04] border border-white/10">
-                    <span className="text-[9px] font-mono uppercase tracking-wider text-slate-400 block">Duration</span>
-                    <span className="text-xs font-mono font-bold text-white block mt-0.5">
-                      {currentTrack ? formatTime(audioDuration || 30) : '0:00'}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Artist Bio / Aesthetic Summary */}
-                <div className="pt-2 border-t border-white/10 flex items-start justify-between gap-4">
-                  <div className="space-y-0.5">
-                    <span className="text-[9.5px] font-bold uppercase tracking-wider text-slate-400">About the Track & Sound</span>
-                    <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
-                      {currentTrack?.artistBio || (currentTrack ? `Original track "${currentTrack.title}" by ${currentTrack.artist} from the album "${currentTrack.album || currentTrack.title}" (${currentTrack.year || 'Official Release'}). Genre: ${currentTrack.genre || 'Music'}. Streamed in 30s High-Fidelity Audio Preview via Global Music Catalog.` : 'Search any song or artist in the search bar above to stream live audio.')}
-                    </p>
-                  </div>
-
-                  {currentTrack && (
-                    <button
-                      onClick={(e) => toggleLikeTrack(currentTrack.id, e)}
-                      className="p-2 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-lime-300 transition-all shrink-0 cursor-pointer"
-                      title="Favorite Track"
-                    >
-                      <Heart className={`w-5 h-5 ${isCurrentLiked ? 'fill-lime-400 text-lime-400 drop-shadow-[0_0_8px_#a3e635]' : ''}`} />
-                    </button>
-                  )}
-                </div>
-
-              </div>
-
             </div>
 
           </div>
         )}
 
-        <div className="relative w-full px-4 sm:px-6 py-2.5 sm:py-3.5 rounded-[26px] sm:rounded-[32px] backdrop-blur-3xl bg-slate-950/92 border border-lime-400/35 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.22),_0_20px_50px_rgba(0,0,0,0.9),_0_0_25px_rgba(163,230,53,0.18)] flex items-center justify-between gap-3 sm:gap-5 transition-all duration-300 min-h-[78px] sm:min-h-[86px]">
+        <div className="relative w-full px-3 sm:px-6 py-2 sm:py-3.5 rounded-[24px] sm:rounded-[32px] backdrop-blur-3xl bg-slate-950/92 border border-lime-400/35 shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.22),_0_20px_50px_rgba(0,0,0,0.9),_0_0_25px_rgba(163,230,53,0.18)] flex items-center justify-between gap-2 sm:gap-5 transition-all duration-300 min-h-[66px] sm:min-h-[86px]">
           
           {/* Inner Rounded Background Layer for Gradients with overflow-hidden */}
-          <div className="absolute inset-0 pointer-events-none rounded-[26px] sm:rounded-[32px] overflow-hidden">
+          <div className="absolute inset-0 pointer-events-none rounded-[24px] sm:rounded-[32px] overflow-hidden">
             <div className="absolute top-0 left-0 right-0 h-[1.5px] bg-gradient-to-r from-teal-400/80 via-lime-400 to-emerald-400/80" />
             <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-emerald-500/20 via-lime-400/30 to-teal-500/20" />
             <div className="absolute inset-0 bg-gradient-to-b from-white/[0.05] via-transparent to-black/40" />
           </div>
 
           {/* 1. LEFT ZONE: Current Track Identity with Interactive Circular Cover Art (Tap to Expand Upwards) */}
-          <div className="flex items-center gap-3 sm:gap-3.5 min-w-0 max-w-[140px] sm:max-w-[220px] text-left relative z-10 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3.5 min-w-0 max-w-[100px] sm:max-w-[220px] text-left relative z-10 shrink-0">
             {/* Interactive Circular Cover with luminous indicator */}
             <div 
               onClick={() => {
                 if (currentTrack) setIsPlayerExpanded(!isPlayerExpanded);
               }}
-              className={`relative w-11 h-11 sm:w-13 sm:h-13 rounded-full overflow-hidden shrink-0 border-2 border-lime-300/80 shadow-[0_0_15px_rgba(163,230,53,0.5)] ring-2 ring-lime-500/30 group/cov transition-all ${
+              className={`relative w-8 h-8 sm:w-13 sm:h-13 rounded-full overflow-hidden shrink-0 border-2 border-lime-300/80 shadow-[0_0_15px_rgba(163,230,53,0.5)] ring-2 ring-lime-500/30 group/cov transition-all ${
                 currentTrack ? 'cursor-pointer hover:scale-105 active:scale-95' : 'opacity-75'
               }`}
               title={currentTrack ? (isPlayerExpanded ? "Click to collapse track details" : "Click to expand full track info") : "Search any song to play"}
@@ -1079,9 +1533,9 @@ export function MusicV2View({
               {currentTrack && (
                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover/cov:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[1px]">
                   {isPlayerExpanded ? (
-                    <ChevronDown className="w-4 h-4 text-lime-300 animate-bounce" />
+                    <ChevronDown className="w-3.5 h-3.5 text-lime-300 animate-bounce" />
                   ) : (
-                    <ChevronUp className="w-4 h-4 text-lime-300 animate-bounce" />
+                    <ChevronUp className="w-3.5 h-3.5 text-lime-300 animate-bounce" />
                   )}
                 </div>
               )}
@@ -1093,10 +1547,10 @@ export function MusicV2View({
                 if (currentTrack) setIsPlayerExpanded(!isPlayerExpanded);
               }}
             >
-              <h4 className="text-xs sm:text-sm font-bold text-white truncate font-sans hover:text-lime-300 transition-colors">
+              <h4 className="text-[11px] sm:text-sm font-bold text-white truncate font-sans hover:text-lime-300 transition-colors">
                 {currentTrack?.title || 'Ready to Stream'}
               </h4>
-              <p className="text-[10px] sm:text-xs text-lime-300/85 font-sans font-medium truncate">
+              <p className="text-[9.5px] sm:text-xs text-lime-300/85 font-sans font-medium truncate">
                 {currentTrack?.artist || 'Search any music above'}
               </p>
             </div>
@@ -1112,10 +1566,10 @@ export function MusicV2View({
           </div>
 
           {/* 2. CENTER ZONE: Transport Controls (Top) & Interactive Time Scrubber (Bottom) */}
-          <div className="flex-1 min-w-0 max-w-xs sm:max-w-md flex flex-col items-center gap-1.5 sm:gap-2 px-1 sm:px-3 relative z-10">
+          <div className="flex-1 min-w-0 max-w-xs sm:max-w-md flex flex-col items-center gap-1 sm:gap-2 px-1 sm:px-3 relative z-10">
             
             {/* Transport Buttons Cradle */}
-            <div className="relative flex items-center gap-1 sm:gap-2.5 px-3 sm:px-4 py-1 rounded-full bg-slate-900/85 border border-lime-400/35 backdrop-blur-xl shadow-[0_4px_22px_rgba(163,230,53,0.2),inset_0_1.5px_2px_rgba(255,255,255,0.15)]">
+            <div className="relative flex items-center gap-1 sm:gap-2.5 px-2.5 sm:px-4 py-0.5 sm:py-1 rounded-full bg-slate-900/85 border border-lime-400/35 backdrop-blur-xl shadow-[0_4px_22px_rgba(163,230,53,0.2),inset_0_1.5px_2px_rgba(255,255,255,0.15)]">
               {/* Shuffle Button */}
               <button 
                 onClick={() => setIsShuffle(!isShuffle)}
@@ -1213,13 +1667,36 @@ export function MusicV2View({
 
           </div>
 
-          {/* 3. RIGHT ZONE: Connected Device Selector (Top) + Clean Borderless Volume with Dynamic Responsive Jumping Lines (Bottom) */}
-          <div className="flex flex-col items-stretch justify-between self-stretch shrink-0 relative z-20 py-0.5 gap-1.5 w-[140px] sm:w-[175px]">
+          {/* 3. RIGHT ZONE: Compact Mobile Volume Button vs Full Desktop Device/Volume Controls */}
+          {/* Mobile Right Zone: Single Compact Circular Mute/Unmute Button (Takes only 36px) */}
+          <div className="sm:hidden flex items-center justify-end shrink-0 relative z-20 pl-1">
+            <button 
+              onClick={() => setVolumeLevel(v => (v > 0 ? 0 : 75))}
+              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-lime-300 transition-colors cursor-pointer flex items-center justify-center border border-white/15 shadow-sm active:scale-90"
+              title={volumeLevel === 0 ? "Unmute" : `Mute (${volumeLevel}%)`}
+            >
+              {volumeLevel === 0 ? (
+                <VolumeX className="w-3.5 h-3.5 text-rose-400" />
+              ) : (
+                <Volume2 className="w-3.5 h-3.5 text-lime-400" />
+              )}
+            </button>
+          </div>
+
+          {/* Desktop Right Zone: Connected Device Selector (Top) + Volume with Dynamic VU Candlesticks (Bottom) */}
+          <div className="hidden sm:flex flex-col items-stretch justify-between self-stretch shrink-0 relative z-20 py-0.5 gap-1.5 w-[160px] sm:w-[175px]">
             
             {/* Top Item: Headphones Device Selector Pill (Clean & Polished) */}
             <div className="relative w-full">
               <button
-                onClick={() => setShowDeviceMenu(!showDeviceMenu)}
+                onClick={() => {
+                  const next = !showDeviceMenu;
+                  setShowDeviceMenu(next);
+                  if (next) {
+                    setIsSearchDropdownOpen(false);
+                    setShowNotificationModal(false);
+                  }
+                }}
                 className="w-full flex items-center justify-between px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full bg-slate-900/85 hover:bg-slate-800/90 border border-lime-400/30 text-[10px] sm:text-xs font-bold text-white transition-all cursor-pointer shadow-[0_2px_10px_rgba(163,230,53,0.15)]"
                 title="Audio Output Device"
               >
@@ -1352,7 +1829,7 @@ export function MusicV2View({
       {/* ========================================================================= */}
       {showTrackInfoModal && selectedInfoTrack && (
         <div 
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-xl animate-fadeIn"
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-black/80 backdrop-blur-2xl animate-fadeIn"
           onClick={() => setShowTrackInfoModal(false)}
         >
           <div 

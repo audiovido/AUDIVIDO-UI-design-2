@@ -366,6 +366,7 @@ export default function App() {
   // Navigation State: 'portal' | 'music' | 'movie' | 'community' | 'music2' | 'signup' | 'signin' | 'account'
   const [currentWorld, setCurrentWorld] = useState<'portal' | 'music' | 'movie' | 'community' | 'music2' | 'signup' | 'signin' | 'account'>('portal');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
+  const [isMobileNotificationsOpen, setIsMobileNotificationsOpen] = useState<boolean>(false);
   
   // Transition triggers
   const [isTraveling, setIsTraveling] = useState<boolean>(false);
@@ -391,7 +392,7 @@ export default function App() {
       const saved = localStorage.getItem('audiovido_liked_tracks_v2');
       if (saved) return JSON.parse(saved);
     } catch (e) {}
-    return { 'track-1': true, 'track-2': true };
+    return { 'track-chill-1': true, 'track-relax-1': true, 'track-workout-1': true };
   });
   const [isShuffle, setIsShuffle] = useState<boolean>(false);
   const [isRepeat, setIsRepeat] = useState<boolean>(false);
@@ -406,10 +407,16 @@ export default function App() {
 
   const toggleLikeTrack = (trackId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    setLikedTracks(prev => ({
-      ...prev,
-      [trackId]: !prev[trackId]
-    }));
+    setLikedTracks(prev => {
+      const next = {
+        ...prev,
+        [trackId]: !prev[trackId]
+      };
+      try {
+        localStorage.setItem('audiovido_liked_tracks_v2', JSON.stringify(next));
+      } catch (err) {}
+      return next;
+    });
   };
 
   const [currentMovie, setCurrentMovie] = useState<Movie>(AURA_MOVIES[0]);
@@ -727,18 +734,20 @@ export default function App() {
     setTravelDestination(destination);
     setIsMobileMenuOpen(false);
 
-    // Completely silent by default: Never auto-play audio on page navigation.
-    // Audio will only play when user explicitly searches/selects a song and hits play.
-    if (audioPlayerRef.current) audioPlayerRef.current.pause();
-    AudioSynth.stopAll();
-    setIsPlaying(false);
-    setIsPlayingFireplace(false);
+    // When navigating to movie cinema, pause audio so it doesn't clash with video sound.
+    // When switching between Music, Music 2, Portal, or Social, keep audio seamlessly playing!
+    if (destination === 'movie') {
+      if (audioPlayerRef.current) audioPlayerRef.current.pause();
+      AudioSynth.stopAll();
+      setIsPlaying(false);
+      setIsPlayingFireplace(false);
+    }
 
     setTimeout(() => {
       setCurrentWorld(destination);
       setIsTraveling(false);
       setTravelDestination('');
-    }, 800);
+    }, 400);
   };
 
   const handleMuteAll = () => {
@@ -1292,12 +1301,31 @@ export default function App() {
           </nav>
         </div>
 
-        {/* Right Hamburger Button for Mobile / Touch View */}
-        <div className="flex md:hidden items-center shrink-0">
+        {/* Right Actions for Mobile / Touch View: Notification Bell + 3-line Menu */}
+        <div className="flex md:hidden items-center gap-2 shrink-0">
+          {/* Notification Bell in Header */}
           <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            onClick={() => {
+              setIsMobileNotificationsOpen(!isMobileNotificationsOpen);
+              if (!isMobileNotificationsOpen) setIsMobileMenuOpen(false);
+            }}
+            className="p-2.5 rounded-full bg-slate-900 border border-white/20 text-slate-200 hover:text-white hover:border-lime-400/50 focus:outline-none focus:ring-2 focus:ring-lime-400 cursor-pointer transition-all relative"
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell className="w-4 h-4 text-slate-200" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-lime-400 shadow-[0_0_8px_#a3e635]" />
+          </button>
+
+          {/* 3-line Hamburger Menu Button for Social, Audio, Video, Music 2 tabs */}
+          <button
+            onClick={() => {
+              setIsMobileMenuOpen(!isMobileMenuOpen);
+              if (!isMobileMenuOpen) setIsMobileNotificationsOpen(false);
+            }}
             className="p-2.5 rounded-full bg-slate-900 border border-white/20 text-white hover:text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer transition-all"
             aria-label="Toggle Mobile Menu"
+            title="Menu"
           >
             {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -1306,6 +1334,68 @@ export default function App() {
         {/* Right Symmetrical Balance Spacer for Desktop */}
         <div className="hidden md:flex items-center shrink-0 w-[140px] pointer-events-none" />
       </header>
+
+      {/* --- RESPONSIVE MOBILE NOTIFICATIONS PANEL --- */}
+      {isMobileNotificationsOpen && (
+        <>
+          <div 
+            className="fixed inset-0 z-[1050] bg-black/60 backdrop-blur-sm md:hidden animate-fadeIn" 
+            onClick={() => setIsMobileNotificationsOpen(false)} 
+          />
+          <div className="fixed top-16 right-3 left-3 sm:right-6 sm:left-auto sm:w-96 max-w-sm z-[1060] p-4 rounded-3xl bg-slate-950/98 border border-lime-400/50 shadow-[0_25px_60px_rgba(0,0,0,0.95),0_0_30px_rgba(163,230,53,0.2)] md:hidden space-y-3 backdrop-blur-3xl animate-fadeIn">
+            <div className="flex items-center justify-between border-b border-white/10 pb-2.5">
+              <div className="flex items-center gap-2">
+                <Bell className="w-4 h-4 text-lime-400" />
+                <span className="text-xs font-black uppercase tracking-wider text-lime-400 font-sans">
+                  Notifications
+                </span>
+                <span className="px-2 py-0.2 rounded-full bg-lime-400/20 text-lime-300 text-[10px] font-mono font-bold">
+                  3 New
+                </span>
+              </div>
+              <button 
+                onClick={() => setIsMobileNotificationsOpen(false)}
+                className="p-1 rounded-full text-slate-400 hover:text-white"
+                title="Close"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+              <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/5 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-lime-400 font-bold uppercase">Fresh Drop</span>
+                  <span className="text-[10px] font-mono text-slate-400">20m ago</span>
+                </div>
+                <p className="text-xs text-white font-bold leading-snug">
+                  🎧 New Release: "Neon Fields - Better Days" is live!
+                </p>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/5 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase">Playlist Updated</span>
+                  <span className="text-[10px] font-mono text-slate-400">1h ago</span>
+                </div>
+                <p className="text-xs text-white font-bold leading-snug">
+                  ✨ "Chill Study Beats" has been refreshed with new lofi tracks.
+                </p>
+              </div>
+
+              <div className="p-3 rounded-2xl bg-white/[0.04] border border-white/5 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-mono text-cyan-400 font-bold uppercase">Community</span>
+                  <span className="text-[10px] font-mono text-slate-400">3h ago</span>
+                </div>
+                <p className="text-xs text-white font-bold leading-snug">
+                  💬 Samantha liked your playlist curation in Social Hub.
+                </p>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* --- RESPONSIVE MOBILE NAVIGATION DRAWER (FOR SMARTPHONES & TABLETS) --- */}
       {isMobileMenuOpen && (
@@ -1360,32 +1450,6 @@ export default function App() {
         </div>
       )}
 
-      {/* --- FIXED MOBILE BOTTOM NAVIGATION BAR (FOR EASY THUMB CONTROL ON IOS / ANDROID) --- */}
-      <div className="fixed bottom-0 left-0 right-0 z-[990] md:hidden bg-slate-950/95 backdrop-blur-3xl border-t border-white/15 px-3 py-2 flex items-center justify-around shadow-[0_-10px_25px_rgba(0,0,0,0.9)]">
-        {[
-          { id: 'portal', label: 'Portal', icon: Home },
-          { id: 'music', label: 'Audio', icon: Music },
-          { id: 'movie', label: 'Video', icon: Film },
-          { id: 'community', label: 'Social', icon: Users },
-          { id: 'music2', label: 'Pulse', icon: Compass }
-        ].map(item => {
-          const Icon = item.icon;
-          const isActive = currentWorld === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => handleTravel(item.id as any)}
-              className={`flex flex-col items-center gap-1 min-w-[54px] min-h-[44px] justify-center transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400 rounded-xl ${
-                isActive ? 'text-cyan-300 font-bold scale-105' : 'text-slate-400 hover:text-white'
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span className="text-[9px] uppercase font-bold tracking-wider">{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
       {/* Real HTML5 Audio Player for Web Streaming Previews & Uploads */}
       <audio 
         ref={audioPlayerRef} 
@@ -1422,7 +1486,7 @@ export default function App() {
       />
 
       {/* --- MASTER VIEWPORT CONTEXT (WITH TOP PADDING FOR FIXED LOCKED HEADER) --- */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 pt-20 sm:pt-24 pb-8 flex flex-col justify-center items-center relative z-10">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 pt-20 sm:pt-24 pb-8 flex flex-col justify-start items-center relative z-10 overflow-x-hidden max-w-full">
 
         {/* ========================================================= */}
         {/* === VIEW 1: PORTAL MAIN MENU (3 HIGH-PERFORMANCE LIQUID GLASS CARDS) === */}

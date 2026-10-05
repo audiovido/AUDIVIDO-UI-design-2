@@ -973,8 +973,12 @@ export function MovieStreamingView({
                 <div className="relative">
                   <button
                     onClick={() => {
-                      setShowSubtitleMenu(!showSubtitleMenu);
-                      setShowQualityMenu(false);
+                      const next = !showSubtitleMenu;
+                      setShowSubtitleMenu(next);
+                      if (next) {
+                        setShowQualityMenu(false);
+                        setIsSearchDropdownOpen(false);
+                      }
                     }}
                     className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border active:scale-95 ${
                       activeSubtitleLang !== 'off' 
@@ -991,77 +995,80 @@ export function MovieStreamingView({
 
                   {/* Subtitle Selection Popup */}
                   {showSubtitleMenu && (
-                    <div className="absolute bottom-full mb-2 right-0 z-50 bg-slate-950/98 border border-rose-500/50 rounded-2xl p-2 shadow-[0_15px_40px_rgba(0,0,0,0.9)] backdrop-blur-xl w-44 space-y-1.5 animate-fadeIn">
-                      <div className="text-[10px] font-bold text-slate-400 px-1 border-b border-white/10 pb-1">
-                        انتخاب زیرنویس
-                      </div>
-
-                      <button
-                        onClick={() => handleSubtitleChange('off')}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
-                          activeSubtitleLang === 'off' 
-                            ? 'bg-rose-600/30 text-rose-300 font-bold border border-rose-400/30' 
-                            : 'text-slate-300 hover:bg-white/10'
-                        }`}
-                      >
-                        <span>خاموش (Off)</span>
-                        {activeSubtitleLang === 'off' && <CheckCircle2 className="w-3 h-3 text-rose-400" />}
-                      </button>
-
-                      <button
-                        onClick={() => handleSubtitleChange('fa')}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
-                          activeSubtitleLang === 'fa' 
-                            ? 'bg-rose-600/30 text-rose-300 font-bold border border-rose-400/30' 
-                            : 'text-slate-300 hover:bg-white/10'
-                        }`}
-                      >
-                        <span className="font-medium">فارسی (Persian)</span>
-                        {activeSubtitleLang === 'fa' && <CheckCircle2 className="w-3 h-3 text-rose-400" />}
-                      </button>
-
-                      <button
-                        onClick={() => handleSubtitleChange('en')}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
-                          activeSubtitleLang === 'en' 
-                            ? 'bg-rose-600/30 text-rose-300 font-bold border border-rose-400/30' 
-                            : 'text-slate-300 hover:bg-white/10'
-                        }`}
-                      >
-                        <span>English (EN)</span>
-                        {activeSubtitleLang === 'en' && <CheckCircle2 className="w-3 h-3 text-rose-400" />}
-                      </button>
-
-                      {/* Subtitle Fine-Tune Sync Offset Adjuster */}
-                      {activeSubtitleLang !== 'off' && (
-                        <div className="pt-1.5 border-t border-white/10 space-y-1">
-                          <div className="flex items-center justify-between text-[10px] text-slate-400 px-1">
-                            <span>تنظیم زمان سینک</span>
-                            <span className="font-mono text-rose-300">{subtitleOffsetSeconds > 0 ? `+${subtitleOffsetSeconds}s` : `${subtitleOffsetSeconds}s`}</span>
-                          </div>
-                          <div className="flex items-center justify-between gap-1">
-                            <button
-                              onClick={() => setSubtitleOffsetSeconds(prev => prev - 1)}
-                              className="flex-1 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-mono font-bold text-slate-200 cursor-pointer"
-                            >
-                              -1s
-                            </button>
-                            <button
-                              onClick={() => setSubtitleOffsetSeconds(0)}
-                              className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-mono text-slate-400 cursor-pointer"
-                            >
-                              Reset
-                            </button>
-                            <button
-                              onClick={() => setSubtitleOffsetSeconds(prev => prev + 1)}
-                              className="flex-1 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-mono font-bold text-slate-200 cursor-pointer"
-                            >
-                              +1s
-                            </button>
-                          </div>
+                    <>
+                      <div className="fixed inset-0 z-40 cursor-default" onClick={() => setShowSubtitleMenu(false)} />
+                      <div className="absolute bottom-full mb-2 right-0 z-50 bg-slate-950/98 border border-rose-500/50 rounded-2xl p-2 shadow-[0_15px_40px_rgba(0,0,0,0.9)] backdrop-blur-xl w-44 space-y-1.5 animate-fadeIn">
+                        <div className="text-[10px] font-bold text-slate-400 px-1 border-b border-white/10 pb-1">
+                          انتخاب زیرنویس
                         </div>
-                      )}
-                    </div>
+
+                        <button
+                          onClick={() => handleSubtitleChange('off')}
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+                            activeSubtitleLang === 'off' 
+                              ? 'bg-rose-600/30 text-rose-300 font-bold border border-rose-400/30' 
+                              : 'text-slate-300 hover:bg-white/10'
+                          }`}
+                        >
+                          <span>خاموش (Off)</span>
+                          {activeSubtitleLang === 'off' && <CheckCircle2 className="w-3 h-3 text-rose-400" />}
+                        </button>
+
+                        <button
+                          onClick={() => handleSubtitleChange('fa')}
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+                            activeSubtitleLang === 'fa' 
+                              ? 'bg-rose-600/30 text-rose-300 font-bold border border-rose-400/30' 
+                              : 'text-slate-300 hover:bg-white/10'
+                          }`}
+                        >
+                          <span className="font-medium">فارسی (Persian)</span>
+                          {activeSubtitleLang === 'fa' && <CheckCircle2 className="w-3 h-3 text-rose-400" />}
+                        </button>
+
+                        <button
+                          onClick={() => handleSubtitleChange('en')}
+                          className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+                            activeSubtitleLang === 'en' 
+                              ? 'bg-rose-600/30 text-rose-300 font-bold border border-rose-400/30' 
+                              : 'text-slate-300 hover:bg-white/10'
+                          }`}
+                        >
+                          <span>English (EN)</span>
+                          {activeSubtitleLang === 'en' && <CheckCircle2 className="w-3 h-3 text-rose-400" />}
+                        </button>
+
+                        {/* Subtitle Fine-Tune Sync Offset Adjuster */}
+                        {activeSubtitleLang !== 'off' && (
+                          <div className="pt-1.5 border-t border-white/10 space-y-1">
+                            <div className="flex items-center justify-between text-[10px] text-slate-400 px-1">
+                              <span>تنظیم زمان سینک</span>
+                              <span className="font-mono text-rose-300">{subtitleOffsetSeconds > 0 ? `+${subtitleOffsetSeconds}s` : `${subtitleOffsetSeconds}s`}</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-1">
+                              <button
+                                onClick={() => setSubtitleOffsetSeconds(prev => prev - 1)}
+                                className="flex-1 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-mono font-bold text-slate-200 cursor-pointer"
+                              >
+                                -1s
+                              </button>
+                              <button
+                                onClick={() => setSubtitleOffsetSeconds(0)}
+                                className="px-2 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-mono text-slate-400 cursor-pointer"
+                              >
+                                Reset
+                              </button>
+                              <button
+                                onClick={() => setSubtitleOffsetSeconds(prev => prev + 1)}
+                                className="flex-1 py-1 rounded-lg bg-white/10 hover:bg-white/20 text-[10px] font-mono font-bold text-slate-200 cursor-pointer"
+                              >
+                                +1s
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
 
@@ -1069,8 +1076,12 @@ export function MovieStreamingView({
                 <div className="relative">
                   <button
                     onClick={() => {
-                      setShowQualityMenu(!showQualityMenu);
-                      setShowSubtitleMenu(false);
+                      const next = !showQualityMenu;
+                      setShowQualityMenu(next);
+                      if (next) {
+                        setShowSubtitleMenu(false);
+                        setIsSearchDropdownOpen(false);
+                      }
                     }}
                     className="px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-mono font-bold transition-all cursor-pointer flex items-center gap-1.5 border bg-white/10 text-purple-300 border-white/10 hover:border-purple-400/50 active:scale-95"
                     title="Stream Quality"
@@ -1083,34 +1094,37 @@ export function MovieStreamingView({
 
                   {/* Quality Popup */}
                   {showQualityMenu && (
-                    <div className="absolute bottom-full mb-2 right-0 z-50 bg-slate-950/98 border border-purple-500/50 rounded-2xl p-1.5 shadow-[0_15px_40px_rgba(0,0,0,0.9)] backdrop-blur-xl w-38 space-y-1 animate-fadeIn">
-                      <button
-                        onClick={() => handleQualityChange(-1)}
-                        className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-mono transition-all cursor-pointer ${
-                          currentQualityIndex === -1 
-                            ? 'bg-purple-600/30 text-purple-300 font-bold border border-purple-400/30' 
-                            : 'text-slate-300 hover:bg-white/10'
-                        }`}
-                      >
-                        <span>Auto (ABR)</span>
-                        {currentQualityIndex === -1 && <CheckCircle2 className="w-3 h-3 text-purple-400" />}
-                      </button>
-
-                      {availableQualities.map(q => (
+                    <>
+                      <div className="fixed inset-0 z-40 cursor-default" onClick={() => setShowQualityMenu(false)} />
+                      <div className="absolute bottom-full mb-2 right-0 z-50 bg-slate-950/98 border border-purple-500/50 rounded-2xl p-1.5 shadow-[0_15px_40px_rgba(0,0,0,0.9)] backdrop-blur-xl w-38 space-y-1 animate-fadeIn">
                         <button
-                          key={q.index}
-                          onClick={() => handleQualityChange(q.index)}
+                          onClick={() => handleQualityChange(-1)}
                           className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-mono transition-all cursor-pointer ${
-                            currentQualityIndex === q.index 
+                            currentQualityIndex === -1 
                               ? 'bg-purple-600/30 text-purple-300 font-bold border border-purple-400/30' 
                               : 'text-slate-300 hover:bg-white/10'
                           }`}
                         >
-                          <span>{q.label}</span>
-                          {currentQualityIndex === q.index && <CheckCircle2 className="w-3 h-3 text-purple-400" />}
+                          <span>Auto (ABR)</span>
+                          {currentQualityIndex === -1 && <CheckCircle2 className="w-3 h-3 text-purple-400" />}
                         </button>
-                      ))}
-                    </div>
+
+                        {availableQualities.map(q => (
+                          <button
+                            key={q.index}
+                            onClick={() => handleQualityChange(q.index)}
+                            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-mono transition-all cursor-pointer ${
+                              currentQualityIndex === q.index 
+                                ? 'bg-purple-600/30 text-purple-300 font-bold border border-purple-400/30' 
+                                : 'text-slate-300 hover:bg-white/10'
+                            }`}
+                          >
+                            <span>{q.label}</span>
+                            {currentQualityIndex === q.index && <CheckCircle2 className="w-3 h-3 text-purple-400" />}
+                          </button>
+                        ))}
+                      </div>
+                    </>
                   )}
                 </div>
 
