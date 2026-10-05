@@ -10,7 +10,7 @@ import {
   Compass, ArrowLeft, Tv, Library, Compass as BrowseIcon, FolderHeart, Clock, Disc, Disc3, ListMusic, Upload,
   Shuffle, Repeat, Star, Share2, Bookmark, MoreHorizontal, Maximize2, Minimize2,
   Settings, User, Bell, HelpCircle, LogOut, MessageSquare, Plus, ExternalLink,
-  ChevronRight, ChevronLeft, CheckCircle2, Sliders, ThumbsUp, Eye, ShieldCheck, X
+  ChevronRight, ChevronLeft, CheckCircle2, Sliders, ThumbsUp, Eye, ShieldCheck, X, Menu, Home, LogIn
 } from 'lucide-react';
 import { 
   Track, Movie, MovieReview, Actor, SocialPost, LiveStream, AuraEvent, 
@@ -23,6 +23,9 @@ import { MovieStreamingView } from './components/MovieStreamingView';
 import { SocialHubView } from './components/SocialHubView';
 import { AudioVidoBrandLogo } from './components/AudioVidoBrandLogo';
 import { MusicV2View } from './components/MusicV2View';
+import { SignUpLandingView } from './components/SignUpLandingView';
+import { SignInAuraNodesView } from './components/SignInAuraNodesView';
+import { AuthAccountView } from './components/AuthAccountView';
 import { musicApi } from './services/musicApiService';
 
 // --- BESPOKE 3D SCULPTED EMBLEMS (STANDARD, HARMONIOUS & PROFESSIONAL) ---
@@ -360,8 +363,9 @@ export default function App() {
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const [customAudioUrl, setCustomAudioUrl] = useState<string>('/audio/coffee_bars.mp3');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // Navigation State: 'portal' | 'music' | 'movie' | 'community' | 'music2'
-  const [currentWorld, setCurrentWorld] = useState<'portal' | 'music' | 'movie' | 'community' | 'music2'>('portal');
+  // Navigation State: 'portal' | 'music' | 'movie' | 'community' | 'music2' | 'signup' | 'signin' | 'account'
+  const [currentWorld, setCurrentWorld] = useState<'portal' | 'music' | 'movie' | 'community' | 'music2' | 'signup' | 'signin' | 'account'>('portal');
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   
   // Transition triggers
   const [isTraveling, setIsTraveling] = useState<boolean>(false);
@@ -382,11 +386,23 @@ export default function App() {
 
   // Unified Playing State (Empty / silent by default - no default hardcoded tracks)
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
-  const [likedTracks, setLikedTracks] = useState<Record<string, boolean>>({});
+  const [likedTracks, setLikedTracks] = useState<Record<string, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem('audiovido_liked_tracks_v2');
+      if (saved) return JSON.parse(saved);
+    } catch (e) {}
+    return { 'track-1': true, 'track-2': true };
+  });
   const [isShuffle, setIsShuffle] = useState<boolean>(false);
   const [isRepeat, setIsRepeat] = useState<boolean>(false);
   const [turntableSpeed, setTurntableSpeed] = useState<'33' | '45'>('33');
   const [turntablePitch, setTurntablePitch] = useState<number>(0);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('audiovido_liked_tracks_v2', JSON.stringify(likedTracks));
+    } catch (e) {}
+  }, [likedTracks]);
 
   const toggleLikeTrack = (trackId: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -481,24 +497,16 @@ export default function App() {
     showMovieToast('Review submitted successfully!');
   };
 
-  // Movie playback timer simulation
-  useEffect(() => {
-    let timer: ReturnType<typeof setInterval>;
-    if (isMovieVideoPlaying) {
-      timer = setInterval(() => {
-        setMoviePlaySeconds(prev => (prev >= 7200 ? 0 : prev + 1));
-      }, 1000);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [isMovieVideoPlaying]);
-
+  // formatMovieTime utility
   const formatMovieTime = (totalSeconds: number) => {
+    if (isNaN(totalSeconds) || totalSeconds < 0) return '00:00';
     const hours = Math.floor(totalSeconds / 3600);
     const minutes = Math.floor((totalSeconds % 3600) / 60);
-    const seconds = totalSeconds % 60;
-    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    const seconds = Math.floor(totalSeconds % 60);
+    if (hours > 0) {
+      return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   };
 
   // Helper to parse duration string (e.g. '1:00', '4:20') into total seconds
@@ -714,9 +722,10 @@ export default function App() {
   }, [isPlaying, currentWorld]);
 
   // --- TRANSITIONAL ZOOM PORTAL TRAVEL ---
-  const handleTravel = (destination: 'portal' | 'music' | 'movie' | 'community' | 'music2') => {
+  const handleTravel = (destination: 'portal' | 'music' | 'movie' | 'community' | 'music2' | 'signup' | 'signin' | 'account') => {
     setIsTraveling(true);
     setTravelDestination(destination);
+    setIsMobileMenuOpen(false);
 
     // Completely silent by default: Never auto-play audio on page navigation.
     // Audio will only play when user explicitly searches/selects a song and hits play.
@@ -865,6 +874,13 @@ export default function App() {
 
   const handlePrevTrack = () => {
     if (!currentTrack || AURA_TRACKS.length === 0) return;
+    const audio = audioPlayerRef.current;
+    if (audio && audio.currentTime > 3) {
+      audio.currentTime = 0;
+      setCurrentTrackSeconds(0);
+      setTrackProgress(0);
+      return;
+    }
     const currentIdx = AURA_TRACKS.findIndex(t => t.id === currentTrack?.id);
     const prevIdx = (currentIdx - 1 + AURA_TRACKS.length) % AURA_TRACKS.length;
     if (AURA_TRACKS[prevIdx]) selectAndPlayTrack(AURA_TRACKS[prevIdx]);
@@ -1199,13 +1215,13 @@ export default function App() {
           </button>
         </div>
 
-        {/* Center: Tactile 3D Realm Navigation Bar (AUDIO, VIDEO, SOCIAL, MUSIC 2, MUSIC 4) Centered in Screen */}
-        <div className="flex-1 flex items-center justify-center">
+        {/* Center: Tactile 3D Realm Navigation Bar (AUDIO, VIDEO, SOCIAL, MUSIC 2, ACCOUNT) Centered in Screen */}
+        <div className="hidden md:flex flex-1 items-center justify-center">
           <nav className="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 bg-slate-950/90 border border-white/20 rounded-full backdrop-blur-3xl shadow-[0_10px_30px_rgba(0,0,0,0.85),inset_0_1.5px_2px_rgba(255,255,255,0.22)] shrink-0">
             {/* 1. AUDIO */}
             <button 
               onClick={() => handleTravel('music')} 
-              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
+              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
                 currentWorld === 'music' 
                   ? 'bg-gradient-to-b from-emerald-300 via-emerald-400 to-teal-500 text-slate-950 shadow-[0_4px_18px_rgba(16,185,129,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-emerald-100 scale-[1.02]' 
                   : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-emerald-400/40'
@@ -1223,7 +1239,7 @@ export default function App() {
             {/* 2. VIDEO */}
             <button 
               onClick={() => handleTravel('movie')} 
-              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
+              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-purple-400 ${
                 currentWorld === 'movie' 
                   ? 'bg-gradient-to-b from-violet-300 via-purple-400 to-indigo-500 text-slate-950 shadow-[0_4px_18px_rgba(168,85,247,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-purple-100 scale-[1.02]' 
                   : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-purple-400/40'
@@ -1241,7 +1257,7 @@ export default function App() {
             {/* 3. SOCIAL */}
             <button 
               onClick={() => handleTravel('community')} 
-              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
+              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-sky-400 ${
                 currentWorld === 'community' 
                   ? 'bg-gradient-to-b from-sky-200 via-sky-300 to-blue-400 text-slate-950 shadow-[0_4px_18px_rgba(56,189,248,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-sky-100 scale-[1.02]' 
                   : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-sky-400/40'
@@ -1259,7 +1275,7 @@ export default function App() {
             {/* 4. MUSIC 2 (Electric Lime Modern Streaming Hub) */}
             <button 
               onClick={() => handleTravel('music2')} 
-              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] ${
+              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-lime-400 ${
                 currentWorld === 'music2' 
                   ? 'bg-gradient-to-b from-lime-300 via-lime-400 to-emerald-500 text-slate-950 shadow-[0_4px_18px_rgba(163,230,53,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-lime-100 scale-[1.02]' 
                   : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-lime-400/40'
@@ -1276,9 +1292,99 @@ export default function App() {
           </nav>
         </div>
 
-        {/* Right Symmetrical Balance Spacer */}
+        {/* Right Hamburger Button for Mobile / Touch View */}
+        <div className="flex md:hidden items-center shrink-0">
+          <button
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+            className="p-2.5 rounded-full bg-slate-900 border border-white/20 text-white hover:text-cyan-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 cursor-pointer transition-all"
+            aria-label="Toggle Mobile Menu"
+          >
+            {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
+
+        {/* Right Symmetrical Balance Spacer for Desktop */}
         <div className="hidden md:flex items-center shrink-0 w-[140px] pointer-events-none" />
       </header>
+
+      {/* --- RESPONSIVE MOBILE NAVIGATION DRAWER (FOR SMARTPHONES & TABLETS) --- */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 z-[1000] bg-black/80 backdrop-blur-2xl md:hidden flex flex-col justify-between p-6 animate-fadeIn"
+          onClick={() => setIsMobileMenuOpen(false)}
+        >
+          <div 
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-sm mx-auto bg-slate-950/95 border border-white/20 rounded-[32px] p-6 shadow-2xl space-y-5 my-auto"
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <AudioVidoBrandLogo size="sm" variant="horizontal" />
+              <button 
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 rounded-full bg-white/10 text-white hover:bg-white/20"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-2">
+              {[
+                { id: 'portal', label: 'PORTAL HOME', icon: Home, color: 'text-amber-300' },
+                { id: 'music', label: 'AUDIO REALM', icon: Music, color: 'text-emerald-300' },
+                { id: 'movie', label: 'VIDEO CINEMA', icon: Film, color: 'text-purple-300' },
+                { id: 'community', label: 'SOCIAL HUB', icon: Users, color: 'text-sky-300' },
+                { id: 'music2', label: 'MUSIC 2 PULSE', icon: Compass, color: 'text-lime-300' }
+              ].map(item => {
+                const Icon = item.icon;
+                const isActive = currentWorld === item.id;
+                return (
+                  <button
+                    key={item.id}
+                    onClick={() => handleTravel(item.id as any)}
+                    className={`w-full flex items-center justify-between p-3.5 rounded-2xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer ${
+                      isActive 
+                        ? 'bg-cyan-500/20 border border-cyan-400 text-white shadow-lg' 
+                        : 'bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-transparent'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Icon className={`w-4 h-4 ${item.color}`} />
+                      <span>{item.label}</span>
+                    </div>
+                    {isActive && <div className="w-2 h-2 rounded-full bg-cyan-400 animate-ping" />}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- FIXED MOBILE BOTTOM NAVIGATION BAR (FOR EASY THUMB CONTROL ON IOS / ANDROID) --- */}
+      <div className="fixed bottom-0 left-0 right-0 z-[990] md:hidden bg-slate-950/95 backdrop-blur-3xl border-t border-white/15 px-3 py-2 flex items-center justify-around shadow-[0_-10px_25px_rgba(0,0,0,0.9)]">
+        {[
+          { id: 'portal', label: 'Portal', icon: Home },
+          { id: 'music', label: 'Audio', icon: Music },
+          { id: 'movie', label: 'Video', icon: Film },
+          { id: 'community', label: 'Social', icon: Users },
+          { id: 'music2', label: 'Pulse', icon: Compass }
+        ].map(item => {
+          const Icon = item.icon;
+          const isActive = currentWorld === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => handleTravel(item.id as any)}
+              className={`flex flex-col items-center gap-1 min-w-[54px] min-h-[44px] justify-center transition-all cursor-pointer focus:outline-none focus:ring-2 focus:ring-cyan-400 rounded-xl ${
+                isActive ? 'text-cyan-300 font-bold scale-105' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Icon className="w-4 h-4" />
+              <span className="text-[9px] uppercase font-bold tracking-wider">{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
 
       {/* Real HTML5 Audio Player for Web Streaming Previews & Uploads */}
       <audio 
@@ -2360,6 +2466,21 @@ export default function App() {
             setIsShuffle={setIsShuffle}
             isRepeat={isRepeat}
             setIsRepeat={setIsRepeat}
+          />
+        )}
+
+        {/* ========================================================= */}
+        {/* === VIEW 6: CONSOLIDATED ACCOUNT & AUTH PORTAL        === */}
+        {/* ========================================================= */}
+        {(currentWorld === 'account' || currentWorld === 'signup' || currentWorld === 'signin') && (
+          <AuthAccountView 
+            initialMode={currentWorld === 'signup' ? 'signup' : 'signin'}
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+            setIsPlaying={setIsPlaying}
+            trackProgress={trackProgress}
+            handleSeek={handleSeek}
+            onNavigateWorld={(world) => handleTravel(world as any)}
           />
         )}
 
