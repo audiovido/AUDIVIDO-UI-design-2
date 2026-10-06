@@ -423,11 +423,11 @@ export function MusicV2View({
       )}
 
       {/* ========================================================================= */}
-      {/* 1. TOP APP BAR & NAVIGATION CONSOLE (CLEAN, 100% RESPONSIVE, ZERO OVERLAP) */}
+      {/* 1. TOP APP BAR & SEARCH CONSOLE (SEAMLESS, ZERO UNWANTED BOXING, ZERO ZOOM) */}
       {/* ========================================================================= */}
-      <div className={`relative ${isSearchDropdownOpen && searchQuery.trim().length > 0 ? 'z-[9990]' : 'z-30'} flex flex-col gap-3 sm:gap-4 p-3.5 sm:p-5 rounded-3xl sm:rounded-[36px] bg-slate-950/95 border border-white/20 backdrop-blur-3xl shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.15),_0_20px_50px_rgba(0,0,0,0.9)]`}>
+      <div className={`relative ${isSearchDropdownOpen && searchQuery.trim().length > 0 ? 'z-[9990]' : 'z-30'} w-full pt-0.5 pb-1`}>
         
-        {/* ROW 1: USER PROFILE GREETING (SAMANTHA) + SEARCH INPUT + NOTIFICATION BELL */}
+        {/* ROW 1: USER PROFILE (SAMANTHA) + PROMINENT SEARCH INPUT */}
         <div className="flex items-center justify-between gap-2.5 sm:gap-4 w-full">
           
           {/* LEFT ZONE: Samantha Profile & Personal Library View Trigger (In-Place Page Switch) */}
@@ -438,14 +438,14 @@ export function MusicV2View({
               setIsSearchDropdownOpen(false);
               setShowNotificationModal(false);
             }}
-            className={`flex items-center gap-2.5 sm:gap-3 shrink-0 p-1 sm:p-1.5 -ml-1 sm:-ml-1.5 rounded-2xl sm:rounded-3xl transition-all cursor-pointer group active:scale-95 text-left border select-none ${
+            className={`flex items-center gap-2.5 sm:gap-3 shrink-0 p-1 rounded-full transition-all cursor-pointer group active:scale-95 text-left border select-none ${
               activeTab === 'library'
                 ? 'bg-lime-400/20 border-lime-400/60 shadow-[0_0_22px_rgba(163,230,53,0.35)] ring-1 ring-lime-400/40'
                 : 'hover:bg-white/[0.08] border-transparent hover:border-lime-400/30'
             }`}
             title="Samantha · My Profile & Personal Library"
           >
-            <div className={`relative w-11 h-11 xs:w-12 xs:h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden border-2 shadow-[0_0_20px_rgba(163,230,53,0.5)] shrink-0 ring-2 transition-transform duration-300 group-hover:scale-105 ${
+            <div className={`relative w-11 h-11 xs:w-12 xs:h-12 sm:w-13 sm:h-13 rounded-full overflow-hidden border-2 shadow-[0_0_20px_rgba(163,230,53,0.5)] shrink-0 ring-2 transition-transform duration-300 group-hover:scale-105 ${
               activeTab === 'library' ? 'border-lime-300 ring-lime-400' : 'border-lime-400 ring-lime-500/30'
             }`}>
               <img 
@@ -464,10 +464,10 @@ export function MusicV2View({
             </div>
           </button>
 
-          {/* CENTER ZONE: Search Input */}
+          {/* CENTER ZONE: Prominent Search Input (text-[16px] prevents mobile iOS auto-zoom) */}
           <div className="relative flex-1 min-w-0">
             <div className="relative w-full">
-              <Search className="absolute left-3.5 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-lime-400/70 pointer-events-none" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-lime-400 pointer-events-none" />
               <input 
                 type="text"
                 value={searchQuery}
@@ -495,7 +495,7 @@ export function MusicV2View({
                   }
                 }}
                 placeholder="Search here"
-                className="w-full pl-10 sm:pl-11 pr-8 sm:pr-9 py-2 sm:py-2.5 rounded-full bg-white/[0.07] hover:bg-white/[0.12] focus:bg-slate-900 border border-white/15 focus:border-lime-400 text-white placeholder-slate-400 text-xs sm:text-sm font-medium focus:outline-none transition-all shadow-[inset_0_1.5px_2px_rgba(255,255,255,0.08)] focus:shadow-[0_0_24px_rgba(163,230,53,0.3)]"
+                className="w-full pl-11 sm:pl-12 pr-9 sm:pr-10 py-3 sm:py-3.5 rounded-full bg-slate-900/90 hover:bg-slate-900 focus:bg-slate-950 border border-lime-400/40 focus:border-lime-400 text-white placeholder-slate-400 text-[16px] sm:text-base font-medium focus:outline-none transition-all shadow-[0_4px_20px_rgba(0,0,0,0.6),inset_0_1.5px_2px_rgba(255,255,255,0.1)] focus:shadow-[0_0_25px_rgba(163,230,53,0.35)]"
               />
               {searchQuery && (
                 <button 
@@ -506,7 +506,7 @@ export function MusicV2View({
                       document.activeElement.blur();
                     }
                   }}
-                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white px-1.5 py-0.5 rounded-full bg-white/10 cursor-pointer"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-white px-2 py-0.5 rounded-full bg-white/10 cursor-pointer"
                 >
                   ✕
                 </button>
@@ -872,21 +872,14 @@ export function MusicV2View({
                           onSelectTrack(track);
                           setIsPlaying(true);
                         }}
-                        className={`flex items-center justify-between p-2.5 sm:p-3 rounded-2xl transition-all cursor-pointer border group ${
+                        className={`flex items-center justify-between py-2 sm:py-2.5 pl-2 sm:pl-2.5 pr-2.5 sm:pr-3 rounded-2xl transition-all cursor-pointer border group ${
                           isCurrent 
                             ? 'bg-lime-400/20 border-lime-400/60 shadow-[0_0_18px_rgba(163,230,53,0.25)]' 
                             : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/5 hover:border-lime-400/35'
                         }`}
                       >
-                        <div className="flex items-center gap-3 sm:gap-3.5 min-w-0 flex-1">
-                          <span className="w-5 text-center text-xs font-mono text-slate-400">
-                            {isTrackPlaying ? (
-                              <span className="text-lime-400 font-bold animate-pulse">▶</span>
-                            ) : (
-                              idx + 1
-                            )}
-                          </span>
-
+                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                          {/* Circular Cover Art flush to left with maximum space for text */}
                           <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden shrink-0 shadow-md border-2 border-lime-400/40 ring-2 ring-lime-500/20 group-hover:scale-105 transition-transform flex items-center justify-center">
                             <img src={track.artistPhoto} alt={track.title} className="w-full h-full object-cover rounded-full" />
                             <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity rounded-full ${
@@ -1079,24 +1072,16 @@ export function MusicV2View({
                           onSelectTrack(track);
                           setIsPlaying(true);
                         }}
-                        className={`flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer border group ${
+                        className={`flex items-center justify-between py-2 sm:py-2.5 pl-2 sm:pl-2.5 pr-2.5 sm:pr-3 rounded-2xl transition-all cursor-pointer border group ${
                           isCurrent 
                             ? 'bg-lime-400/20 border-lime-400/60 shadow-[0_0_18px_rgba(163,230,53,0.25)]' 
                             : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/5 hover:border-lime-400/40'
                         }`}
                       >
-                        <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                          <span className="w-5 text-center text-xs font-mono text-slate-400">
-                            {isTrackPlaying ? (
-                              <span className="text-lime-400 font-bold animate-pulse">▶</span>
-                            ) : (
-                              idx + 1
-                            )}
-                          </span>
-
-                          <div className="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 shadow border border-white/10 group-hover:scale-105 transition-transform">
-                            <img src={track.artistPhoto} alt={track.title} className="w-full h-full object-cover" />
-                            <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${
+                        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                          <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden shrink-0 shadow border border-white/10 group-hover:scale-105 transition-transform flex items-center justify-center">
+                            <img src={track.artistPhoto} alt={track.title} className="w-full h-full object-cover rounded-full" />
+                            <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity rounded-full ${
                               isTrackPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                             }`}>
                               {isTrackPlaying ? (
@@ -1363,24 +1348,17 @@ export function MusicV2View({
                         onSelectTrack(track);
                         setIsPlaying(true);
                       }}
-                      className={`flex items-center justify-between p-3 rounded-2xl transition-all cursor-pointer border group ${
+                      className={`flex items-center justify-between py-2 sm:py-2.5 pl-2 sm:pl-2.5 pr-2.5 sm:pr-3 rounded-2xl transition-all cursor-pointer border group ${
                         isCurrent 
                           ? 'bg-lime-400/20 border-lime-400/60 shadow-[0_0_18px_rgba(163,230,53,0.25)]' 
                           : 'bg-white/[0.03] hover:bg-white/[0.08] border-white/5 hover:border-lime-400/40'
                       }`}
                     >
-                      <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                        <span className="w-5 text-center text-xs font-mono text-slate-400">
-                          {isTrackPlaying ? (
-                            <span className="text-lime-400 font-bold animate-pulse">▶</span>
-                          ) : (
-                            idx + 1
-                          )}
-                        </span>
-
-                        <div className="relative w-11 h-11 rounded-xl overflow-hidden shrink-0 shadow border border-white/10 group-hover:scale-105 transition-transform">
-                          <img src={track.artistPhoto} alt={track.title} className="w-full h-full object-cover" />
-                          <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${
+                      <div className="flex items-center gap-2.5 sm:gap-3 min-w-0 flex-1">
+                        {/* Circular Cover Art flush to left with maximum space for text */}
+                        <div className="relative w-11 h-11 sm:w-12 sm:h-12 rounded-full overflow-hidden shrink-0 shadow border border-white/10 group-hover:scale-105 transition-transform flex items-center justify-center">
+                          <img src={track.artistPhoto} alt={track.title} className="w-full h-full object-cover rounded-full" />
+                          <div className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity rounded-full ${
                             isTrackPlaying ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
                           }`}>
                             {isTrackPlaying ? (
@@ -1566,30 +1544,31 @@ export function MusicV2View({
           </div>
 
           {/* 2. CENTER ZONE: Transport Controls (Top) & Interactive Time Scrubber (Bottom) */}
-          <div className="flex-1 min-w-0 max-w-xs sm:max-w-md flex flex-col items-center gap-1 sm:gap-2 px-1 sm:px-3 relative z-10">
+          <div className="flex-1 min-w-0 max-w-sm sm:max-w-md flex flex-col items-center gap-1 sm:gap-2 px-1 sm:px-3 relative z-10">
             
-            {/* Transport Buttons Cradle */}
-            <div className="relative flex items-center gap-1 sm:gap-2.5 px-2.5 sm:px-4 py-0.5 sm:py-1 rounded-full bg-slate-900/85 border border-lime-400/35 backdrop-blur-xl shadow-[0_4px_22px_rgba(163,230,53,0.2),inset_0_1.5px_2px_rgba(255,255,255,0.15)]">
-              {/* Shuffle Button */}
+            {/* Transport Buttons Cradle with Comfortable Touch Spacing */}
+            <div className="relative flex items-center justify-center gap-2 sm:gap-3.5 px-3 sm:px-5 py-1 sm:py-1.5 rounded-full bg-slate-900/90 border border-lime-400/40 backdrop-blur-2xl shadow-[0_4px_22px_rgba(163,230,53,0.25),inset_0_1.5px_2px_rgba(255,255,255,0.15)]">
+              {/* Shuffle Button - Accessible on all screens */}
               <button 
                 onClick={() => setIsShuffle(!isShuffle)}
-                className={`hidden sm:inline-flex p-1.5 rounded-full transition-all cursor-pointer ${
-                  isShuffle ? 'text-lime-300 bg-lime-400/20 shadow-[0_0_8px_rgba(163,230,53,0.5)]' : 'text-slate-400 hover:text-white'
+                className={`p-1.5 sm:p-2 rounded-full transition-all cursor-pointer ${
+                  isShuffle ? 'text-lime-300 bg-lime-400/25 shadow-[0_0_10px_rgba(163,230,53,0.6)]' : 'text-slate-400 hover:text-white'
                 }`}
                 title={isShuffle ? "Shuffle On" : "Shuffle Off"}
               >
-                <Shuffle className="w-3.5 h-3.5" />
+                <Shuffle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
 
+              {/* Previous Track Button - Spaced out & Easy to tap */}
               <button 
                 onClick={onPrevTrack}
-                className="p-1 sm:p-1.5 rounded-full text-slate-300 hover:text-lime-300 hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-slate-200 hover:text-lime-300 hover:bg-white/10 active:scale-90 transition-all cursor-pointer mx-0.5 sm:mx-1"
                 title="Previous track"
               >
-                <SkipBack className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
+                <SkipBack className="w-4 h-4 sm:w-4.5 sm:h-4.5 fill-current" />
               </button>
 
-              {/* Big Glowing Lime Play/Pause Button */}
+              {/* Big Glowing Lime Play/Pause Button - Prominent, Larger & Easy to Tap */}
               <button 
                 onClick={() => {
                   if (currentTrack) {
@@ -1597,36 +1576,37 @@ export function MusicV2View({
                   }
                 }}
                 disabled={!currentTrack}
-                className={`relative w-8 h-8 sm:w-9 sm:h-9 rounded-full bg-gradient-to-tr from-lime-400 via-lime-300 to-emerald-400 text-slate-950 flex items-center justify-center transition-all shadow-[0_0_20px_rgba(163,230,53,0.75)] shrink-0 border border-white ${
+                className={`relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-gradient-to-tr from-lime-400 via-lime-300 to-emerald-400 text-slate-950 flex items-center justify-center transition-all shadow-[0_0_24px_rgba(163,230,53,0.85)] shrink-0 border-2 border-white mx-1 sm:mx-2 ${
                   !currentTrack ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:scale-108 active:scale-95'
                 }`}
                 title={!currentTrack ? "Search a song to play" : (isPlaying ? "Pause" : "Play")}
               >
-                <span className={`absolute -inset-1 rounded-full border border-lime-300/40 pointer-events-none ${isPlaying ? 'animate-pulse' : ''}`} />
+                <span className={`absolute -inset-1 rounded-full border border-lime-300/50 pointer-events-none ${isPlaying ? 'animate-pulse' : ''}`} />
                 {isPlaying ? (
-                  <Pause className="w-4 h-4 fill-slate-950 text-slate-950" />
+                  <Pause className="w-4.5 h-4.5 fill-slate-950 text-slate-950" />
                 ) : (
-                  <Play className="w-4 h-4 fill-slate-950 text-slate-950 ml-0.5" />
+                  <Play className="w-4.5 h-4.5 fill-slate-950 text-slate-950 ml-0.5" />
                 )}
               </button>
 
+              {/* Next Track Button - Spaced out & Easy to tap */}
               <button 
                 onClick={onNextTrack}
-                className="p-1 sm:p-1.5 rounded-full text-slate-300 hover:text-lime-300 hover:bg-white/10 active:scale-90 transition-all cursor-pointer"
+                className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center text-slate-200 hover:text-lime-300 hover:bg-white/10 active:scale-90 transition-all cursor-pointer mx-0.5 sm:mx-1"
                 title="Next track"
               >
-                <SkipForward className="w-3.5 h-3.5 sm:w-4 sm:h-4 fill-current" />
+                <SkipForward className="w-4 h-4 sm:w-4.5 sm:h-4.5 fill-current" />
               </button>
 
-              {/* Repeat Button */}
+              {/* Repeat Button - Accessible on all screens */}
               <button 
                 onClick={() => setIsRepeat(!isRepeat)}
-                className={`hidden sm:inline-flex p-1.5 rounded-full transition-all cursor-pointer ${
-                  isRepeat ? 'text-lime-300 bg-lime-400/20 shadow-[0_0_8px_rgba(163,230,53,0.5)]' : 'text-slate-400 hover:text-white'
+                className={`p-1.5 sm:p-2 rounded-full transition-all cursor-pointer ${
+                  isRepeat ? 'text-lime-300 bg-lime-400/25 shadow-[0_0_10px_rgba(163,230,53,0.6)]' : 'text-slate-400 hover:text-white'
                 }`}
                 title={isRepeat ? "Repeat On" : "Repeat Off"}
               >
-                <Repeat className="w-3.5 h-3.5" />
+                <Repeat className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
             </div>
 
@@ -1667,23 +1647,7 @@ export function MusicV2View({
 
           </div>
 
-          {/* 3. RIGHT ZONE: Compact Mobile Volume Button vs Full Desktop Device/Volume Controls */}
-          {/* Mobile Right Zone: Single Compact Circular Mute/Unmute Button (Takes only 36px) */}
-          <div className="sm:hidden flex items-center justify-end shrink-0 relative z-20 pl-1">
-            <button 
-              onClick={() => setVolumeLevel(v => (v > 0 ? 0 : 75))}
-              className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-lime-300 transition-colors cursor-pointer flex items-center justify-center border border-white/15 shadow-sm active:scale-90"
-              title={volumeLevel === 0 ? "Unmute" : `Mute (${volumeLevel}%)`}
-            >
-              {volumeLevel === 0 ? (
-                <VolumeX className="w-3.5 h-3.5 text-rose-400" />
-              ) : (
-                <Volume2 className="w-3.5 h-3.5 text-lime-400" />
-              )}
-            </button>
-          </div>
-
-          {/* Desktop Right Zone: Connected Device Selector (Top) + Volume with Dynamic VU Candlesticks (Bottom) */}
+          {/* 3. RIGHT ZONE: Desktop Device/Volume Controls (Mute button removed on mobile as requested) */}
           <div className="hidden sm:flex flex-col items-stretch justify-between self-stretch shrink-0 relative z-20 py-0.5 gap-1.5 w-[160px] sm:w-[175px]">
             
             {/* Top Item: Headphones Device Selector Pill (Clean & Polished) */}

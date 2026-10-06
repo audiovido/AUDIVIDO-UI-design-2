@@ -2222,22 +2222,7 @@ export default function App() {
                         }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                          {/* Index or Live Equalizer */}
-                          <div className="w-5 text-center shrink-0">
-                            {isCurrent && isPlaying ? (
-                              <span className="flex items-end justify-center gap-0.5 h-3">
-                                <span className="w-0.5 h-2 bg-amber-400 rounded-full animate-pulse" />
-                                <span className="w-0.5 h-3 bg-amber-300 rounded-full animate-pulse delay-75" />
-                                <span className="w-0.5 h-1.5 bg-yellow-200 rounded-full animate-pulse delay-150" />
-                              </span>
-                            ) : (
-                              <span className="text-[10px] font-mono text-slate-400 group-hover:text-white">
-                                {String(idx + 1).padStart(2, '0')}
-                              </span>
-                            )}
-                          </div>
-
-                          {/* Cover Art - Rounded Full with Artist Photo */}
+                          {/* Cover Art - Rounded Full with Artist Photo flush to left */}
                           <div className="w-8 h-8 rounded-full overflow-hidden shrink-0 shadow-sm relative border border-white/25 group-hover:border-amber-300/60 transition-colors">
                             <img 
                               src={track.artistPhoto} 
