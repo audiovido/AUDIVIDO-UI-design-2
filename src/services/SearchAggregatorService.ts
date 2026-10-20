@@ -4,6 +4,12 @@
  */
 
 import { MediaCatalogItem, SeasonMetadata, EpisodeMetadata } from '../types/streaming';
+import { openVideo } from './openVideoService';
+
+function matchesCategory(m: MediaCatalogItem, categoryFilter: string): boolean {
+  if (!categoryFilter || categoryFilter === 'all' || categoryFilter === 'watchlist') return true;
+  return m.genres.some(g => g.toLowerCase().includes(categoryFilter)) || m.type.toLowerCase().includes(categoryFilter);
+}
 
 export const CURATED_FEATURED_CINEMA: MediaCatalogItem[] = [
   {
@@ -179,22 +185,26 @@ export class SearchAggregatorService {
     }
 
     if (!cleanQuery) {
-      let filtered = [...CURATED_FEATURED_CINEMA];
-      if (categoryFilter && categoryFilter !== 'all' && categoryFilter !== 'watchlist') {
-        filtered = filtered.filter(m => 
-          m.genres.some(g => g.toLowerCase().includes(categoryFilter)) ||
-          m.type.toLowerCase().includes(categoryFilter)
-        );
+      // Landing view: playable picks from the open sources; the static list is only a fallback.
+      try {
+        const featured = (await openVideo.search('')).filter(m => matchesCategory(m, categoryFilter));
+        if (featured.length) {
+          this.cache.set(cacheKey, featured);
+          return featured;
+        }
+      } catch (e) {
+        console.warn('Open video featured list unavailable:', e);
       }
-      return filtered;
+      return CURATED_FEATURED_CINEMA.filter(m => matchesCategory(m, categoryFilter));
     }
 
     const sanitizedQuery = encodeURIComponent(cleanQuery);
 
-    const [cinemetaMovies, cinemetaSeries, tvmazeResults] = await Promise.allSettled([
+    const [cinemetaMovies, cinemetaSeries, tvmazeResults, openResults] = await Promise.allSettled([
       this.fetchCinemetaCatalog('movie', sanitizedQuery),
       this.fetchCinemetaCatalog('series', sanitizedQuery),
-      this.fetchTVMazeShows(sanitizedQuery)
+      this.fetchTVMazeShows(sanitizedQuery),
+      openVideo.search(cleanQuery)
     ]);
 
     const aggregatedMap = new Map<string, MediaCatalogItem>();
@@ -228,15 +238,13 @@ export class SearchAggregatorService {
       }
     }
 
-    let results = Array.from(aggregatedMap.values());
-    results.sort((a, b) => computeRelevanceScore(b, cleanQuery) - computeRelevanceScore(a, cleanQuery));
+    const catalogOnly = Array.from(aggregatedMap.values());
+    catalogOnly.sort((a, b) => computeRelevanceScore(b, cleanQuery) - computeRelevanceScore(a, cleanQuery));
 
-    if (categoryFilter && categoryFilter !== 'all' && categoryFilter !== 'watchlist') {
-      results = results.filter(m => 
-        m.genres.some(g => g.toLowerCase().includes(categoryFilter)) ||
-        m.type.toLowerCase().includes(categoryFilter)
-      );
-    }
+    // Directly playable open-source results first (already ranked server-side), then
+    // catalogue titles, which only play if a free legal copy is found at click time.
+    const playable = openResults.status === 'fulfilled' ? openResults.value : [];
+    const results = [...playable, ...catalogOnly].filter(m => matchesCategory(m, categoryFilter));
 
     this.cache.set(cacheKey, results);
     return results;
