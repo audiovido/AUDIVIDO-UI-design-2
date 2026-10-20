@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-export type MediaType = 'movie' | 'series' | 'anime' | 'documentary';
+export type MediaType = 'movie' | 'series' | 'anime' | 'documentary' | 'live';
 export type MediaKind = 'full_movie' | 'tv_series' | 'youtube_trailer' | 'open_cinema';
 
 export interface EpisodeMetadata {
@@ -46,6 +46,13 @@ export interface MediaCatalogItem {
   runtimeFormatted?: string;
   runtimeSeconds?: number;
   trailerKey?: string;
+  /** Set for items from /api/video/search: `<provider>:<id>`, resolved via /api/video/resolve. */
+  videoSourceId?: string;
+  provider?: string;
+  isLive?: boolean;
+  license?: string;
+  attribution?: string;
+  pageUrl?: string;
 }
 
 export type StreamProtocol = 'hls' | 'mp4' | 'webm' | 'embed';

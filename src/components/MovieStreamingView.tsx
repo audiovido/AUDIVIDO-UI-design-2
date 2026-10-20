@@ -18,6 +18,14 @@ import { searchAggregator, CURATED_FEATURED_CINEMA } from '../services/SearchAgg
 import { streamResolver } from '../services/StreamResolverService';
 import { subtitleSyncService } from '../services/SubtitleSyncService';
 
+/** Badge text + colours for a catalogue item's type (Movie / Series / Documentary / Live). */
+function mediaTypeBadge(m: MediaCatalogItem): { label: string; className: string } {
+  if (m.isLive) return { label: 'Live', className: 'bg-red-500/15 text-red-300 border-red-500/40' };
+  if (m.type === 'series') return { label: 'Series', className: 'bg-purple-500/15 text-purple-300 border-purple-500/40' };
+  if (m.type === 'documentary') return { label: 'Doc', className: 'bg-sky-500/15 text-sky-300 border-sky-500/40' };
+  return { label: 'Movie', className: 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40' };
+}
+
 interface MovieStreamingViewProps {
   handleTravel: (world: any) => void;
   currentMovie: Movie;
@@ -92,6 +100,8 @@ export function MovieStreamingView({
   // Active Stream Manifest
   const [activeManifest, setActiveManifest] = useState<PlayableStreamManifest | null>(null);
   const [hasStreamStarted, setHasStreamStarted] = useState<boolean>(false);
+  const hasStreamStartedRef = useRef(false);
+  hasStreamStartedRef.current = hasStreamStarted;
   const [videoDuration, setVideoDuration] = useState<number>(7320);
   const [bufferedEnd, setBufferedEnd] = useState<number>(0);
   const [videoVolume, setVideoVolume] = useState<number>(85);
@@ -225,6 +235,10 @@ export function MovieStreamingView({
       if (isMounted) {
         setCatalogResults(results);
         setIsSearchingCatalog(false);
+        // Before anything has played, show the first playable pick instead of the placeholder.
+        if (!movieSearch.trim() && !hasStreamStartedRef.current && results[0]?.videoSourceId) {
+          setActiveMediaItem(results[0]);
+        }
       }
     };
 
@@ -281,8 +295,6 @@ export function MovieStreamingView({
       hlsRef.current = null;
     }
 
-    const fallbackMp4Url = 'https://archive.org/download/Tears-of-Steel/tears_of_steel_720p.mp4';
-
     if (manifest.protocol === 'hls' && Hls.isSupported()) {
       const hls = new Hls({
         enableWorker: true,
@@ -306,16 +318,15 @@ export function MovieStreamingView({
 
       hls.on(Hls.Events.ERROR, (_, data) => {
         if (data.fatal) {
-          console.warn('HLS error, switching to direct MP4 stream:', data);
+          console.warn('HLS fatal error:', data);
           hls.destroy();
           hlsRef.current = null;
-          video.src = fallbackMp4Url;
-          video.load();
-          triggerPlay(video);
+          setIsMovieVideoPlaying(false);
+          showMovieToast('This stream is currently unavailable — try another result');
         }
       });
     } else {
-      video.src = manifest.sourceUrl || fallbackMp4Url;
+      video.src = manifest.sourceUrl;
       video.load();
       triggerPlay(video);
     }
@@ -331,10 +342,30 @@ export function MovieStreamingView({
         v.play().then(() => setIsMovieVideoPlaying(true)).catch(() => {});
       });
     }
-  }, [setIsMovieMuted, setIsMovieVideoPlaying]);
+  }, [setIsMovieMuted, setIsMovieVideoPlaying, showMovieToast]);
+
+  // Tear down whatever is playing so a previous stream never continues under a new title.
+  const stopCurrentStream = () => {
+    if (hlsRef.current) {
+      hlsRef.current.destroy();
+      hlsRef.current = null;
+    }
+    const video = videoRef.current;
+    if (video) {
+      video.pause();
+      video.removeAttribute('src');
+      video.load();
+    }
+    setActiveManifest(null);
+    setHasStreamStarted(false);
+    setIsMovieVideoPlaying(false);
+    setMoviePlaySeconds(0);
+    setBufferedEnd(0);
+  };
 
   // Select and stream a movie or TV show
   const selectAndPlayMedia = async (item: MediaCatalogItem) => {
+    stopCurrentStream();
     setActiveMediaItem(item);
     setIsSearchDropdownOpen(false);
 
@@ -353,12 +384,23 @@ export function MovieStreamingView({
       description: item.overview
     } as any);
 
-    showMovieToast(`Playing: ${item.title}`);
+    showMovieToast(item.videoSourceId ? `Loading: ${item.title}` : `Looking for a free legal copy of ${item.title}…`);
     videoContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
-    // 1. Resolve authentic direct stream manifest and mount in HTML5 video
+    // 1. Resolve a real, openly-licensed stream and mount it in the HTML5 video
     const manifest = await streamResolver.resolveStreamManifest(item);
-    mountAndPlayManifest(manifest, item.runtimeSeconds);
+    if (!manifest) {
+      showMovieToast(`No free, legal stream found for "${item.title}"`);
+    } else {
+      showMovieToast(`Playing: ${item.title}`);
+      mountAndPlayManifest(manifest, manifest.isLive ? undefined : item.runtimeSeconds);
+    }
+
+    // Open-source items have no Cinemeta/TVMaze record to deepen.
+    if (item.videoSourceId) {
+      setCurrentEpisode(null);
+      return;
+    }
 
     // 2. Fetch deep details and episodes hierarchy asynchronously
     searchAggregator.resolveMediaDetails(item).then(detailed => {
@@ -381,6 +423,11 @@ export function MovieStreamingView({
     videoContainerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
 
     const episodeManifest = await streamResolver.resolveEpisodeStream(activeMediaItem, episode);
+    if (!episodeManifest) {
+      stopCurrentStream();
+      showMovieToast(`No free, legal stream found for this episode`);
+      return;
+    }
     mountAndPlayManifest(episodeManifest, (episode.runtimeMinutes || 45) * 60);
   };
 
@@ -640,7 +687,7 @@ export function MovieStreamingView({
                 {/* Vertical Ranked List with Chic Badges and Exact Duration in Front */}
                 <div className="space-y-1.5 overflow-y-auto pr-1 scrollbar-thin flex-1">
                   {catalogResults.map((m, idx) => {
-                    const isSeries = m.type === 'series';
+                    const badge = mediaTypeBadge(m);
 
                     return (
                       <div
@@ -667,13 +714,15 @@ export function MovieStreamingView({
                               </h4>
                               
                               {/* Chic, Minimalist Badge: Movie / Series */}
-                              <span className={`px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold uppercase tracking-wider shrink-0 border ${
-                                isSeries 
-                                  ? 'bg-purple-500/15 text-purple-300 border-purple-500/40' 
-                                  : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
-                              }`}>
-                                {isSeries ? 'Series' : 'Movie'}
+                              <span className={`px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold uppercase tracking-wider shrink-0 border ${badge.className}`}>
+                                {badge.label}
                               </span>
+
+                              {m.videoSourceId && (
+                                <span className="px-2 py-0.5 rounded-full text-[9.5px] font-mono font-bold shrink-0 border bg-amber-500/10 text-amber-200 border-amber-400/40">
+                                  Free · {m.mediaBadge}
+                                </span>
+                              )}
 
                               {/* Exact Duration in Front with Clock Icon */}
                               <span className="text-[10.5px] font-mono font-bold text-purple-200/90 flex items-center gap-1 bg-white/5 px-2 py-0.5 rounded-full border border-white/10 shrink-0">
@@ -683,11 +732,13 @@ export function MovieStreamingView({
                             </div>
                             
                             <div className="flex items-center gap-2 text-[10.5px] text-slate-400 truncate mt-1">
-                              <span>{m.releaseYear || '2024'}</span>
-                              <span>·</span>
+                              {m.releaseYear > 0 && (<><span>{m.releaseYear}</span><span>·</span></>)}
                               <span>{m.genres?.slice(0, 2).join(' · ') || 'Cinema'}</span>
-                              <span>·</span>
-                              <span className="text-amber-300 font-mono">★ {m.rating}</span>
+                              {m.license ? (
+                                <><span>·</span><span className="text-emerald-300/90 font-mono">{m.license}</span></>
+                              ) : m.rating > 0 && (
+                                <><span>·</span><span className="text-amber-300 font-mono">★ {m.rating}</span></>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -713,6 +764,8 @@ export function MovieStreamingView({
             { id: 'all', label: 'All' },
             { id: 'movie', label: 'Movies' },
             { id: 'series', label: 'Series' },
+            { id: 'documentary', label: 'Docs' },
+            { id: 'live', label: 'Live TV' },
             { id: 'animation', label: 'Anime' },
             { id: 'watchlist', label: 'Watchlist', icon: Bookmark }
           ].map(tab => (
@@ -1245,19 +1298,19 @@ export function MovieStreamingView({
             <h2 className="text-lg sm:text-2xl font-black text-white tracking-tight">
               {activeMediaItem.title}
             </h2>
-            <span className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-300 font-mono text-[10px] sm:text-[11px] font-bold">
-              ★ {activeMediaItem.rating || '8.8'}
+            {activeMediaItem.rating > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-400/40 text-purple-300 font-mono text-[10px] sm:text-[11px] font-bold">
+                ★ {activeMediaItem.rating}
+              </span>
+            )}
+            <span className={`px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider border ${mediaTypeBadge(activeMediaItem).className}`}>
+              {mediaTypeBadge(activeMediaItem).label}
             </span>
-            <span className={`px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-mono font-bold uppercase tracking-wider border ${
-              activeMediaItem.type === 'series' 
-                ? 'bg-purple-500/15 text-purple-300 border-purple-500/40' 
-                : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/40'
-            }`}>
-              {activeMediaItem.type === 'series' ? 'Series' : 'Movie'}
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-[10px] font-mono text-slate-300">
-              {activeMediaItem.releaseYear || '2024'}
-            </span>
+            {activeMediaItem.releaseYear > 0 && (
+              <span className="px-2 py-0.5 rounded-full bg-white/10 border border-white/15 text-[10px] font-mono text-slate-300">
+                {activeMediaItem.releaseYear}
+              </span>
+            )}
             {activeMediaItem.runtimeFormatted && (
               <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-purple-200 text-[10px] font-mono font-bold flex items-center gap-1">
                 <Clock className="w-3 h-3 text-purple-400" />
@@ -1270,11 +1323,23 @@ export function MovieStreamingView({
             {activeMediaItem.overview || 'High definition master stream featuring uncompressed visual telemetry and spatial audio.'}
           </p>
 
-          <div className="flex items-center gap-2 pt-0.5 text-[11px] text-slate-400 font-mono flex-wrap">
-            <span>Director: {activeMediaItem.directors?.join(', ') || 'Global Director'}</span>
-            <span>·</span>
-            <span>Duration: {activeMediaItem.runtimeFormatted || activeMediaItem.duration || 'Feature'}</span>
-          </div>
+          {activeMediaItem.videoSourceId ? (
+            // Attribution is a licence requirement for CC-BY / CC-BY-SA sources.
+            <div className="flex items-center gap-2 pt-0.5 text-[11px] text-slate-400 font-mono flex-wrap">
+              <span>Source: {activeMediaItem.mediaBadge}</span>
+              {activeMediaItem.attribution && (<><span>·</span><span>{activeMediaItem.attribution}</span></>)}
+              {activeMediaItem.license && (<><span>·</span><span className="text-emerald-300/90">{activeMediaItem.license}</span></>)}
+              {activeMediaItem.pageUrl && (
+                <><span>·</span><a href={activeMediaItem.pageUrl} target="_blank" rel="noopener noreferrer" className="text-purple-300 hover:text-white underline">Original</a></>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 pt-0.5 text-[11px] text-slate-400 font-mono flex-wrap">
+              <span>Director: {activeMediaItem.directors?.join(', ') || 'Global Director'}</span>
+              <span>·</span>
+              <span>Duration: {activeMediaItem.runtimeFormatted || activeMediaItem.duration || 'Feature'}</span>
+            </div>
+          )}
         </div>
 
         {/* Watchlist Action Pill */}
@@ -1341,12 +1406,12 @@ export function MovieStreamingView({
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
                 
                 <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/75 backdrop-blur-md border border-white/20 text-[8.5px] font-mono font-bold text-white uppercase">
-                  {movie.type === 'series' ? 'SERIES' : 'MOVIE'}
+                  {mediaTypeBadge(movie).label}
                 </div>
 
                 <div className="absolute bottom-1.5 left-1.5 right-1.5 flex items-center justify-between text-[9.5px] sm:text-[10px] text-white font-mono">
-                  <span className="text-amber-300">★ {movie.rating}</span>
-                  <span>{movie.runtimeFormatted || movie.releaseYear || '2024'}</span>
+                  {movie.rating > 0 ? <span className="text-amber-300">★ {movie.rating}</span> : <span className="text-emerald-300 truncate">{movie.mediaBadge}</span>}
+                  <span className="shrink-0">{movie.runtimeFormatted || movie.releaseYear || ''}</span>
                 </div>
               </div>
 

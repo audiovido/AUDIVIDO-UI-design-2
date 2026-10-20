@@ -3,10 +3,12 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+import 'dotenv/config';
 import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Readable } from 'stream';
+import { registerVideoRoutes } from './server/video';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -588,6 +590,9 @@ app.get('/api/subtitles/proxy', async (req, res) => {
     res.status(502).send('Error proxying subtitle: ' + (e?.message || e));
   }
 });
+
+// Open-licensed video search, resolve and live TV
+registerVideoRoutes(app);
 
 // Full-Stack Server Mount: Vite in Dev / Static in Prod
 async function startServer() {
