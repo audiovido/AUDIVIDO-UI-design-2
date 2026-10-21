@@ -99,8 +99,8 @@ class MusicApiService {
           durationSeconds: durSec,
           coverUrl: item.coverUrl || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
           previewUrl: `/api/resolve-stream?q=${encodeURIComponent(item.title + ' ' + item.artist)}`,
-          genre: 'Official Release',
-          year: '2024',
+          genre: item.genre || 'Official Release',
+          year: item.year || '2024',
           source: 'YouTubeMusic' as const,
           plays: `${(Math.random() * 8 + 3).toFixed(1)}M`,
           isFullTrack: true
@@ -208,13 +208,13 @@ class MusicApiService {
           id: item.id || `sc-${Math.random()}`,
           title: item.title || 'Unknown Title',
           artist: item.artist || 'SoundCloud Artist',
-          album: 'SoundCloud Master',
+          album: item.album || 'SoundCloud Master',
           duration: `${mins}:${secs.toString().padStart(2, '0')}`,
           durationSeconds: durSec,
           coverUrl: item.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
           previewUrl: item.streamUrl,
-          genre: 'SoundCloud Global',
-          year: '2024',
+          genre: item.genre || 'SoundCloud Global',
+          year: item.year || '2024',
           source: 'SoundCloud' as const,
           plays: `${(Math.random() * 4 + 1).toFixed(1)}M`,
           isFullTrack: true
@@ -263,7 +263,7 @@ class MusicApiService {
   }
 
   /**
-   * Search across all engines with Intelligent Ranking & Anti-Karaoke filters
+   * Search across all engines with Intelligent Ranking, Deep Metadata & Anti-Karaoke filters
    */
   async searchTracks(
     query: string, 
@@ -280,14 +280,17 @@ class MusicApiService {
       return this.searchITunes(q, limit);
     }
 
-    // Default 'all': Priority 1 is YouTube Music Official Tracks, Priority 2 is Apple iTunes
-    const [ytmRes, itunesRes] = await Promise.allSettled([
+    // Default 'all': Priority 1 is YouTube Music Official Tracks (enriched with iTunes & Deezer),
+    // Priority 2 is Apple iTunes, Priority 3 is SoundCloud progressive streams
+    const [ytmRes, itunesRes, scRes] = await Promise.allSettled([
       this.searchYouTubeMusic(q, limit),
-      this.searchITunes(q, limit)
+      this.searchITunes(q, limit),
+      this.searchSoundCloud(q, 10)
     ]);
 
     const ytmTracks = ytmRes.status === 'fulfilled' ? ytmRes.value : [];
     const itunesTracks = itunesRes.status === 'fulfilled' ? itunesRes.value : [];
+    const scTracks = scRes.status === 'fulfilled' ? scRes.value : [];
 
     const merged: ApiTrack[] = [];
     const seen = new Set<string>();
@@ -307,9 +310,14 @@ class MusicApiService {
       addTrack(yt);
     }
 
-    // Append iTunes tracks
+    // Append iTunes tracks (and enrich any existing YTM track missing album/year/genre)
     for (const it of itunesTracks) {
       addTrack(it);
+    }
+
+    // Append SoundCloud full progressive tracks
+    for (const sc of scTracks) {
+      addTrack(sc);
     }
 
     return merged.slice(0, limit);

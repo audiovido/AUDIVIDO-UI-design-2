@@ -164,23 +164,29 @@ export class SubtitleSyncService {
       return this.cache.get(url)!;
     }
 
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 2500);
-      const response = await fetch(url, { signal: controller.signal });
-      clearTimeout(timeoutId);
+    const candidateUrls = url.startsWith('/api/')
+      ? [url]
+      : [url, `/api/subtitles/proxy?url=${encodeURIComponent(url)}`];
 
-      if (response.ok) {
-        const text = await response.text();
-        const vttData = text.trim().startsWith('WEBVTT') ? text : this.convertSrtToVtt(text);
-        const parsed = this.parseWebVTT(vttData);
-        if (parsed.length > 0) {
-          this.cache.set(url, parsed);
-          return parsed;
+    for (const targetUrl of candidateUrls) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+        const response = await fetch(targetUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const text = await response.text();
+          const vttData = text.trim().startsWith('WEBVTT') ? text : this.convertSrtToVtt(text);
+          const parsed = this.parseWebVTT(vttData);
+          if (parsed.length > 0) {
+            this.cache.set(url, parsed);
+            return parsed;
+          }
         }
+      } catch {
+        // Try next candidate or fallback
       }
-    } catch {
-      // Fallback
     }
 
     return DEFAULT_GLOBAL_SUBTITLES[lang] || DEFAULT_GLOBAL_SUBTITLES.en;

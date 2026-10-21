@@ -171,6 +171,16 @@ function computeRelevanceScore(item: MediaCatalogItem, query: string): number {
   return score;
 }
 
+function normalizeMatchTitle(s: string): string {
+  return (s || '')
+    .toLowerCase()
+    .replace(/\([^)]*\)/g, ' ')
+    .replace(/\[[^\]]*\]/g, ' ')
+    .replace(/\b(18|19|20)\d\d\b/g, ' ')
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
 export class SearchAggregatorService {
   private static readonly TVMAZE_BASE = 'https://api.tvmaze.com';
   private static readonly CINEMETA_BASE = 'https://v3-cinemeta.strem.io';
@@ -184,10 +194,12 @@ export class SearchAggregatorService {
       return this.cache.get(cacheKey)!;
     }
 
+    const openKind = categoryFilter === 'live' ? 'live' : 'all';
+
     if (!cleanQuery) {
       // Landing view: playable picks from the open sources; the static list is only a fallback.
       try {
-        const featured = (await openVideo.search('')).filter(m => matchesCategory(m, categoryFilter));
+        const featured = (await openVideo.search('', openKind)).filter(m => matchesCategory(m, categoryFilter));
         if (featured.length) {
           this.cache.set(cacheKey, featured);
           return featured;
@@ -201,10 +213,10 @@ export class SearchAggregatorService {
     const sanitizedQuery = encodeURIComponent(cleanQuery);
 
     const [cinemetaMovies, cinemetaSeries, tvmazeResults, openResults] = await Promise.allSettled([
-      this.fetchCinemetaCatalog('movie', sanitizedQuery),
-      this.fetchCinemetaCatalog('series', sanitizedQuery),
-      this.fetchTVMazeShows(sanitizedQuery),
-      openVideo.search(cleanQuery)
+      categoryFilter === 'live' ? Promise.resolve([]) : this.fetchCinemetaCatalog('movie', sanitizedQuery),
+      categoryFilter === 'live' ? Promise.resolve([]) : this.fetchCinemetaCatalog('series', sanitizedQuery),
+      categoryFilter === 'live' ? Promise.resolve([]) : this.fetchTVMazeShows(sanitizedQuery),
+      openVideo.search(cleanQuery, openKind)
     ]);
 
     const aggregatedMap = new Map<string, MediaCatalogItem>();
@@ -241,20 +253,52 @@ export class SearchAggregatorService {
     const catalogOnly = Array.from(aggregatedMap.values());
     catalogOnly.sort((a, b) => computeRelevanceScore(b, cleanQuery) - computeRelevanceScore(a, cleanQuery));
 
-    // Directly playable open-source results first (already ranked server-side), then
-    // catalogue titles, which only play if a free legal copy is found at click time.
+    // Directly playable open-source results first (already ranked server-side),
+    // enriched with Cinemeta/TVMaze metadata when titles match.
     const playable = openResults.status === 'fulfilled' ? openResults.value : [];
-    const results = [...playable, ...catalogOnly].filter(m => matchesCategory(m, categoryFilter));
+    const matchedCatalogIds = new Set<string>();
+
+    const enrichedPlayable = playable.map(openItem => {
+      if (openItem.isLive) return openItem;
+      const openNorm = normalizeMatchTitle(openItem.title);
+      if (!openNorm) return openItem;
+
+      const match = catalogOnly.find(cat => {
+        const catNorm = normalizeMatchTitle(cat.title);
+        const yearOk = !openItem.releaseYear || !cat.releaseYear || Math.abs(openItem.releaseYear - cat.releaseYear) <= 2;
+        return catNorm === openNorm && yearOk;
+      });
+
+      if (!match) return openItem;
+      matchedCatalogIds.add(match.id);
+      return {
+        ...openItem,
+        imdbId: openItem.imdbId || match.imdbId,
+        rating: openItem.rating || match.rating,
+        releaseYear: openItem.releaseYear || match.releaseYear,
+        genres: match.genres?.length ? match.genres : openItem.genres,
+        directors: match.directors?.length ? match.directors : openItem.directors,
+        cast: match.cast?.length ? match.cast : openItem.cast,
+        overview: openItem.overview && openItem.overview.length > 40 ? openItem.overview : (match.overview || openItem.overview),
+        backdropUrl: match.backdropUrl || openItem.backdropUrl,
+      };
+    });
+
+    const remainingCatalog = catalogOnly.filter(c => !matchedCatalogIds.has(c.id));
+    const results = [...enrichedPlayable, ...remainingCatalog].filter(m => matchesCategory(m, categoryFilter));
 
     this.cache.set(cacheKey, results);
     return results;
   }
 
   public async resolveMediaDetails(item: MediaCatalogItem): Promise<MediaCatalogItem> {
-    if (item.type === 'movie') {
-      return this.fetchDeepCinemetaMovie(item.id, item);
+    if (item.isLive || item.type === 'live') {
+      return item;
     }
-    return this.fetchDeepTVMazeHierarchy(item);
+    if (item.type === 'series') {
+      return this.fetchDeepTVMazeHierarchy(item);
+    }
+    return this.fetchDeepCinemetaMovie(item.id, item);
   }
 
   private async fetchCinemetaCatalog(type: 'movie' | 'series', query: string): Promise<MediaCatalogItem[]> {
@@ -264,7 +308,7 @@ export class SearchAggregatorService {
       const data = await resp.json();
       if (!data?.metas || !Array.isArray(data.metas)) return [];
 
-      return data.metas.slice(0, 10).map((meta: any) => {
+      return data.metas.slice(0, 16).map((meta: any) => {
         const imdbId = meta.id || meta.imdb_id;
         const runtimeInfo = formatRuntimeString(meta.runtime);
 
@@ -301,7 +345,7 @@ export class SearchAggregatorService {
       const data = await resp.json();
       if (!Array.isArray(data)) return [];
 
-      return data.slice(0, 10).map((entry: any) => {
+      return data.slice(0, 14).map((entry: any) => {
         const show = entry.show;
         const epRuntime = show.runtime || show.averageRuntime || 45;
         const formatted = `${epRuntime}m`;
@@ -333,7 +377,30 @@ export class SearchAggregatorService {
 
   private async fetchDeepCinemetaMovie(id: string, base: MediaCatalogItem): Promise<MediaCatalogItem> {
     try {
-      const cleanId = id.startsWith('tt') ? id : (base.imdbId || id);
+      let cleanId = id.startsWith('tt') ? id : (base.imdbId && base.imdbId.startsWith('tt') ? base.imdbId : '');
+
+      // If this is an open-source item without an IMDb ID, look up Cinemeta by title to enrich deep metadata
+      if (!cleanId && base.title) {
+        const cleanTitle = normalizeMatchTitle(base.title);
+        if (cleanTitle) {
+          const searchResp = await fetch(`${SearchAggregatorService.CINEMETA_BASE}/catalog/movie/top/search=${encodeURIComponent(cleanTitle)}.json`);
+          if (searchResp.ok) {
+            const searchData = await searchResp.json();
+            const candidate = (searchData?.metas || []).find((m: any) => {
+              const mNorm = normalizeMatchTitle(m.name || '');
+              const mYear = parseInt(m.year || m.releaseInfo, 10);
+              const yearOk = !base.releaseYear || !mYear || Math.abs(base.releaseYear - mYear) <= 2;
+              return mNorm === cleanTitle && yearOk;
+            });
+            if (candidate?.id && String(candidate.id).startsWith('tt')) {
+              cleanId = candidate.id;
+            }
+          }
+        }
+      }
+
+      if (!cleanId) return base;
+
       const resp = await fetch(`${SearchAggregatorService.CINEMETA_BASE}/meta/movie/${cleanId}.json`);
       if (!resp.ok) return base;
       const data = await resp.json();
@@ -344,14 +411,17 @@ export class SearchAggregatorService {
 
       return {
         ...base,
+        imdbId: cleanId,
         directors: meta.director ? (Array.isArray(meta.director) ? meta.director : [meta.director]) : base.directors,
         cast: meta.cast || base.cast,
+        genres: meta.genres?.length ? meta.genres : base.genres,
         backdropUrl: meta.background || base.backdropUrl,
-        overview: meta.description || base.overview,
+        overview: base.overview && base.overview.length > 60 ? base.overview : (meta.description || base.overview),
         rating: meta.imdbRating ? parseFloat(meta.imdbRating) : base.rating,
-        duration: runtimeInfo.formatted,
-        runtimeFormatted: runtimeInfo.formatted,
-        runtimeSeconds: runtimeInfo.seconds
+        releaseYear: base.releaseYear || parseInt(meta.year || meta.releaseInfo, 10) || 0,
+        duration: base.runtimeFormatted || runtimeInfo.formatted,
+        runtimeFormatted: base.runtimeFormatted || runtimeInfo.formatted,
+        runtimeSeconds: base.runtimeSeconds || runtimeInfo.seconds
       };
     } catch {
       return base;

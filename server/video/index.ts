@@ -119,19 +119,32 @@ export async function resolveVideo(id: string): Promise<ResolvedStream | null> {
   return stream;
 }
 
+function cleanFilmTitle(s: string): string {
+  return normalizeTitle(
+    s
+      .replace(/\([^)]*\)/g, ' ')
+      .replace(/\[[^\]]*\]/g, ' ')
+      .replace(/\b(18|19|20)\d\d\b/g, ' ')
+      .replace(/\b(4k|remastered|hd|1080p|720p|full\s*movie|restored)\b/gi, ' '),
+  );
+}
+
 /**
  * Finds a free, openly-licensed copy of a specific title (e.g. a Cinemeta/IMDb result).
- * Deliberately strict — an exact normalised title match and, when known, a year within ±1 —
+ * Deliberately strict — an exact normalised title match and, when known, a year within ±2 —
  * so a different film with a similar name is never played in its place.
  */
 export async function findTitle(title: string, year?: number): Promise<{ result: VideoResult; stream: ResolvedStream } | null> {
-  const nq = normalizeTitle(title);
-  const { results } = await searchVideos(title, 'vod');
-  const candidates = results.filter(r =>
-    normalizeTitle(r.title).replace(/\b(19|20)\d\d\b/g, '').trim() === nq &&
-    (!year || !r.year || Math.abs(r.year - year) <= 1),
-  );
-  for (const result of candidates.slice(0, 3)) {
+  const nq = cleanFilmTitle(title);
+  if (!nq) return null;
+  const { results } = await searchVideos(nq, 'vod');
+  const candidates = results.filter(r => {
+    const rt = cleanFilmTitle(r.title);
+    const titleMatches = rt === nq || rt.startsWith(nq + ' ');
+    const yearMatches = !year || !r.year || Math.abs(r.year - year) <= 2;
+    return titleMatches && yearMatches;
+  });
+  for (const result of candidates.slice(0, 4)) {
     try {
       const stream = await resolveVideo(result.id);
       if (stream) return { result, stream };

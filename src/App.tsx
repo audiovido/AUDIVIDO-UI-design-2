@@ -23,6 +23,7 @@ import { MovieStreamingView } from './components/MovieStreamingView';
 import { SocialHubView } from './components/SocialHubView';
 import { AudioVidoBrandLogo } from './components/AudioVidoBrandLogo';
 import { MusicV2View } from './components/MusicV2View';
+import { MusicV3View } from './components/MusicV3View';
 import { SignUpLandingView } from './components/SignUpLandingView';
 import { SignInAuraNodesView } from './components/SignInAuraNodesView';
 import { AuthAccountView } from './components/AuthAccountView';
@@ -363,8 +364,8 @@ export default function App() {
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
   const [customAudioUrl, setCustomAudioUrl] = useState<string>('/audio/coffee_bars.mp3');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // Navigation State: 'portal' | 'music' | 'movie' | 'community' | 'music2' | 'signup' | 'signin' | 'account'
-  const [currentWorld, setCurrentWorld] = useState<'portal' | 'music' | 'movie' | 'community' | 'music2' | 'signup' | 'signin' | 'account'>('portal');
+  // Navigation State: 'portal' | 'music' | 'movie' | 'community' | 'music2' | 'music3' | 'signup' | 'signin' | 'account'
+  const [currentWorld, setCurrentWorld] = useState<'portal' | 'music' | 'movie' | 'community' | 'music2' | 'music3' | 'signup' | 'signin' | 'account'>('portal');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isMobileNotificationsOpen, setIsMobileNotificationsOpen] = useState<boolean>(false);
   
@@ -719,7 +720,7 @@ export default function App() {
   // Track progress timers for non-audio sources (movie world)
   useEffect(() => {
     let interval: any;
-    if (isPlaying && currentWorld !== 'music' && currentWorld !== 'music2') {
+    if (isPlaying && currentWorld !== 'music' && currentWorld !== 'music2' && currentWorld !== 'music3') {
       interval = setInterval(() => {
         setTrackProgress(p => (p >= 100 ? 0 : p + 0.6));
         setMovieProgress(p => (p >= 100 ? 0 : p + 0.35));
@@ -729,7 +730,7 @@ export default function App() {
   }, [isPlaying, currentWorld]);
 
   // --- TRANSITIONAL ZOOM PORTAL TRAVEL ---
-  const handleTravel = (destination: 'portal' | 'music' | 'movie' | 'community' | 'music2' | 'signup' | 'signin' | 'account') => {
+  const handleTravel = (destination: 'portal' | 'music' | 'movie' | 'community' | 'music2' | 'music3' | 'signup' | 'signin' | 'account') => {
     setIsTraveling(true);
     setTravelDestination(destination);
     setIsMobileMenuOpen(false);
@@ -1224,31 +1225,13 @@ export default function App() {
           </button>
         </div>
 
-        {/* Center: Tactile 3D Realm Navigation Bar (AUDIO, VIDEO, SOCIAL, MUSIC 2, ACCOUNT) Centered in Screen */}
+        {/* Center: Tactile 3D Realm Navigation Bar (VIDEO, MUSIC 2, MUSIC 3) Centered in Screen */}
         <div className="hidden md:flex flex-1 items-center justify-center">
-          <nav className="flex items-center gap-1 sm:gap-2 p-1 sm:p-1.5 bg-slate-950/90 border border-white/20 rounded-full backdrop-blur-3xl shadow-[0_10px_30px_rgba(0,0,0,0.85),inset_0_1.5px_2px_rgba(255,255,255,0.22)] shrink-0">
-            {/* 1. AUDIO */}
-            <button 
-              onClick={() => handleTravel('music')} 
-              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-cyan-400 ${
-                currentWorld === 'music' 
-                  ? 'bg-gradient-to-b from-emerald-300 via-emerald-400 to-teal-500 text-slate-950 shadow-[0_4px_18px_rgba(16,185,129,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-emerald-100 scale-[1.02]' 
-                  : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-emerald-400/40'
-              }`}
-              title="Audio Realm"
-            >
-              <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
-                currentWorld === 'music' 
-                  ? 'bg-slate-950 shadow-sm' 
-                  : 'bg-emerald-400 shadow-[0_0_8px_#34d399]'
-              }`} />
-              <span>AUDIO</span>
-            </button>
-
-            {/* 2. VIDEO */}
+          <nav className="flex items-center gap-1.5 sm:gap-2.5 p-1 sm:p-1.5 bg-slate-950/90 border border-white/20 rounded-full backdrop-blur-3xl shadow-[0_10px_30px_rgba(0,0,0,0.85),inset_0_1.5px_2px_rgba(255,255,255,0.22)] shrink-0">
+            {/* 1. VIDEO */}
             <button 
               onClick={() => handleTravel('movie')} 
-              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-purple-400 ${
+              className={`relative px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1.5 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-purple-400 ${
                 currentWorld === 'movie' 
                   ? 'bg-gradient-to-b from-violet-300 via-purple-400 to-indigo-500 text-slate-950 shadow-[0_4px_18px_rgba(168,85,247,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-purple-100 scale-[1.02]' 
                   : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-purple-400/40'
@@ -1263,28 +1246,10 @@ export default function App() {
               <span>VIDEO</span>
             </button>
 
-            {/* 3. SOCIAL */}
-            <button 
-              onClick={() => handleTravel('community')} 
-              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-sky-400 ${
-                currentWorld === 'community' 
-                  ? 'bg-gradient-to-b from-sky-200 via-sky-300 to-blue-400 text-slate-950 shadow-[0_4px_18px_rgba(56,189,248,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-sky-100 scale-[1.02]' 
-                  : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-sky-400/40'
-              }`}
-              title="Social Realm"
-            >
-              <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
-                currentWorld === 'community' 
-                  ? 'bg-slate-950 shadow-sm' 
-                  : 'bg-sky-300 shadow-[0_0_8px_#38bdf8]'
-              }`} />
-              <span>SOCIAL</span>
-            </button>
-
-            {/* 4. MUSIC 2 (Electric Lime Modern Streaming Hub) */}
+            {/* 2. MUSIC 2 (Electric Lime Modern Streaming Hub) */}
             <button 
               onClick={() => handleTravel('music2')} 
-              className={`relative px-2.5 sm:px-5 py-1 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-lime-400 ${
+              className={`relative px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1.5 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-lime-400 ${
                 currentWorld === 'music2' 
                   ? 'bg-gradient-to-b from-lime-300 via-lime-400 to-emerald-500 text-slate-950 shadow-[0_4px_18px_rgba(163,230,53,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-lime-100 scale-[1.02]' 
                   : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-lime-400/40'
@@ -1297,6 +1262,24 @@ export default function App() {
                   : 'bg-lime-400 shadow-[0_0_8px_#a3e635]'
               }`} />
               <span>MUSIC 2</span>
+            </button>
+
+            {/* 3. MUSIC 3 (Crimson & Light Editorial Studio) */}
+            <button 
+              onClick={() => handleTravel('music3')} 
+              className={`relative px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1.5 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-red-400 ${
+                currentWorld === 'music3' 
+                  ? 'bg-gradient-to-b from-red-400 via-[#E61E2A] to-rose-700 text-white shadow-[0_4px_18px_rgba(230,30,42,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.85),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-red-200 scale-[1.02]' 
+                  : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-red-400/40'
+              }`}
+              title="Music 3 Streaming"
+            >
+              <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
+                currentWorld === 'music3' 
+                  ? 'bg-white shadow-sm' 
+                  : 'bg-[#E61E2A] shadow-[0_0_8px_#E61E2A]'
+              }`} />
+              <span>MUSIC 3</span>
             </button>
           </nav>
         </div>
@@ -1420,10 +1403,9 @@ export default function App() {
             <div className="space-y-2">
               {[
                 { id: 'portal', label: 'PORTAL HOME', icon: Home, color: 'text-amber-300' },
-                { id: 'music', label: 'AUDIO REALM', icon: Music, color: 'text-emerald-300' },
                 { id: 'movie', label: 'VIDEO CINEMA', icon: Film, color: 'text-purple-300' },
-                { id: 'community', label: 'SOCIAL HUB', icon: Users, color: 'text-sky-300' },
-                { id: 'music2', label: 'MUSIC 2 PULSE', icon: Compass, color: 'text-lime-300' }
+                { id: 'music2', label: 'MUSIC 2 PULSE', icon: Compass, color: 'text-lime-300' },
+                { id: 'music3', label: 'MUSIC 3 STUDIO', icon: Disc3, color: 'text-red-400' }
               ].map(item => {
                 const Icon = item.icon;
                 const isActive = currentWorld === item.id;
@@ -2515,6 +2497,32 @@ export default function App() {
             setIsShuffle={setIsShuffle}
             isRepeat={isRepeat}
             setIsRepeat={setIsRepeat}
+          />
+        )}
+
+        {/* ========================================================= */}
+        {/* === VIEW 5B: STANDALONE WIDESCREEN MUSIC 3 (LUNIO UI) === */}
+        {/* ========================================================= */}
+        {currentWorld === 'music3' && (
+          <MusicV3View 
+            currentTrack={currentTrack}
+            isPlaying={isPlaying}
+            setIsPlaying={setIsPlaying}
+            trackProgress={trackProgress}
+            currentTrackSeconds={currentTrackSeconds}
+            audioDuration={audioDuration}
+            handleSeek={handleSeek}
+            likedTracks={likedTracks}
+            toggleLikeTrack={toggleLikeTrack}
+            allTracks={AURA_TRACKS}
+            onSelectTrack={(track) => selectAndPlayTrack(track)}
+            onNextTrack={handleNextTrack}
+            onPrevTrack={handlePrevTrack}
+            isShuffle={isShuffle}
+            setIsShuffle={setIsShuffle}
+            isRepeat={isRepeat}
+            setIsRepeat={setIsRepeat}
+            onNavigateWorld={(world) => handleTravel(world as any)}
           />
         )}
 

@@ -96,6 +96,15 @@ export function MovieStreamingView({
   const [activeMediaItem, setActiveMediaItem] = useState<MediaCatalogItem>(CURATED_FEATURED_CINEMA[0]);
   const [isSearchingCatalog, setIsSearchingCatalog] = useState<boolean>(false);
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState<boolean>(false);
+  const [knownItemsMap, setKnownItemsMap] = useState<Record<string, MediaCatalogItem>>(() => {
+    const initial: Record<string, MediaCatalogItem> = {};
+    CURATED_FEATURED_CINEMA.forEach(item => { initial[item.id] = item; });
+    try {
+      const saved = localStorage.getItem('audiovido_watchlist_items_v1');
+      if (saved) Object.assign(initial, JSON.parse(saved));
+    } catch {}
+    return initial;
+  });
 
   // Active Stream Manifest
   const [activeManifest, setActiveManifest] = useState<PlayableStreamManifest | null>(null);
@@ -235,6 +244,14 @@ export function MovieStreamingView({
       if (isMounted) {
         setCatalogResults(results);
         setIsSearchingCatalog(false);
+        setKnownItemsMap(prev => {
+          const next = { ...prev };
+          results.forEach(r => { next[r.id] = r; });
+          try {
+            localStorage.setItem('audiovido_watchlist_items_v1', JSON.stringify(next));
+          } catch {}
+          return next;
+        });
         // Before anything has played, show the first playable pick instead of the placeholder.
         if (!movieSearch.trim() && !hasStreamStartedRef.current && results[0]?.videoSourceId) {
           setActiveMediaItem(results[0]);
@@ -249,7 +266,7 @@ export function MovieStreamingView({
     };
   }, [movieSearch, movieFilterCategory]);
 
-  // Load Subtitle track when activeSubtitleLang changes or title/media changes
+  // Load Subtitle track when activeSubtitleLang changes or title/media/manifest changes
   useEffect(() => {
     if (activeSubtitleLang === 'off') {
       setParsedCues([]);
@@ -258,24 +275,43 @@ export function MovieStreamingView({
     }
 
     let isSubscribed = true;
-    const cleanImdb = activeMediaItem.id.startsWith('tt') ? activeMediaItem.id : activeMediaItem.imdbId;
 
-    subtitleSyncService.getSubtitlesForTitle(
-      activeMediaItem.title,
-      activeSubtitleLang,
-      cleanImdb,
-      selectedSeason,
-      currentEpisode?.episodeNumber
-    ).then(cues => {
+    const resolveSubtitles = async () => {
+      // 1. Prefer real subtitle tracks directly attached to the open-source stream manifest
+      if (activeManifest?.subtitles && activeManifest.subtitles.length > 0) {
+        const directTrack =
+          activeManifest.subtitles.find(t => t.srclang.toLowerCase().startsWith(activeSubtitleLang)) ||
+          (activeSubtitleLang === 'en' ? activeManifest.subtitles[0] : undefined);
+        if (directTrack?.url) {
+          const directCues = await subtitleSyncService.loadVttTrack(directTrack.url, activeSubtitleLang);
+          if (isSubscribed && directCues.length > 0) {
+            setParsedCues(directCues);
+            return;
+          }
+        }
+      }
+
+      // 2. Otherwise query OpenSubtitles by IMDb ID or title-specific subtitle sync
+      const cleanImdb = activeMediaItem.id.startsWith('tt') ? activeMediaItem.id : activeMediaItem.imdbId;
+      const isSeriesItem = activeMediaItem.type === 'series';
+      const cues = await subtitleSyncService.getSubtitlesForTitle(
+        activeMediaItem.title,
+        activeSubtitleLang,
+        cleanImdb,
+        isSeriesItem ? selectedSeason : undefined,
+        isSeriesItem ? currentEpisode?.episodeNumber : undefined
+      );
       if (isSubscribed) {
         setParsedCues(cues);
       }
-    });
+    };
+
+    resolveSubtitles();
 
     return () => {
       isSubscribed = false;
     };
-  }, [activeSubtitleLang, activeMediaItem.title, activeMediaItem.imdbId, activeMediaItem.id, selectedSeason, currentEpisode?.episodeNumber]);
+  }, [activeSubtitleLang, activeManifest, activeMediaItem.title, activeMediaItem.imdbId, activeMediaItem.id, selectedSeason, currentEpisode?.episodeNumber]);
 
   // Stream Resolver & HLS.js Mount Engine
   const mountAndPlayManifest = useCallback((manifest: PlayableStreamManifest, targetDuration?: number) => {
@@ -396,15 +432,15 @@ export function MovieStreamingView({
       mountAndPlayManifest(manifest, manifest.isLive ? undefined : item.runtimeSeconds);
     }
 
-    // Open-source items have no Cinemeta/TVMaze record to deepen.
-    if (item.videoSourceId) {
+    if (item.isLive || item.type === 'live') {
       setCurrentEpisode(null);
       return;
     }
 
-    // 2. Fetch deep details and episodes hierarchy asynchronously
+    // 2. Fetch deep details (cast, directors, IMDb ID for subtitles, and episodes hierarchy) asynchronously
     searchAggregator.resolveMediaDetails(item).then(detailed => {
       setActiveMediaItem(detailed);
+      setKnownItemsMap(prev => ({ ...prev, [detailed.id]: detailed }));
       if (detailed.seasons && detailed.seasons.length > 0) {
         setSelectedSeason(detailed.seasons[0].seasonNumber);
         if (detailed.seasons[0].episodes.length > 0) {
@@ -598,9 +634,30 @@ export function MovieStreamingView({
     return found ? found.episodes : [];
   }, [activeMediaItem.seasons, selectedSeason]);
 
+  // Displayed catalog results (properly filtered when Watchlist tab is active)
+  const displayedCatalogResults = useMemo(() => {
+    if (movieFilterCategory !== 'watchlist') return catalogResults;
+    const savedIds = Object.keys(watchlistIds).filter(id => watchlistIds[id]);
+    const list: MediaCatalogItem[] = [];
+    const seen = new Set<string>();
+    for (const item of catalogResults) {
+      if (watchlistIds[item.id] && !seen.has(item.id)) {
+        seen.add(item.id);
+        list.push(item);
+      }
+    }
+    for (const id of savedIds) {
+      if (!seen.has(id) && knownItemsMap[id]) {
+        seen.add(id);
+        list.push(knownItemsMap[id]);
+      }
+    }
+    return list;
+  }, [catalogResults, movieFilterCategory, watchlistIds, knownItemsMap]);
+
   // Progress metrics (0% to 100%)
-  const playedPercent = Math.min(100, Math.max(0, (moviePlaySeconds / (videoDuration || 1)) * 100));
-  const bufferedPercent = Math.min(100, Math.max(0, (bufferedEnd / (videoDuration || 1)) * 100));
+  const playedPercent = activeManifest?.isLive ? 100 : Math.min(100, Math.max(0, (moviePlaySeconds / (videoDuration || 1)) * 100));
+  const bufferedPercent = activeManifest?.isLive ? 100 : Math.min(100, Math.max(0, (bufferedEnd / (videoDuration || 1)) * 100));
 
   return (
     <div className="w-full max-w-6xl mx-auto space-y-5 animate-fadeIn py-2 pb-44 px-2 sm:px-4 font-sans relative select-none">
@@ -830,7 +887,6 @@ export function MovieStreamingView({
             ref={videoRef}
             playsInline
             preload="auto"
-            crossOrigin="anonymous"
             onPlay={() => setIsMovieVideoPlaying(true)}
             onPause={() => setIsMovieVideoPlaying(false)}
             onDurationChange={() => {
@@ -959,7 +1015,7 @@ export function MovieStreamingView({
               </div>
 
               <span className="text-[11px] sm:text-xs font-mono font-medium text-slate-400 min-w-[50px] shrink-0">
-                {formatMovieTime(videoDuration)}
+                {activeManifest?.isLive ? 'LIVE' : formatMovieTime(videoDuration)}
               </span>
             </div>
 
@@ -1379,13 +1435,13 @@ export function MovieStreamingView({
             </h3>
           </div>
           <span className="text-[11px] font-mono text-purple-300 font-bold">
-            {catalogResults.length} Available
+            {displayedCatalogResults.length} Available
           </span>
         </div>
 
         {/* Horizontal Carousel */}
         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
-          {catalogResults.map((movie) => (
+          {displayedCatalogResults.map((movie) => (
             <div 
               key={movie.id}
               onClick={() => selectAndPlayMedia(movie)}

@@ -58,7 +58,7 @@ app.use((req, res, next) => {
   next();
 });
 
-// API 1: YouTube Music Search
+// API 1: YouTube Music Search (Enriched with iTunes & Deezer Deep Metadata)
 app.get('/api/ytmusic-search', async (req, res) => {
   try {
     const query = String(req.query.q || req.query.query || '').trim();
@@ -66,38 +66,43 @@ app.get('/api/ytmusic-search', async (req, res) => {
       return res.json({ results: [] });
     }
 
-    const ytmRes = await fetch('https://music.youtube.com/youtubei/v1/search?prettyPrint=false', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-        'Referer': 'https://music.youtube.com/'
-      },
-      body: JSON.stringify({
-        context: { client: { clientName: 'WEB_REMIX', clientVersion: '1.20240101.01.00', gl: 'US', hl: 'en' } },
-        query: query
-      })
-    });
+    const [ytmSettled, itunesSettled, deezerSettled] = await Promise.allSettled([
+      fetch('https://music.youtube.com/youtubei/v1/search?prettyPrint=false', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          'Referer': 'https://music.youtube.com/'
+        },
+        body: JSON.stringify({
+          context: { client: { clientName: 'WEB_REMIX', clientVersion: '1.20240101.01.00', gl: 'US', hl: 'en' } },
+          query: query
+        }),
+        signal: AbortSignal.timeout(6000)
+      }).then(r => r.ok ? r.json() : null),
+      fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=20`, {
+        signal: AbortSignal.timeout(5000)
+      }).then(r => r.ok ? r.json() : null),
+      fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=15`, {
+        signal: AbortSignal.timeout(5000)
+      }).then(r => r.ok ? r.json() : null)
+    ]);
 
-    const ytmData: any = await ytmRes.json();
-    const text = JSON.stringify(ytmData);
+    const ytmData: any = ytmSettled.status === 'fulfilled' ? ytmSettled.value : null;
+    const text = ytmData ? JSON.stringify(ytmData) : '';
     const regex = /"videoId":"([a-zA-Z0-9_-]{11})"/g;
     const videoIds = [...new Set([...text.matchAll(regex)].map(m => m[1]))].slice(0, 15);
 
-    let itunesTracks: any[] = [];
-    try {
-      const itRes = await fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=15`);
-      if (itRes.ok) {
-        const itData: any = await itRes.json();
-        itunesTracks = itData.results || [];
-      }
-    } catch {}
+    const itunesTracks: any[] = (itunesSettled.status === 'fulfilled' && itunesSettled.value?.results) || [];
+    const deezerTracks: any[] = (deezerSettled.status === 'fulfilled' && deezerSettled.value?.data) || [];
 
     const negativeWords = ['karaoke', 'instrumental', 'backing track', 'tribute', 'remake', 'minus one'];
     const officialResults = await Promise.all(
-      videoIds.slice(0, 10).map(async (id) => {
+      videoIds.slice(0, 12).map(async (id) => {
         try {
-          const oRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+          const oRes = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`, {
+            signal: AbortSignal.timeout(4000)
+          });
           if (!oRes.ok) return null;
           const oData: any = await oRes.json();
           const rawTitle = oData.title || '';
@@ -107,23 +112,63 @@ app.get('/api/ytmusic-search', async (req, res) => {
             return null;
           }
 
-          const match = itunesTracks.find(it => 
-            titleLower.includes(it.trackName?.toLowerCase()) || 
-            it.trackName?.toLowerCase().includes(titleLower.slice(0, 8))
-          );
+          let cleanTitle = rawTitle
+            .replace(/\(Official.*?\)/gi, '')
+            .replace(/\[Official.*?\]/gi, '')
+            .replace(/\(Audio.*?\)/gi, '')
+            .replace(/\[Audio.*?\]/gi, '')
+            .replace(/\(Lyric.*?\)/gi, '')
+            .replace(/\[Lyric.*?\]/gi, '')
+            .replace(/\(HD\)|\(4K\)/gi, '')
+            .trim();
+          let cleanArtist = oData.author_name?.replace(' - Topic', '').replace(/VEVO$/i, '').trim() || 'Official Artist';
 
-          let cover = match?.artworkUrl100?.replace('100x100bb', '600x600bb') || oData.thumbnail_url || '';
-          let cleanArtist = oData.author_name?.replace(' - Topic', '').replace('VEVO', '') || match?.artistName || 'Official Artist';
-          let cleanTitle = rawTitle.replace(/\(Official.*?\)/gi, '').replace(/\[Official.*?\]/gi, '').replace(/\(Audio\)/gi, '').trim();
+          // If title is formatted as "Artist - Song Title", split cleanly
+          if (cleanTitle.includes(' - ')) {
+            const parts = cleanTitle.split(' - ');
+            if (parts.length === 2 && parts[0].length > 1 && parts[1].length > 1) {
+              cleanArtist = parts[0].trim();
+              cleanTitle = parts[1].trim();
+            }
+          }
+
+          const normTitle = cleanTitle.toLowerCase();
+          const match = itunesTracks.find(it => {
+            const itTitle = (it.trackName || '').toLowerCase();
+            return itTitle && (normTitle.includes(itTitle) || itTitle.includes(normTitle.slice(0, 10)));
+          });
+
+          const dzMatch = deezerTracks.find(dz => {
+            const dzTitle = (dz.title || '').toLowerCase();
+            return dzTitle && (normTitle.includes(dzTitle) || dzTitle.includes(normTitle.slice(0, 10)));
+          });
+
+          const cover =
+            match?.artworkUrl100?.replace('100x100bb', '600x600bb') ||
+            dzMatch?.album?.cover_xl ||
+            dzMatch?.album?.cover_big ||
+            oData.thumbnail_url ||
+            `https://i.ytimg.com/vi/${id}/hqdefault.jpg`;
+
+          const durationSec = match?.trackTimeMillis
+            ? Math.round(match.trackTimeMillis / 1000)
+            : (dzMatch?.duration || 215);
+          const mins = Math.floor(durationSec / 60);
+          const secs = durationSec % 60;
+          const releaseYear = match?.releaseDate
+            ? String(new Date(match.releaseDate).getFullYear())
+            : '2024';
 
           return {
             id: `ytm-${id}`,
             videoId: id,
-            title: cleanTitle,
-            artist: cleanArtist,
-            album: match?.collectionName || 'Official Release',
-            duration: match?.trackTimeMillis ? `${Math.floor(match.trackTimeMillis / 60000)}:${Math.floor((match.trackTimeMillis % 60000) / 1000).toString().padStart(2, '0')}` : '3:45',
-            durationSeconds: match?.trackTimeMillis ? Math.round(match.trackTimeMillis / 1000) : 225,
+            title: match?.trackName || cleanTitle,
+            artist: match?.artistName || dzMatch?.artist?.name || cleanArtist,
+            album: match?.collectionName || dzMatch?.album?.title || 'Official Release',
+            genre: match?.primaryGenreName || 'Official Master',
+            year: releaseYear,
+            duration: `${mins}:${secs.toString().padStart(2, '0')}`,
+            durationSeconds: durationSec,
             coverUrl: cover,
             source: 'YouTubeMusic',
             isFullTrack: true
@@ -140,7 +185,7 @@ app.get('/api/ytmusic-search', async (req, res) => {
   }
 });
 
-// API 2: Resolve Audio Stream
+// API 2: Resolve Audio Stream (SoundCloud Progressive -> YouTube Music / Invidious -> Deezer / iTunes Stream)
 app.get('/api/resolve-stream', async (req, res) => {
   try {
     const query = String(req.query.q || req.query.query || '').trim();
@@ -148,44 +193,54 @@ app.get('/api/resolve-stream', async (req, res) => {
       return res.json({ streamUrl: null });
     }
 
-    const clientId = await getSoundCloudClientId();
-    const scUrl = `https://api-v2.soundcloud.com/search/tracks?q=${encodeURIComponent(query)}&client_id=${clientId}&limit=12`;
-    const response = await fetch(scUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
+    // Tier 1: SoundCloud full-length progressive stream
+    try {
+      const clientId = await getSoundCloudClientId();
+      const scUrl = `https://api-v2.soundcloud.com/search/tracks?q=${encodeURIComponent(query)}&client_id=${clientId}&limit=15`;
+      const response = await fetch(scUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        },
+        signal: AbortSignal.timeout(5500)
+      });
 
-    const data: any = await response.json();
-    const negativeWords = ['karaoke', 'instrumental', 'backing track', 'cover', 'tribute', 'remake', 'minus one'];
-    
-    const progressiveTracks = (data.collection || []).filter((t: any) => {
-      const title = (t.title || '').toLowerCase();
-      const hasNegative = negativeWords.some(w => title.includes(w));
-      const hasProg = t.media?.transcodings?.some((tc: any) => tc.format?.protocol === 'progressive');
-      return !hasNegative && t.duration > 40000 && hasProg;
-    });
+      if (response.ok) {
+        const data: any = await response.json();
+        const negativeWords = ['karaoke', 'instrumental', 'backing track', 'cover', 'tribute', 'remake', 'minus one'];
+        
+        const progressiveTracks = (data.collection || []).filter((t: any) => {
+          const title = (t.title || '').toLowerCase();
+          const hasNegative = negativeWords.some(w => title.includes(w));
+          const hasProg = t.media?.transcodings?.some((tc: any) => tc.format?.protocol === 'progressive');
+          return !hasNegative && t.duration > 40000 && hasProg;
+        });
 
-    const selectedTrack = progressiveTracks[0] || (data.collection || []).find((t: any) => t.duration > 40000);
+        const candidates = progressiveTracks.length > 0
+          ? progressiveTracks
+          : (data.collection || []).filter((t: any) => t.duration > 40000);
 
-    if (selectedTrack) {
-      const prog = selectedTrack.media?.transcodings?.find((tc: any) => tc.format.protocol === 'progressive') || selectedTrack.media?.transcodings?.[0];
-      if (prog?.url) {
-        const sRes = await fetch(`${prog.url}?client_id=${clientId}`);
-        const sData: any = await sRes.json();
-        if (sData.url) {
-          return res.json({
-            streamUrl: sData.url,
-            durationSeconds: Math.round(selectedTrack.duration / 1000),
-            title: selectedTrack.title,
-            artist: selectedTrack.user?.username,
-            source: 'OfficialStream'
-          });
+        for (const candidate of candidates.slice(0, 3)) {
+          const prog = candidate.media?.transcodings?.find((tc: any) => tc.format?.protocol === 'progressive') || candidate.media?.transcodings?.[0];
+          if (prog?.url) {
+            const sRes = await fetch(`${prog.url}?client_id=${clientId}`, { signal: AbortSignal.timeout(4000) });
+            if (sRes.ok) {
+              const sData: any = await sRes.json();
+              if (sData?.url) {
+                return res.json({
+                  streamUrl: sData.url,
+                  durationSeconds: Math.round(candidate.duration / 1000),
+                  title: candidate.title,
+                  artist: candidate.user?.username,
+                  source: 'OfficialStream'
+                });
+              }
+            }
+          }
         }
       }
-    }
+    } catch {}
 
-    // Fallback: YouTube Music
+    // Tier 2: YouTube Music + Invidious Audio Stream
     try {
       const ytmRes = await fetch('https://music.youtube.com/youtubei/v1/search?prettyPrint=false', {
         method: 'POST',
@@ -197,7 +252,8 @@ app.get('/api/resolve-stream', async (req, res) => {
         body: JSON.stringify({
           context: { client: { clientName: 'WEB_REMIX', clientVersion: '1.20240101.01.00', gl: 'US', hl: 'en' } },
           query: query
-        })
+        }),
+        signal: AbortSignal.timeout(5000)
       });
 
       if (ytmRes.ok) {
@@ -210,12 +266,13 @@ app.get('/api/resolve-stream', async (req, res) => {
           const invidiousHosts = [
             'https://invidious.f5.si',
             'https://iv.ggtyler.dev',
-            'https://invidious.jing.rocks'
+            'https://invidious.jing.rocks',
+            'https://inv.tux.pizza'
           ];
 
           for (const host of invidiousHosts) {
             try {
-              const vRes = await fetch(`${host}/api/v1/videos/${videoId}`, { signal: AbortSignal.timeout(4000) });
+              const vRes = await fetch(`${host}/api/v1/videos/${videoId}`, { signal: AbortSignal.timeout(3500) });
               if (vRes.ok) {
                 const vData: any = await vRes.json();
                 const audios = (vData.adaptiveFormats || []).filter((f: any) => f.type && f.type.startsWith('audio/'));
@@ -234,6 +291,36 @@ app.get('/api/resolve-stream', async (req, res) => {
             } catch {}
           }
         }
+      }
+    } catch {}
+
+    // Tier 3: Deezer & Apple iTunes High-Bitrate Direct Stream Fallback
+    try {
+      const [dzRes, itRes] = await Promise.allSettled([
+        fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=5`, { signal: AbortSignal.timeout(4000) }).then(r => r.ok ? r.json() : null),
+        fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=5`, { signal: AbortSignal.timeout(4000) }).then(r => r.ok ? r.json() : null)
+      ]);
+
+      const dzTrack = dzRes.status === 'fulfilled' ? dzRes.value?.data?.find((t: any) => t.preview) : null;
+      if (dzTrack?.preview) {
+        return res.json({
+          streamUrl: dzTrack.preview,
+          durationSeconds: 30,
+          title: dzTrack.title,
+          artist: dzTrack.artist?.name,
+          source: 'Deezer'
+        });
+      }
+
+      const itTrack = itRes.status === 'fulfilled' ? itRes.value?.results?.find((t: any) => t.previewUrl) : null;
+      if (itTrack?.previewUrl) {
+        return res.json({
+          streamUrl: itTrack.previewUrl,
+          durationSeconds: 30,
+          title: itTrack.trackName,
+          artist: itTrack.artistName,
+          source: 'iTunes'
+        });
       }
     } catch {}
 
@@ -276,8 +363,11 @@ app.get('/api/soundcloud-search', async (req, res) => {
             id: `sc-${item.id}`,
             title: item.title,
             artist: item.user?.username || 'SoundCloud Artist',
+            album: item.publisher_metadata?.album_title || 'SoundCloud Master',
+            genre: item.genre || 'SoundCloud Global',
+            year: item.release_date ? String(new Date(item.release_date).getFullYear()) : (item.created_at ? String(new Date(item.created_at).getFullYear()) : '2024'),
             durationSeconds: Math.round((item.duration || 0) / 1000),
-            artwork: item.artwork_url || item.user?.avatar_url || '',
+            artwork: (item.artwork_url || item.user?.avatar_url || '').replace('-large', '-t500x500'),
             streamUrl: streamUrl,
             source: 'SoundCloud',
             permalink: item.permalink_url
@@ -322,186 +412,6 @@ app.get('/api/audio-proxy', async (req, res) => {
     }
   } catch (e: any) {
     res.status(502).send('Audio proxy error: ' + (e?.message || e));
-  }
-});
-
-// ==========================================================================
-// API 5: UNIVERSAL VIDEO STREAM RESOLVER (Tier 1: Direct HLS, Tier 2: P2P, Tier 3: Embeds)
-// ==========================================================================
-app.get('/api/stream/resolve', async (req, res) => {
-  try {
-    const imdbId = String(req.query.imdbId || '');
-    const tmdbId = String(req.query.tmdbId || '');
-    const title = String(req.query.title || '').toLowerCase().trim();
-    const type = (req.query.type === 'series' ? 'series' : 'movie') as 'movie' | 'series';
-    const season = req.query.season ? String(req.query.season) : '1';
-    const episode = req.query.episode ? String(req.query.episode) : '1';
-
-    const targetId = imdbId || tmdbId;
-
-    // 1. Direct Open Media Registry
-    const OPEN_CINEMA_MAP: Record<string, string> = {
-      'sintel': 'https://media.w3.org/2010/05/sintel/trailer.mp4',
-      'tears of steel': 'https://archive.org/download/Tears-of-Steel/tears_of_steel_720p.mp4',
-      'big buck bunny': 'https://archive.org/download/BigBuckBunny_124/Content/big_buck_bunny_720p_surround.mp4',
-      'oceans': 'https://vjs.zencdn.net/v/oceans.mp4',
-      'night of the living dead': 'https://archive.org/download/night_of_the_living_dead/night_of_the_living_dead_512kb.mp4'
-    };
-
-    for (const [key, directUrl] of Object.entries(OPEN_CINEMA_MAP)) {
-      if (title.includes(key)) {
-        return res.json({
-          success: true,
-          tiers: {
-            tier1: {
-              url: directUrl,
-              type: 'mp4',
-              resolution: '4K Ultra HD'
-            },
-            tier2: null,
-            tier3: null
-          }
-        });
-      }
-    }
-
-    // 3. Direct Master Stream Resolution (Tier 1: High-Definition HLS / MP4 Stream)
-    // Ensures HTML5 video playback without iframe sandbox blocking
-    const directMasterUrl = 'https://test-streams.mux.dev/x36xhzz/x36xhzz.m3u8';
-
-    // 4. Query Stremio Addon Protocol (Torrentio / Community Streams)
-    let p2pCandidates: any[] = [];
-    if (targetId && targetId.startsWith('tt')) {
-      try {
-        const streamTargetId = type === 'series' ? `${targetId}:${season}:${episode}` : targetId;
-        const stremioAddonUrl = `https://torrentio.strem.fun/stream/${type}/${streamTargetId}.json`;
-        const stremioRes = await fetch(stremioAddonUrl, { signal: AbortSignal.timeout(3500) });
-        if (stremioRes.ok) {
-          const sData: any = await stremioRes.json();
-          if (Array.isArray(sData?.streams)) {
-            p2pCandidates = sData.streams
-              .filter((s: any) => !!s.infoHash)
-              .map((s: any) => ({
-                name: s.name || s.title,
-                infoHash: s.infoHash,
-                fileIdx: s.fileIdx,
-                quality: s.title?.match(/(4K|2160p|1080p|720p|480p)/i)?.[0] || '1080p FHD'
-              }));
-          }
-        }
-      } catch {}
-    }
-
-    // 5. Multi-Source Sanitized Embed Providers (Tier 3: Movie/Series streaming hosts, NO YouTube)
-    const effectiveId = targetId || 'tt0816692';
-    const embedFallbacks: string[] = [
-      type === 'movie'
-        ? `https://multiembed.mov/?video_id=${effectiveId}`
-        : `https://multiembed.mov/?video_id=${effectiveId}&s=${season}&e=${episode}`,
-      type === 'movie'
-        ? `https://vidsrc.me/embed/movie?imdb=${effectiveId}`
-        : `https://vidsrc.me/embed/tv?imdb=${effectiveId}&season=${season}&episode=${episode}`,
-      type === 'movie'
-        ? `https://vidsrc.to/embed/movie/${effectiveId}`
-        : `https://vidsrc.to/embed/tv/${effectiveId}/${season}/${episode}`,
-      type === 'movie'
-        ? `https://autoembed.to/movie/imdb/${effectiveId}`
-        : `https://autoembed.to/tv/imdb/${effectiveId}-${season}-${episode}`
-    ];
-
-    return res.json({
-      success: true,
-      tiers: {
-        tier1: {
-          url: directMasterUrl,
-          type: 'hls',
-          resolution: '4K Ultra HD'
-        },
-        tier2: p2pCandidates.length > 0 ? p2pCandidates : null,
-        tier3: {
-          embeds: embedFallbacks,
-          primary: embedFallbacks[0]
-        }
-      }
-    });
-  } catch (err: any) {
-    res.status(500).json({ error: 'Failed to resolve stream sources', message: err?.message || err });
-  }
-});
-
-// ==========================================================================
-// API 6: UNIVERSAL HLS MANIFEST REWRITER & BYTE-RANGE STREAMING PROXY
-// ==========================================================================
-app.get('/api/stream/proxy', async (req, res) => {
-  const targetUrl = String(req.query.url || '');
-  if (!targetUrl) return res.status(400).send('Missing "url" parameter');
-
-  try {
-    const upstreamUrl = new URL(targetUrl);
-    const headers: Record<string, string> = {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-      'Referer': upstreamUrl.origin,
-      'Origin': upstreamUrl.origin,
-      ...(req.headers.range ? { Range: String(req.headers.range) } : {})
-    };
-
-    const upstreamRes = await fetch(targetUrl, { headers });
-
-    res.status(upstreamRes.status);
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Expose-Headers', 'Content-Range, Accept-Ranges, Content-Length');
-
-    const contentRange = upstreamRes.headers.get('content-range');
-    if (contentRange) res.setHeader('Content-Range', contentRange);
-
-    const acceptRanges = upstreamRes.headers.get('accept-ranges');
-    if (acceptRanges) res.setHeader('Accept-Ranges', acceptRanges);
-
-    const contentType = upstreamRes.headers.get('content-type') || '';
-
-    // If HLS Playlist (.m3u8), rewrite relative and absolute URLs
-    if (
-      targetUrl.includes('.m3u8') ||
-      contentType.includes('application/vnd.apple.mpegurl') ||
-      contentType.includes('application/x-mpegurl')
-    ) {
-      res.setHeader('Content-Type', 'application/vnd.apple.mpegurl');
-      const manifestText = await upstreamRes.text();
-      const host = req.get('host') || `localhost:${PORT}`;
-      const protocol = req.protocol || 'http';
-      const proxyBaseUrl = `${protocol}://${host}/api/stream/proxy`;
-
-      const originalBase = targetUrl.substring(0, targetUrl.lastIndexOf('/') + 1);
-      const rewritten = manifestText
-        .split('\n')
-        .map((line) => {
-          const trimmed = line.trim();
-          if (!trimmed || trimmed.startsWith('#')) {
-            if (trimmed.startsWith('#EXT-X-KEY') || trimmed.startsWith('#EXT-X-MAP')) {
-              return trimmed.replace(/URI="([^"]+)"/, (_, uriMatch) => {
-                const resolvedUri = new URL(uriMatch, originalBase).toString();
-                return `URI="${proxyBaseUrl}?url=${encodeURIComponent(resolvedUri)}"`;
-              });
-            }
-            return line;
-          }
-          const absoluteSegmentUrl = new URL(trimmed, originalBase).toString();
-          return `${proxyBaseUrl}?url=${encodeURIComponent(absoluteSegmentUrl)}`;
-        })
-        .join('\n');
-
-      return res.send(rewritten);
-    }
-
-    res.setHeader('Content-Type', contentType || 'video/MP2T');
-    if (upstreamRes.body) {
-      Readable.fromWeb(upstreamRes.body as any).pipe(res);
-    } else {
-      const buffer = await upstreamRes.arrayBuffer();
-      res.end(Buffer.from(buffer));
-    }
-  } catch (err: any) {
-    res.status(502).send('Error proxying media stream: ' + (err?.message || err));
   }
 });
 
