@@ -8,6 +8,7 @@ import express from 'express';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { Readable } from 'stream';
+import CryptoJS from 'crypto-js';
 import { registerVideoRoutes } from './server/video';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -19,6 +20,54 @@ const isProd = process.env.NODE_ENV === 'production';
 
 let cachedSoundCloudClientId: string | null = null;
 let lastSoundCloudIdFetch = 0;
+
+function pickBestSoundCloudTranscoding(item: any): any | null {
+  if (!item || item.policy === 'SNIP' || (item.duration || 0) < 60000) {
+    return null;
+  }
+  const transcodings: any[] = Array.isArray(item.media?.transcodings) ? item.media.transcodings : [];
+  // 1. Direct progressive MP3 stream
+  const progressive = transcodings.find(
+    (tc) => !tc.snipped && tc.format?.protocol === 'progressive'
+  );
+  if (progressive) return progressive;
+
+  // 2. Unencrypted HLS fMP4/AAC stream (supported by Hls.js and Safari native audio)
+  const unencryptedHlsMp4 = transcodings.find(
+    (tc) =>
+      !tc.snipped &&
+      tc.format?.protocol === 'hls' &&
+      !String(tc.format?.protocol || '').includes('encrypted') &&
+      String(tc.format?.mime_type || '').includes('audio/mp4')
+  );
+  if (unencryptedHlsMp4) return unencryptedHlsMp4;
+
+  // 3. Any other unencrypted non-mpegurl HLS transcoding
+  const unencryptedHlsOther = transcodings.find(
+    (tc) =>
+      !tc.snipped &&
+      tc.format?.protocol === 'hls' &&
+      !String(tc.format?.protocol || '').includes('encrypted') &&
+      !String(tc.format?.mime_type || '').includes('mpegurl')
+  );
+  return unencryptedHlsOther || null;
+}
+
+function decryptJioSaavnStreamUrl(encryptedMediaUrl: string, has320: boolean = true): string | null {
+  try {
+    if (!encryptedMediaUrl) return null;
+    const key = CryptoJS.enc.Utf8.parse('38346591');
+    const decrypted = CryptoJS.DES.decrypt(
+      { ciphertext: CryptoJS.enc.Base64.parse(encryptedMediaUrl) } as any,
+      key,
+      { mode: CryptoJS.mode.ECB, padding: CryptoJS.pad.Pkcs7 }
+    ).toString(CryptoJS.enc.Utf8);
+    if (!decrypted || !decrypted.startsWith('http')) return null;
+    return has320 ? decrypted.replace('_96.mp4', '_320.mp4') : decrypted.replace('_96.mp4', '_160.mp4');
+  } catch {
+    return null;
+  }
+}
 
 async function getSoundCloudClientId(): Promise<string> {
   if (cachedSoundCloudClientId && Date.now() - lastSoundCloudIdFetch < 1000 * 60 * 60 * 12) {
@@ -185,7 +234,8 @@ app.get('/api/ytmusic-search', async (req, res) => {
   }
 });
 
-// API 2: Resolve Audio Stream (SoundCloud Progressive -> YouTube Music / Invidious -> Deezer / iTunes Stream)
+// API 2: Resolve Full-Length Audio Stream (SoundCloud Unencrypted Full -> JioSaavn 320kbps Full -> Audius Full -> YouTube Music / Invidious Full)
+// Strictly NO 30-second demo previews!
 app.get('/api/resolve-stream', async (req, res) => {
   try {
     const query = String(req.query.q || req.query.query || '').trim();
@@ -193,10 +243,12 @@ app.get('/api/resolve-stream', async (req, res) => {
       return res.json({ streamUrl: null });
     }
 
-    // Tier 1: SoundCloud full-length progressive stream
+    const negativeWords = ['karaoke', 'instrumental', 'backing track', 'tribute', 'minus one'];
+
+    // Tier 1: SoundCloud full-length unencrypted stream (progressive or unencrypted HLS audio/mp4)
     try {
       const clientId = await getSoundCloudClientId();
-      const scUrl = `https://api-v2.soundcloud.com/search/tracks?q=${encodeURIComponent(query)}&client_id=${clientId}&limit=15`;
+      const scUrl = `https://api-v2.soundcloud.com/search/tracks?q=${encodeURIComponent(query)}&client_id=${clientId}&limit=20`;
       const response = await fetch(scUrl, {
         headers: {
           'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
@@ -206,23 +258,24 @@ app.get('/api/resolve-stream', async (req, res) => {
 
       if (response.ok) {
         const data: any = await response.json();
-        const negativeWords = ['karaoke', 'instrumental', 'backing track', 'cover', 'tribute', 'remake', 'minus one'];
-        
-        const progressiveTracks = (data.collection || []).filter((t: any) => {
+        const rawCollection: any[] = Array.isArray(data.collection) ? data.collection : [];
+
+        // Filter to full-length (>= 90s preferred, >= 60s minimum), non-SNIP, unencrypted tracks
+        const playableTracks = rawCollection.filter((t: any) => {
           const title = (t.title || '').toLowerCase();
-          const hasNegative = negativeWords.some(w => title.includes(w));
-          const hasProg = t.media?.transcodings?.some((tc: any) => tc.format?.protocol === 'progressive');
-          return !hasNegative && t.duration > 40000 && hasProg;
+          const hasNegative = negativeWords.some((w) => title.includes(w));
+          const bestTc = pickBestSoundCloudTranscoding(t);
+          return !hasNegative && Boolean(bestTc);
         });
 
-        const candidates = progressiveTracks.length > 0
-          ? progressiveTracks
-          : (data.collection || []).filter((t: any) => t.duration > 40000);
+        // Prefer standard song lengths (90s to 600s) first so full songs rank above short clips or 1-hour mixes
+        const standardLength = playableTracks.filter((t: any) => t.duration >= 90000 && t.duration <= 600000);
+        const candidates = standardLength.length > 0 ? standardLength : playableTracks;
 
-        for (const candidate of candidates.slice(0, 3)) {
-          const prog = candidate.media?.transcodings?.find((tc: any) => tc.format?.protocol === 'progressive') || candidate.media?.transcodings?.[0];
-          if (prog?.url) {
-            const sRes = await fetch(`${prog.url}?client_id=${clientId}`, { signal: AbortSignal.timeout(4000) });
+        for (const candidate of candidates.slice(0, 5)) {
+          const bestTc = pickBestSoundCloudTranscoding(candidate);
+          if (bestTc?.url) {
+            const sRes = await fetch(`${bestTc.url}?client_id=${clientId}`, { signal: AbortSignal.timeout(4000) });
             if (sRes.ok) {
               const sData: any = await sRes.json();
               if (sData?.url) {
@@ -231,7 +284,7 @@ app.get('/api/resolve-stream', async (req, res) => {
                   durationSeconds: Math.round(candidate.duration / 1000),
                   title: candidate.title,
                   artist: candidate.user?.username,
-                  source: 'OfficialStream'
+                  source: 'SoundCloud'
                 });
               }
             }
@@ -240,7 +293,67 @@ app.get('/api/resolve-stream', async (req, res) => {
       }
     } catch {}
 
-    // Tier 2: YouTube Music + Invidious Audio Stream
+    // Tier 2: JioSaavn 320kbps Full-Length Direct MP4 Stream
+    try {
+      const saavnUrl = `https://www.jiosaavn.com/api.php?__call=search.getResults&_format=json&_marker=0&api_version=4&ctx=web6dot0&n=10&p=1&q=${encodeURIComponent(query)}`;
+      const saavnRes = await fetch(saavnUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+        signal: AbortSignal.timeout(4500)
+      });
+      if (saavnRes.ok) {
+        const saavnData: any = await saavnRes.json();
+        const items: any[] = Array.isArray(saavnData.results) ? saavnData.results : [];
+        for (const item of items) {
+          const dur = Number(item.more_info?.duration || 0);
+          const titleLower = String(item.title || '').toLowerCase();
+          if (dur >= 65 && !negativeWords.some((w) => titleLower.includes(w)) && item.more_info?.encrypted_media_url) {
+            const streamUrl = decryptJioSaavnStreamUrl(
+              item.more_info.encrypted_media_url,
+              item.more_info['320kbps'] === 'true'
+            );
+            if (streamUrl) {
+              return res.json({
+                streamUrl,
+                durationSeconds: dur,
+                title: item.title,
+                artist: item.more_info?.artistMap?.primary_artists?.map((a: any) => a.name).join(', ') || item.subtitle,
+                source: 'Saavn'
+              });
+            }
+          }
+        }
+      }
+    } catch {}
+
+    // Tier 3: Audius Open Decentralized Full-Length MP3 Stream
+    try {
+      const auHostsRes = await fetch('https://api.audius.co', { signal: AbortSignal.timeout(3500) });
+      if (auHostsRes.ok) {
+        const auHosts: any = await auHostsRes.json();
+        const host = auHosts?.data?.[0];
+        if (host) {
+          const auSearchRes = await fetch(
+            `${host}/v1/tracks/search?query=${encodeURIComponent(query)}&app_name=AudioVido`,
+            { signal: AbortSignal.timeout(4000) }
+          );
+          if (auSearchRes.ok) {
+            const auData: any = await auSearchRes.json();
+            const match = (auData?.data || []).find((t: any) => (t.duration || 0) >= 65);
+            if (match?.id) {
+              return res.json({
+                streamUrl: `${host}/v1/tracks/${match.id}/stream?app_name=AudioVido`,
+                durationSeconds: match.duration || 180,
+                title: match.title,
+                artist: match.user?.name || 'Audius Artist',
+                source: 'Audius'
+              });
+            }
+          }
+        }
+      }
+    } catch {}
+
+    // Tier 4: YouTube Music + Invidious Full Audio Stream
     try {
       const ytmRes = await fetch('https://music.youtube.com/youtubei/v1/search?prettyPrint=false', {
         method: 'POST',
@@ -259,7 +372,7 @@ app.get('/api/resolve-stream', async (req, res) => {
       if (ytmRes.ok) {
         const ytmData: any = await ytmRes.json();
         const text = JSON.stringify(ytmData);
-        const videoMatches = [...text.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].map(m => m[1]);
+        const videoMatches = [...text.matchAll(/"videoId":"([a-zA-Z0-9_-]{11})"/g)].map((m) => m[1]);
         const videoId = videoMatches[0];
 
         if (videoId) {
@@ -294,43 +407,13 @@ app.get('/api/resolve-stream', async (req, res) => {
       }
     } catch {}
 
-    // Tier 3: Deezer & Apple iTunes High-Bitrate Direct Stream Fallback
-    try {
-      const [dzRes, itRes] = await Promise.allSettled([
-        fetch(`https://api.deezer.com/search?q=${encodeURIComponent(query)}&limit=5`, { signal: AbortSignal.timeout(4000) }).then(r => r.ok ? r.json() : null),
-        fetch(`https://itunes.apple.com/search?term=${encodeURIComponent(query)}&entity=song&limit=5`, { signal: AbortSignal.timeout(4000) }).then(r => r.ok ? r.json() : null)
-      ]);
-
-      const dzTrack = dzRes.status === 'fulfilled' ? dzRes.value?.data?.find((t: any) => t.preview) : null;
-      if (dzTrack?.preview) {
-        return res.json({
-          streamUrl: dzTrack.preview,
-          durationSeconds: 30,
-          title: dzTrack.title,
-          artist: dzTrack.artist?.name,
-          source: 'Deezer'
-        });
-      }
-
-      const itTrack = itRes.status === 'fulfilled' ? itRes.value?.results?.find((t: any) => t.previewUrl) : null;
-      if (itTrack?.previewUrl) {
-        return res.json({
-          streamUrl: itTrack.previewUrl,
-          durationSeconds: 30,
-          title: itTrack.trackName,
-          artist: itTrack.artistName,
-          source: 'iTunes'
-        });
-      }
-    } catch {}
-
     res.json({ streamUrl: null });
   } catch (e: any) {
     res.status(500).json({ error: e?.message || e, streamUrl: null });
   }
 });
 
-// API 3: SoundCloud Search
+// API 3: SoundCloud Full-Track Search (Only Unencrypted Full Tracks >= 60s, Never 30s Snippets)
 app.get('/api/soundcloud-search', async (req, res) => {
   try {
     const query = String(req.query.q || req.query.query || '').trim();
@@ -339,33 +422,45 @@ app.get('/api/soundcloud-search', async (req, res) => {
     }
 
     const clientId = await getSoundCloudClientId();
-    const scUrl = `https://api-v2.soundcloud.com/search/tracks?q=${encodeURIComponent(query)}&client_id=${clientId}&limit=20`;
+    const scUrl = `https://api-v2.soundcloud.com/search/tracks?q=${encodeURIComponent(query)}&client_id=${clientId}&limit=25`;
     const response = await fetch(scUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
+      },
+      signal: AbortSignal.timeout(6000)
     });
+
+    if (!response.ok) {
+      return res.json({ collection: [] });
+    }
 
     const data: any = await response.json();
     const items = Array.isArray(data.collection) ? data.collection : [];
+    const playableItems = items.filter((item: any) => Boolean(pickBestSoundCloudTranscoding(item)));
 
     const resolvedItems = await Promise.all(
-      items.slice(0, 12).map(async (item: any) => {
+      playableItems.slice(0, 15).map(async (item: any) => {
         try {
-          const prog = item.media?.transcodings?.find((tc: any) => tc.format.protocol === 'progressive') || item.media?.transcodings?.[0];
-          let streamUrl = '';
-          if (prog?.url) {
-            const sRes = await fetch(`${prog.url}?client_id=${clientId}`);
-            const sData: any = await sRes.json();
-            streamUrl = sData.url || '';
-          }
+          const bestTc = pickBestSoundCloudTranscoding(item);
+          if (!bestTc?.url) return null;
+
+          const sRes = await fetch(`${bestTc.url}?client_id=${clientId}`, { signal: AbortSignal.timeout(4000) });
+          if (!sRes.ok) return null;
+          const sData: any = await sRes.json();
+          const streamUrl = sData?.url || '';
+          if (!streamUrl) return null;
+
           return {
             id: `sc-${item.id}`,
             title: item.title,
             artist: item.user?.username || 'SoundCloud Artist',
             album: item.publisher_metadata?.album_title || 'SoundCloud Master',
             genre: item.genre || 'SoundCloud Global',
-            year: item.release_date ? String(new Date(item.release_date).getFullYear()) : (item.created_at ? String(new Date(item.created_at).getFullYear()) : '2024'),
+            year: item.release_date
+              ? String(new Date(item.release_date).getFullYear())
+              : item.created_at
+              ? String(new Date(item.created_at).getFullYear())
+              : '2024',
             durationSeconds: Math.round((item.duration || 0) / 1000),
             artwork: (item.artwork_url || item.user?.avatar_url || '').replace('-large', '-t500x500'),
             streamUrl: streamUrl,
@@ -381,6 +476,95 @@ app.get('/api/soundcloud-search', async (req, res) => {
     res.json({ collection: resolvedItems.filter(Boolean) });
   } catch (e: any) {
     res.status(500).json({ error: e?.message || e, collection: [] });
+  }
+});
+
+// API 3B: JioSaavn 320kbps Full Studio Search + Audius Open Full Track Search
+app.get('/api/full-stream-catalog', async (req, res) => {
+  try {
+    const query = String(req.query.q || req.query.query || '').trim();
+    if (!query) {
+      return res.json({ results: [] });
+    }
+
+    const negativeWords = ['karaoke', 'instrumental', 'backing track', 'tribute', 'minus one'];
+    const tracks: any[] = [];
+
+    const [saavnSettled, audiusSettled] = await Promise.allSettled([
+      fetch(
+        `https://www.jiosaavn.com/api.php?__call=search.getResults&_format=json&_marker=0&api_version=4&ctx=web6dot0&n=12&p=1&q=${encodeURIComponent(query)}`,
+        {
+          headers: { 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)' },
+          signal: AbortSignal.timeout(4500)
+        }
+      ).then((r) => (r.ok ? r.json() : null)),
+      fetch('https://api.audius.co', { signal: AbortSignal.timeout(3000) })
+        .then((r) => (r.ok ? r.json() : null))
+        .then(async (hosts: any) => {
+          const host = hosts?.data?.[0];
+          if (!host) return null;
+          const r = await fetch(
+            `${host}/v1/tracks/search?query=${encodeURIComponent(query)}&app_name=AudioVido`,
+            { signal: AbortSignal.timeout(4000) }
+          );
+          if (!r.ok) return null;
+          const d: any = await r.json();
+          return { host, items: d?.data || [] };
+        })
+    ]);
+
+    if (saavnSettled.status === 'fulfilled' && Array.isArray(saavnSettled.value?.results)) {
+      for (const item of saavnSettled.value.results) {
+        const dur = Number(item.more_info?.duration || 0);
+        const rawTitle = String(item.title || '').replace(/&quot;/g, '"').replace(/&amp;/g, '&');
+        if (dur >= 65 && !negativeWords.some((w) => rawTitle.toLowerCase().includes(w)) && item.more_info?.encrypted_media_url) {
+          const streamUrl = decryptJioSaavnStreamUrl(
+            item.more_info.encrypted_media_url,
+            item.more_info['320kbps'] === 'true'
+          );
+          if (streamUrl) {
+            const primaryArtists = item.more_info?.artistMap?.primary_artists?.map((a: any) => a.name).join(', ');
+            tracks.push({
+              id: `saavn-${item.id}`,
+              title: rawTitle,
+              artist: primaryArtists || item.subtitle || 'Studio Artist',
+              album: item.more_info?.album || rawTitle,
+              genre: item.language ? `${item.language.charAt(0).toUpperCase()}${item.language.slice(1)}` : 'Studio Master',
+              year: item.year || '2024',
+              durationSeconds: dur,
+              artwork: String(item.image || '').replace('150x150', '500x500'),
+              streamUrl,
+              source: 'Saavn'
+            });
+          }
+        }
+      }
+    }
+
+    if (audiusSettled.status === 'fulfilled' && audiusSettled.value?.items) {
+      const { host, items } = audiusSettled.value;
+      for (const item of items.slice(0, 8)) {
+        const dur = Number(item.duration || 0);
+        if (dur >= 65 && item.id) {
+          tracks.push({
+            id: `audius-${item.id}`,
+            title: item.title || 'Audius Track',
+            artist: item.user?.name || 'Audius Artist',
+            album: item.mood || 'Audius Stream',
+            genre: item.genre || 'Electronic / Pop',
+            year: item.release_date ? String(new Date(item.release_date).getFullYear()) : '2024',
+            durationSeconds: dur,
+            artwork: item.artwork?.['480x480'] || item.artwork?.['150x150'] || '',
+            streamUrl: `${host}/v1/tracks/${item.id}/stream?app_name=AudioVido`,
+            source: 'Audius'
+          });
+        }
+      }
+    }
+
+    res.json({ results: tracks });
+  } catch (e: any) {
+    res.status(500).json({ error: e?.message || e, results: [] });
   }
 });
 

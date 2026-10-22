@@ -204,9 +204,11 @@ export function MusicV3View({
   // Left Sidebar Navigation State
   const [activeNav, setActiveNav] = useState<'home' | 'likes' | 'explore' | 'artists' | 'albums' | 'settings'>('home');
   const [searchQuery, setSearchQuery] = useState<string>('');
+  const [resolvedQuery, setResolvedQuery] = useState<string>('');
   const [apiTracks, setApiTracks] = useState<Track[]>([]);
   const [isSearchingApi, setIsSearchingApi] = useState<boolean>(false);
   const [isSearchDropdownOpen, setIsSearchDropdownOpen] = useState<boolean>(false);
+  const searchRequestIdRef = useRef<number>(0);
 
   // Enriched real artwork & tracks from iTunes/Deezer on mount
   const [topArtists, setTopArtists] = useState<MusicV3Artist[]>(TOP_ARTISTS_INITIAL);
@@ -353,69 +355,113 @@ export function MusicV3View({
     });
   }, [volumeLevel]);
 
-  // Live Deep Search (YouTube Music + Apple iTunes + SoundCloud)
+  // Execute full-track search (SoundCloud + JioSaavn 320k + Audius + YouTube Music) for the complete typed query
+  const runCompleteQuerySearch = React.useCallback(async (rawQuery: string, reqId: number) => {
+    const q = rawQuery.trim();
+    if (!q || q.length < 2) {
+      if (reqId === searchRequestIdRef.current) {
+        setApiTracks([]);
+        setResolvedQuery('');
+        setIsSearchingApi(false);
+      }
+      return;
+    }
+
+    try {
+      const results = await musicApi.searchTracks(q, 'all', 16);
+      // Strictly ignore if user typed more characters while this request was in flight
+      if (reqId !== searchRequestIdRef.current) return;
+
+      const mapped: Track[] = results.map((item) => ({
+        id: item.id,
+        title: item.title,
+        artist: item.artist,
+        album: item.album,
+        artistPhoto: item.coverUrl,
+        duration: item.duration,
+        durationSeconds: item.durationSeconds,
+        previewUrl: item.previewUrl,
+        year: item.year,
+        source: item.source,
+        genre: item.genre,
+        vibes: ['Global Stream', item.genre],
+        cozyIndex: 90,
+        colorFrom: 'from-red-500',
+        colorTo: 'to-rose-700',
+        audioSynthType: 'music',
+        isFullTrack: true
+      }));
+
+      setApiTracks(mapped);
+      setResolvedQuery(q);
+    } catch (err) {
+      if (reqId === searchRequestIdRef.current) {
+        console.warn('Music 3 search error:', err);
+      }
+    } finally {
+      if (reqId === searchRequestIdRef.current) {
+        setIsSearchingApi(false);
+      }
+    }
+  }, []);
+
+  // Wait until the user finishes typing the complete word/phrase up to the last letter (600ms debounce + strict cancellation)
   useEffect(() => {
     const q = searchQuery.trim();
+    const nextReqId = searchRequestIdRef.current + 1;
+    searchRequestIdRef.current = nextReqId;
+
     if (!q || q.length < 2) {
       setApiTracks([]);
+      setResolvedQuery('');
       setIsSearchingApi(false);
       return;
     }
 
     setIsSearchingApi(true);
-    const timer = setTimeout(async () => {
-      try {
-        const results = await musicApi.searchTracks(q, 'all', 14);
-        const mapped: Track[] = results.map(item => ({
-          id: item.id,
-          title: item.title,
-          artist: item.artist,
-          album: item.album,
-          artistPhoto: item.coverUrl,
-          duration: item.duration,
-          durationSeconds: item.durationSeconds,
-          previewUrl: item.previewUrl,
-          year: item.year,
-          source: item.source,
-          genre: item.genre,
-          vibes: ['Global Stream', item.genre],
-          cozyIndex: 90,
-          colorFrom: 'from-red-500',
-          colorTo: 'to-rose-700',
-          audioSynthType: 'music',
-          isFullTrack: true
-        }));
-        setApiTracks(mapped);
-      } catch (err) {
-        console.warn('Music 3 search error:', err);
-      } finally {
-        setIsSearchingApi(false);
-      }
-    }, 300);
+    setApiTracks([]);
 
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    const timer = window.setTimeout(() => {
+      runCompleteQuerySearch(q, nextReqId);
+    }, 600);
 
-  // Load real full synced lyrics whenever track changes
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [searchQuery, runCompleteQuerySearch]);
+
+  // Load real full synced lyrics whenever track changes (immediately clear previous song's lyrics)
   useEffect(() => {
     const target = currentTrack || displayTrack;
     if (!target) return;
     let isSubscribed = true;
+    setLyricsData(null);
     setIsLoadingLyrics(true);
-    musicApi.fetchLyrics(target.title, target.artist).then(res => {
-      if (isSubscribed) {
-        setLyricsData(res);
-        setIsLoadingLyrics(false);
-      }
-    }).catch(() => {
-      if (isSubscribed) setIsLoadingLyrics(false);
-    });
+    lyricLineRefs.current = [];
+    if (lyricsContainerRef.current) {
+      lyricsContainerRef.current.scrollTop = 0;
+    }
+
+    musicApi
+      .fetchLyrics(target.title, target.artist)
+      .then((res) => {
+        if (isSubscribed) {
+          setLyricsData(res);
+          setIsLoadingLyrics(false);
+        }
+      })
+      .catch(() => {
+        if (isSubscribed) {
+          setLyricsData(null);
+          setIsLoadingLyrics(false);
+        }
+      });
     return () => {
       isSubscribed = false;
     };
   }, [currentTrack?.id, currentTrack?.title, currentTrack?.artist]);
 
-  // Build Complete Full-Length Timestamped Lyrics Array (so every song has full scrollable synced lines)
+  // Build Complete Full-Length Timestamped Lyrics Array exclusively from the active song's real lyrics
   const effectiveDuration = Math.max(60, audioDuration || displayTrack.durationSeconds || 192);
   const fullSyncedLines = React.useMemo(() => {
     if (lyricsData?.syncedLyrics && lyricsData.syncedLyrics.length > 0) {
@@ -429,23 +475,7 @@ export function MusicV3View({
         text
       }));
     }
-    const fallbackLines = [
-      "Feel the rhythm rising through the studio floor",
-      "Every note calibrated in crystal spatial sound",
-      "Lost in the melody as the chorus comes alive",
-      "Shadows fade away beneath the crimson lights",
-      "Turn up the volume and let the beat carry on",
-      "Echoes of the night resonating clear and bold",
-      "Dancing on the edge of a timeless harmony",
-      "Holding onto every second of this soundscape",
-      "From the first chord to the final fading echo",
-      "Pure studio master streaming in full fidelity"
-    ];
-    const step = effectiveDuration / fallbackLines.length;
-    return fallbackLines.map((text, idx) => ({
-      time: Math.round(idx * step * 10) / 10,
-      text
-    }));
+    return [];
   }, [lyricsData, effectiveDuration]);
 
   // Determine the currently active lyric line index WITH PREDICTIVE LEAD-TIME (+0.75s)
@@ -630,16 +660,23 @@ export function MusicV3View({
   const isCurrentLiked = currentTrack ? !!likedTracks[currentTrack.id] : true;
 
   const searchResultsList = React.useMemo(() => {
-    if (apiTracks.length > 0) return apiTracks;
     const q = searchQuery.trim().toLowerCase();
     if (!q) return [];
+    // If API tracks for the current query are ready, return them
+    if (apiTracks.length > 0 && resolvedQuery.toLowerCase() === q) {
+      return apiTracks;
+    }
+    // While waiting for user to finish typing or API to resolve, do not show stale partial API tracks
+    if (isSearchingApi) {
+      return [];
+    }
     return allTracks.filter(
-      t =>
+      (t) =>
         t.title.toLowerCase().includes(q) ||
         t.artist.toLowerCase().includes(q) ||
         (t.album && t.album.toLowerCase().includes(q))
     );
-  }, [apiTracks, allTracks, searchQuery]);
+  }, [apiTracks, allTracks, searchQuery, resolvedQuery, isSearchingApi]);
 
   return (
     <div className="w-full max-w-[1280px] mx-auto my-1 sm:my-2 animate-fadeIn select-none font-sans">
@@ -768,23 +805,36 @@ export function MusicV3View({
                 <input
                   type="text"
                   value={searchQuery}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
                   onFocus={() => {
                     setIsSearchDropdownOpen(true);
                     setShowNotifications(false);
                     setShowProfileMenu(false);
                   }}
                   onChange={(e) => {
-                    setSearchQuery(e.target.value);
+                    const val = e.target.value;
+                    setSearchQuery(val);
                     setIsSearchDropdownOpen(true);
                   }}
                   onKeyDown={(e) => {
-                    if (e.key === 'Enter' && searchResultsList.length > 0) {
-                      onSelectTrack(searchResultsList[0]);
-                      setIsPlaying(true);
-                      setIsPlayerExpanded(true);
-                      setIsSearchDropdownOpen(false);
-                      if (document.activeElement instanceof HTMLElement) {
-                        document.activeElement.blur();
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const q = searchQuery.trim();
+                      if (q.length >= 2 && resolvedQuery.toLowerCase() !== q.toLowerCase()) {
+                        const reqId = searchRequestIdRef.current + 1;
+                        searchRequestIdRef.current = reqId;
+                        setIsSearchingApi(true);
+                        runCompleteQuerySearch(q, reqId);
+                      } else if (searchResultsList.length > 0) {
+                        onSelectTrack(searchResultsList[0]);
+                        setIsPlaying(true);
+                        setIsPlayerExpanded(true);
+                        setIsSearchDropdownOpen(false);
+                        if (document.activeElement instanceof HTMLElement) {
+                          document.activeElement.blur();
+                        }
                       }
                     }
                     if (e.key === 'Escape') {
@@ -792,13 +842,17 @@ export function MusicV3View({
                     }
                   }}
                   placeholder="Search songs, artists, or albums..."
-                  className="w-full pl-11 pr-10 py-3 sm:py-3.5 rounded-full bg-white text-[#141416] placeholder-neutral-400 text-[16px] sm:text-sm font-semibold shadow-[0_6px_24px_rgba(0,0,0,0.06)] border border-neutral-200/80 focus:border-[#E61E2A] focus:ring-4 focus:ring-[#E61E2A]/15 focus:outline-none transition-all"
+                  className="w-full pl-11 pr-10 py-3 sm:py-3.5 rounded-full bg-white text-[#141416] placeholder-neutral-400 text-[16px] sm:text-sm font-semibold shadow-[0_6px_24px_rgba(0,0,0,0.06)] border border-neutral-200/80 focus:border-[#E61E2A] focus:ring-4 focus:ring-[#E61E2A]/15 focus:outline-none transition-all select-text"
                 />
                 {searchQuery && (
                   <button
                     type="button"
                     onClick={() => {
+                      searchRequestIdRef.current += 1;
                       setSearchQuery('');
+                      setResolvedQuery('');
+                      setApiTracks([]);
+                      setIsSearchingApi(false);
                       setIsSearchDropdownOpen(false);
                     }}
                     className="absolute right-3.5 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-600 flex items-center justify-center cursor-pointer"
@@ -839,7 +893,12 @@ export function MusicV3View({
                     </div>
 
                     <div className="max-h-[340px] overflow-y-auto space-y-1.5 pr-1 scrollbar-thin">
-                      {searchResultsList.length === 0 && !isSearchingApi ? (
+                      {searchResultsList.length === 0 && isSearchingApi ? (
+                        <div className="py-8 flex flex-col items-center justify-center gap-2 text-center text-xs text-neutral-500 font-semibold">
+                          <Loader2 className="w-5 h-5 animate-spin text-[#E61E2A]" />
+                          <span>Searching full tracks for "{searchQuery}"...</span>
+                        </div>
+                      ) : searchResultsList.length === 0 && !isSearchingApi ? (
                         <div className="py-8 text-center text-xs text-neutral-400 font-medium">
                           No matching tracks found. Try another song or artist name.
                         </div>
@@ -1428,8 +1487,23 @@ export function MusicV3View({
                   {/* RIGHT HALF (6 Cols): Clean, Symmetrical Live-Synced Lyrics Stage (Zero extra header text, zero timestamps) */}
                   <div className="md:col-span-6 flex flex-col justify-center h-[230px] sm:h-[260px] md:h-[280px]">
                     {isLoadingLyrics ? (
-                      <div className="w-full h-full flex items-center justify-center">
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-2.5 text-center px-4">
                         <Loader2 className="w-6 h-6 animate-spin text-[#E61E2A]" />
+                        <p className="text-xs font-bold text-neutral-500 truncate max-w-full">
+                          {displayTrack.title} · {displayTrack.artist}
+                        </p>
+                      </div>
+                    ) : fullSyncedLines.length === 0 ? (
+                      <div className="w-full h-full flex flex-col items-center justify-center gap-2 text-center px-6">
+                        <p className="text-base sm:text-lg font-extrabold text-[#141416] break-words" dir="auto">
+                          {displayTrack.title}
+                        </p>
+                        <p className="text-xs sm:text-sm font-semibold text-[#E61E2A]" dir="auto">
+                          {displayTrack.artist}
+                        </p>
+                        <p className="text-xs text-neutral-400 font-medium pt-1">
+                          Instrumental / No synced vocal lyrics found for this track
+                        </p>
                       </div>
                     ) : (
                       <div
@@ -1451,11 +1525,12 @@ export function MusicV3View({
 
                           return (
                             <button
-                              key={`${idx}-${line.time}`}
+                              key={`${displayTrack.id}-${idx}-${line.time}`}
                               ref={(el) => {
                                 lyricLineRefs.current[idx] = el;
                               }}
                               type="button"
+                              dir="auto"
                               onClick={() => {
                                 if (!currentTrack) {
                                   onSelectTrack(displayTrack);
@@ -1464,7 +1539,7 @@ export function MusicV3View({
                                 const pct = (line.time / effectiveDuration) * 100;
                                 handleSeek(pct);
                               }}
-                              className={`w-full text-left transition-all duration-200 block cursor-pointer rounded-2xl px-3.5 py-2 ${
+                              className={`w-full text-start transition-all duration-200 block cursor-pointer rounded-2xl px-3.5 py-2 ${
                                 isCurrentLine
                                   ? 'text-[#E61E2A] font-black text-lg sm:text-xl md:text-[22px] leading-snug bg-red-50/80 scale-[1.01]'
                                   : isNearLine

@@ -28,6 +28,7 @@ import { SignUpLandingView } from './components/SignUpLandingView';
 import { SignInAuraNodesView } from './components/SignInAuraNodesView';
 import { AuthAccountView } from './components/AuthAccountView';
 import { musicApi } from './services/musicApiService';
+import Hls from 'hls.js';
 
 // --- BESPOKE 3D SCULPTED EMBLEMS (STANDARD, HARMONIOUS & PROFESSIONAL) ---
 function AudioEmblem3D() {
@@ -360,8 +361,10 @@ function SocialEmblem3D() {
 }
 
 export default function App() {
-  // Real Audio Player Reference & Local File Support
+  // Real Audio Player Reference, HLS Instance & Local File Support
   const audioPlayerRef = useRef<HTMLAudioElement | null>(null);
+  const audioHlsRef = useRef<Hls | null>(null);
+  const loadedStreamUrlRef = useRef<string>('');
   const [customAudioUrl, setCustomAudioUrl] = useState<string>('/audio/coffee_bars.mp3');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   // Navigation State: 'portal' | 'music' | 'movie' | 'community' | 'music2' | 'music3' | 'signup' | 'signin' | 'account'
@@ -683,33 +686,73 @@ export default function App() {
     }
   }, [ambientVolume]);
 
-  // Sync playing states with real HTML5 audio player
+  // Helper to attach and play either HLS (.m3u8) or progressive (MP3/MP4) full-length audio streams
+  const playResolvedAudioStream = (streamUrl: string, resetTime: boolean = false) => {
+    const audio = audioPlayerRef.current;
+    if (!audio || !streamUrl) return;
+
+    if (loadedStreamUrlRef.current === streamUrl && !resetTime) {
+      audio.play().catch((e) => {
+        if (e.name !== 'AbortError') console.warn('Audio resume error:', e);
+      });
+      return;
+    }
+
+    if (audioHlsRef.current) {
+      audioHlsRef.current.destroy();
+      audioHlsRef.current = null;
+    }
+
+    loadedStreamUrlRef.current = streamUrl;
+
+    if (streamUrl.includes('.m3u8')) {
+      if (Hls.isSupported()) {
+        const hls = new Hls({ enableWorker: true });
+        audioHlsRef.current = hls;
+        hls.loadSource(streamUrl);
+        hls.attachMedia(audio);
+        hls.on(Hls.Events.MANIFEST_PARSED, () => {
+          if (resetTime) audio.currentTime = 0;
+          audio.play().catch((e) => {
+            if (e.name !== 'AbortError') console.warn('HLS audio play error:', e);
+          });
+        });
+        return;
+      }
+    }
+
+    if (audio.src !== streamUrl) {
+      audio.src = streamUrl;
+      audio.load();
+    }
+    if (resetTime) {
+      audio.currentTime = 0;
+    }
+    audio.play().catch((e) => {
+      if (e.name !== 'AbortError') console.warn('HTML5 audio play error:', e);
+    });
+  };
+
+  // Sync playing states with real HTML5 / HLS audio player
   useEffect(() => {
     const audio = audioPlayerRef.current;
     if (!audio) return;
     if (isPlaying && currentTrack) {
       if (currentTrack.previewUrl && !currentTrack.previewUrl.startsWith('/api/resolve-stream')) {
-        if (!audio.src || !audio.src.includes(currentTrack.previewUrl)) {
-          audio.src = currentTrack.previewUrl;
-          audio.load();
-        }
-        audio.play().catch(e => {
-          if (e.name !== 'AbortError') console.warn('HTML5 audio play error:', e);
-        });
+        playResolvedAudioStream(currentTrack.previewUrl, false);
       } else {
-        // Resolve stream dynamically if not resolved yet
-        musicApi.resolveFullTrackAudio(currentTrack.title, currentTrack.artist).then(res => {
-          if (res?.streamUrl) {
-            audio.src = res.streamUrl;
-            audio.load();
-            if (res.durationSeconds) setAudioDuration(res.durationSeconds);
-            currentTrack.previewUrl = res.streamUrl;
-            currentTrack.isFullTrack = true;
-            audio.play().catch(e => {
-              if (e.name !== 'AbortError') console.warn('HTML5 audio play error after resolve:', e);
-            });
-          }
-        }).catch(err => console.warn('Failed to resolve audio on play:', err));
+        // Resolve full stream dynamically if not resolved yet
+        musicApi
+          .resolveFullTrackAudio(currentTrack.title, currentTrack.artist)
+          .then((res) => {
+            if (res?.streamUrl) {
+              if (res.durationSeconds) setAudioDuration(res.durationSeconds);
+              currentTrack.previewUrl = res.streamUrl;
+              currentTrack.isFullTrack = true;
+              playResolvedAudioStream(res.streamUrl, false);
+            }
+          })
+          .catch((err) => console.warn('Failed to resolve audio on play:', err));
       }
     } else {
       audio.pause();
@@ -851,18 +894,8 @@ export default function App() {
 
     const audio = audioPlayerRef.current;
     if (audio && streamUrl && !streamUrl.startsWith('/api/resolve-stream')) {
-      if (audio.src !== streamUrl) {
-        audio.src = streamUrl;
-      }
-      audio.currentTime = 0;
       setIsPlaying(true);
-      audio.play().then(() => {
-        setIsPlaying(true);
-      }).catch(err => {
-        if (err.name !== 'AbortError') {
-          console.warn('Direct stream play error:', err);
-        }
-      });
+      playResolvedAudioStream(streamUrl, true);
     } else if (audio) {
       audio.pause();
       setIsPlaying(false);

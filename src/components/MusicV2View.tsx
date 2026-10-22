@@ -269,9 +269,14 @@ export function MusicV2View({
     });
   }, [volumeLevel]);
 
-  // Debounced live Apple iTunes search in Music 2
+  const searchReqIdRef = React.useRef<number>(0);
+
+  // Debounced live full-track search in Music 2 (waits for complete typing, cancels partial queries)
   useEffect(() => {
     const q = searchQuery.trim();
+    const reqId = searchReqIdRef.current + 1;
+    searchReqIdRef.current = reqId;
+
     if (!q || q.length < 2) {
       setApiTracks([]);
       setIsSearchingApi(false);
@@ -279,9 +284,12 @@ export function MusicV2View({
     }
 
     setIsSearchingApi(true);
-    const timer = setTimeout(async () => {
+    setApiTracks([]);
+
+    const timer = window.setTimeout(async () => {
       try {
-        const results = await musicApi.searchTracks(q, 'all', 12);
+        const results = await musicApi.searchTracks(q, 'all', 16);
+        if (reqId !== searchReqIdRef.current) return;
         const mapped: Track[] = results.map(item => ({
           id: item.id,
           title: item.title,
@@ -299,17 +307,22 @@ export function MusicV2View({
           colorFrom: '#10b981',
           colorTo: '#84cc16',
           audioSynthType: 'music',
-          artistBio: `Official track "${item.title}" by ${item.artist} from the album "${item.album}" (${item.year || 'Official Release'}). Genre: ${item.genre}. Source: Apple iTunes Catalog.`
+          isFullTrack: true,
+          artistBio: `Official track "${item.title}" by ${item.artist} from the album "${item.album}" (${item.year || 'Official Release'}). Genre: ${item.genre}.`
         }));
         setApiTracks(mapped);
       } catch (err) {
-        console.warn('API search error in Music 2:', err);
+        if (reqId === searchReqIdRef.current) {
+          console.warn('API search error in Music 2:', err);
+        }
       } finally {
-        setIsSearchingApi(false);
+        if (reqId === searchReqIdRef.current) {
+          setIsSearchingApi(false);
+        }
       }
-    }, 350);
+    }, 550);
 
-    return () => clearTimeout(timer);
+    return () => window.clearTimeout(timer);
   }, [searchQuery]);
 
   // Format seconds to M:SS
