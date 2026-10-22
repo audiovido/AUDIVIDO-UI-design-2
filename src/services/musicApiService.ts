@@ -305,6 +305,95 @@ class MusicApiService {
   }
 
   /**
+   * Client-side CORS-friendly full-track fallback for static hosts like GitHub Pages (*.github.io)
+   */
+  private async searchClientSideFullStreams(query: string, limit: number = 15): Promise<ApiTrack[]> {
+    const results: ApiTrack[] = [];
+    const encoded = encodeURIComponent(query);
+
+    const [saavnRes, audiusRes] = await Promise.allSettled([
+      fetch(`https://saavn.dev/api/search/songs?query=${encoded}&limit=${limit}`),
+      fetch(`https://discoveryprovider.audius.co/v1/tracks/search?query=${encoded}&app_name=AudiovidoStudio`)
+    ]);
+
+    if (saavnRes.status === 'fulfilled' && saavnRes.value.ok) {
+      try {
+        const sData = await saavnRes.value.json();
+        const items = sData?.data?.results || [];
+        for (const item of items) {
+          const durSec = Number(item.duration) || 0;
+          if (durSec < 60) continue;
+          const downloads = Array.isArray(item.downloadUrl) ? item.downloadUrl : [];
+          const bestDl =
+            downloads.find((d: any) => d.quality === '320kbps') ||
+            downloads.find((d: any) => d.quality === '160kbps') ||
+            downloads[downloads.length - 1];
+          const streamUrl = bestDl?.url || bestDl?.link;
+          if (!streamUrl) continue;
+
+          const images = Array.isArray(item.image) ? item.image : [];
+          const bestImg = images[images.length - 1]?.url || images[images.length - 1]?.link;
+          const mins = Math.floor(durSec / 60);
+          const secs = durSec % 60;
+          const artists =
+            item.artists?.primary?.map((a: any) => a.name).join(', ') ||
+            item.primaryArtists ||
+            'Studio Artist';
+
+          results.push({
+            id: `saavn-${item.id}`,
+            title: (item.name || item.title || 'Unknown Title').replace(/&quot;/g, '"').replace(/&amp;/g, '&'),
+            artist: String(artists).replace(/&quot;/g, '"').replace(/&amp;/g, '&'),
+            album: item.album?.name || 'Studio Master',
+            duration: `${mins}:${secs.toString().padStart(2, '0')}`,
+            durationSeconds: durSec,
+            coverUrl: bestImg || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
+            previewUrl: streamUrl,
+            genre: item.language || 'Studio Master',
+            year: String(item.year || '2024'),
+            source: 'Saavn',
+            plays: `${(Math.random() * 5 + 1.2).toFixed(1)}M`,
+            isFullTrack: true
+          });
+        }
+      } catch {}
+    }
+
+    if (audiusRes.status === 'fulfilled' && audiusRes.value.ok) {
+      try {
+        const aData = await audiusRes.value.json();
+        const items = Array.isArray(aData?.data) ? aData.data : [];
+        for (const item of items.slice(0, limit)) {
+          const durSec = Number(item.duration) || 0;
+          if (durSec < 60 || !item.id) continue;
+          const mins = Math.floor(durSec / 60);
+          const secs = durSec % 60;
+          results.push({
+            id: `audius-${item.id}`,
+            title: item.title || 'Unknown Title',
+            artist: item.user?.name || item.user?.handle || 'Audius Artist',
+            album: item.mood || item.genre || 'Audius Master',
+            duration: `${mins}:${secs.toString().padStart(2, '0')}`,
+            durationSeconds: durSec,
+            coverUrl:
+              item.artwork?.['480x480'] ||
+              item.artwork?.['1000x1000'] ||
+              'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
+            previewUrl: `https://discoveryprovider.audius.co/v1/tracks/${item.id}/stream?app_name=AudiovidoStudio`,
+            genre: item.genre || 'Electronic / Pop',
+            year: item.release_date ? String(new Date(item.release_date).getFullYear()) : '2024',
+            source: 'Audius',
+            plays: `${(Math.random() * 3 + 1).toFixed(1)}M`,
+            isFullTrack: true
+          });
+        }
+      } catch {}
+    }
+
+    return results;
+  }
+
+  /**
    * Search JioSaavn 320kbps Full Studio, Archive.org Lossless/MP3 & Audius Open Full Stream Catalog
    */
   async searchFullStreamCatalog(query: string, limit: number = 15): Promise<ApiTrack[]> {
@@ -319,45 +408,51 @@ class MusicApiService {
     try {
       const endpoint = `/api/full-stream-catalog?q=${encodeURIComponent(trimmed)}`;
       const res = await fetch(endpoint);
-      if (!res.ok) return [];
+      const contentType = res.headers.get('content-type') || '';
+      if (res.ok && contentType.includes('application/json')) {
+        const data = await res.json();
+        const items = Array.isArray(data.results) ? data.results : [];
 
-      const data = await res.json();
-      const items = Array.isArray(data.results) ? data.results : [];
+        const results: ApiTrack[] = items
+          .map((item: any) => {
+            const durSec = Number(item.durationSeconds) || 180;
+            const mins = Math.floor(durSec / 60);
+            const secs = durSec % 60;
 
-      const results: ApiTrack[] = items
-        .map((item: any) => {
-          const durSec = Number(item.durationSeconds) || 180;
-          const mins = Math.floor(durSec / 60);
-          const secs = durSec % 60;
+            return {
+              id: item.id || `full-${Math.random()}`,
+              title: item.title || 'Unknown Title',
+              artist: item.artist || 'Studio Artist',
+              album: item.album || 'Studio Master',
+              duration: `${mins}:${secs.toString().padStart(2, '0')}`,
+              durationSeconds: durSec,
+              coverUrl:
+                item.artwork ||
+                'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
+              previewUrl: item.streamUrl,
+              genre: item.genre || 'Studio Master',
+              year: item.year || '2024',
+              source: (item.source === 'Audius' ? 'Audius' : 'Saavn') as 'Audius' | 'Saavn',
+              plays: `${(Math.random() * 5 + 1.2).toFixed(1)}M`,
+              isFullTrack: true
+            };
+          })
+          .filter((t: ApiTrack) => Boolean(t.previewUrl) && t.durationSeconds >= 60);
 
-          return {
-            id: item.id || `full-${Math.random()}`,
-            title: item.title || 'Unknown Title',
-            artist: item.artist || 'Studio Artist',
-            album: item.album || 'Studio Master',
-            duration: `${mins}:${secs.toString().padStart(2, '0')}`,
-            durationSeconds: durSec,
-            coverUrl:
-              item.artwork ||
-              'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
-            previewUrl: item.streamUrl,
-            genre: item.genre || 'Studio Master',
-            year: item.year || '2024',
-            source: (item.source === 'Audius' ? 'Audius' : 'Saavn') as 'Audius' | 'Saavn',
-            plays: `${(Math.random() * 5 + 1.2).toFixed(1)}M`,
-            isFullTrack: true
-          };
-        })
-        .filter((t: ApiTrack) => Boolean(t.previewUrl) && t.durationSeconds >= 60);
-
-      if (results.length > 0) {
-        this.cache.set(cacheKey, results);
+        if (results.length > 0) {
+          this.cache.set(cacheKey, results);
+          return results.slice(0, limit);
+        }
       }
-      return results.slice(0, limit);
     } catch (e) {
-      console.warn('Full stream catalog search failed:', e);
-      return [];
+      console.warn('Server full stream catalog unavailable, using direct CORS fallback:', e);
     }
+
+    const fallbackResults = await this.searchClientSideFullStreams(trimmed, limit);
+    if (fallbackResults.length > 0) {
+      this.cache.set(cacheKey, fallbackResults);
+    }
+    return fallbackResults.slice(0, limit);
   }
 
   /**
@@ -379,7 +474,7 @@ class MusicApiService {
 
     const resolvePromise = (async (): Promise<{ streamUrl?: string; durationSeconds?: number } | null> => {
       try {
-        const q = `${artist} ${title}`.trim();
+        const q = this.expandSearchQuery(`${artist} ${title}`.trim());
         const params = new URLSearchParams({
           q,
           title: title.trim(),
@@ -390,8 +485,9 @@ class MusicApiService {
         }
         const endpoint = `/api/resolve-stream?${params.toString()}`;
         const res = await fetch(endpoint);
+        const contentType = res.headers.get('content-type') || '';
 
-        if (res.ok) {
+        if (res.ok && contentType.includes('application/json')) {
           const data = await res.json();
           if (data?.streamUrl) {
             const result = {
@@ -406,6 +502,18 @@ class MusicApiService {
             this.streamCache.set(key, result);
             return result;
           }
+        }
+
+        // Static host (.github.io) fallback: resolve full-length stream directly in browser
+        const clientStreams = await this.searchClientSideFullStreams(q, 8);
+        if (clientStreams.length > 0 && clientStreams[0].previewUrl) {
+          const best = clientStreams[0];
+          const result = {
+            streamUrl: best.previewUrl!,
+            durationSeconds: best.durationSeconds || durationSeconds || 210
+          };
+          this.streamCache.set(key, result);
+          return result;
         }
       } catch (e) {
         console.warn('Error resolving full track:', e);

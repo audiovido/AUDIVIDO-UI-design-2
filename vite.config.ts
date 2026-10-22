@@ -366,6 +366,7 @@ function audioProxyPlugin() {
 
 export default defineConfig(() => {
   return {
+    base: './',
     plugins: [react(), tailwindcss(), audioProxyPlugin()],
     resolve: {
       alias: {
