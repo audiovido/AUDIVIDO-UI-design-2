@@ -699,7 +699,7 @@ export function MusicV3View({
   }, [apiTracks, allTracks, searchQuery, resolvedQuery, isSearchingApi]);
 
   return (
-    <div className="w-full max-w-[1280px] mx-auto my-1 sm:my-2 animate-fadeIn select-none font-sans">
+    <div className="w-full min-h-[calc(100vh-4rem)] bg-[#F4F3F1] text-[#141416] animate-fadeIn select-none font-sans">
       {/* Click-outside backdrop when search dropdown is open */}
       {isSearchDropdownOpen && searchQuery.trim().length > 0 && (
         <div
@@ -708,8 +708,8 @@ export function MusicV3View({
         />
       )}
 
-      {/* MAIN LIGHT-CREAM ROUNDED APPLICATION SHELL */}
-      <div className="relative w-full min-h-[760px] rounded-[28px] sm:rounded-[42px] bg-[#F4F3F1] text-[#141416] shadow-[0_30px_90px_rgba(0,0,0,0.65),inset_0_1px_2px_rgba(255,255,255,0.9)] border border-white/80 p-4 sm:p-6 md:p-8 flex flex-col md:flex-row gap-5 md:gap-7 overflow-visible">
+      {/* MAIN FULL-BACKGROUND LIGHT APPLICATION SHELL */}
+      <div className="relative w-full max-w-[1440px] mx-auto min-h-[calc(100vh-4rem)] bg-[#F4F3F1] text-[#141416] px-4 sm:px-6 md:px-10 py-4 sm:py-6 md:py-8 flex flex-col md:flex-row gap-5 md:gap-7 overflow-visible">
 
         {/* =================================================================== */}
         {/* LEFT SIDEBAR: CLEAN VERTICAL CIRCULAR ICON BUTTONS                  */}

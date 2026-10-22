@@ -367,8 +367,8 @@ export default function App() {
   const loadedStreamUrlRef = useRef<string>('');
   const [customAudioUrl, setCustomAudioUrl] = useState<string>('/audio/coffee_bars.mp3');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-  // Navigation State: 'portal' | 'music' | 'movie' | 'community' | 'music2' | 'music3' | 'signup' | 'signin' | 'account'
-  const [currentWorld, setCurrentWorld] = useState<'portal' | 'music' | 'movie' | 'community' | 'music2' | 'music3' | 'signup' | 'signin' | 'account'>('portal');
+  // Navigation State: 'music3' (AUDIO) | 'movie' (VIDEO)
+  const [currentWorld, setCurrentWorld] = useState<'portal' | 'music' | 'movie' | 'community' | 'music2' | 'music3' | 'signup' | 'signin' | 'account'>('music3');
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState<boolean>(false);
   const [isMobileNotificationsOpen, setIsMobileNotificationsOpen] = useState<boolean>(false);
   
@@ -810,13 +810,13 @@ export default function App() {
 
   // --- TRANSITIONAL ZOOM PORTAL TRAVEL ---
   const handleTravel = (destination: 'portal' | 'music' | 'movie' | 'community' | 'music2' | 'music3' | 'signup' | 'signin' | 'account') => {
+    const resolvedDestination = destination === 'movie' ? 'movie' : 'music3';
     setIsTraveling(true);
-    setTravelDestination(destination);
+    setTravelDestination(resolvedDestination);
     setIsMobileMenuOpen(false);
 
     // When navigating to movie cinema, pause audio so it doesn't clash with video sound.
-    // When switching between Music, Music 2, Portal, or Social, keep audio seamlessly playing!
-    if (destination === 'movie') {
+    if (resolvedDestination === 'movie') {
       if (audioPlayerRef.current) audioPlayerRef.current.pause();
       AudioSynth.stopAll();
       setIsPlaying(false);
@@ -824,10 +824,10 @@ export default function App() {
     }
 
     setTimeout(() => {
-      setCurrentWorld(destination);
+      setCurrentWorld(resolvedDestination);
       setIsTraveling(false);
       setTravelDestination('');
-    }, 400);
+    }, 200);
   };
 
   const handleMuteAll = () => {
@@ -1292,33 +1292,52 @@ export default function App() {
   }, [currentWorld, movieTab, isPlaying]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans relative overflow-x-clip select-none aurora-bg transition-colors duration-1000">
-      
-      {/* GLOBAL COSMIC NIGHT SKY & AURORA BOREALIS & DYNAMIC METEORS */}
-      <CosmicNightSky isPortal={currentWorld === 'portal'} />
+    <div
+      className={`min-h-screen flex flex-col font-sans relative overflow-x-clip select-none transition-colors duration-500 ${
+        currentWorld === 'music3'
+          ? 'bg-[#F4F3F1] text-[#141416]'
+          : 'bg-slate-950 text-slate-100 aurora-bg'
+      }`}
+    >
+      {/* GLOBAL COSMIC NIGHT SKY & AURORA BOREALIS (Only in Video tab, completely absent in Audio tab) */}
+      {currentWorld === 'movie' && <CosmicNightSky isPortal={false} />}
 
       {/* --- TOP BRANDING NAV BAR (PERMANENTLY FIXED & LOCKED AT TOP OF SCREEN) --- */}
       <header className="fixed top-0 left-0 right-0 z-[999] flex items-center justify-between px-3 sm:px-6 py-2.5 bg-slate-950/90 backdrop-blur-3xl border-b border-white/10 shadow-[0_10px_35px_rgba(0,0,0,0.9)] shrink-0 gap-2 transition-all">
         
-        {/* Left: Brand Portal Gateway Button */}
+        {/* Left: Brand Logo Button */}
         <div className="flex items-center shrink-0">
           <button 
-            onClick={() => handleTravel('portal')}
-            className={`flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border transition-all cursor-pointer select-none active:translate-y-[1px] active:scale-[0.98] group shrink-0 ${
-              currentWorld === 'portal'
-                ? 'bg-slate-950/90 border-amber-300 shadow-[0_0_24px_rgba(56,189,248,0.5),inset_0_1px_2px_rgba(255,255,255,0.4)] scale-[1.02]'
-                : 'bg-black/60 hover:bg-slate-950/90 border-white/20 hover:border-cyan-400/50 shadow-[0_4px_16px_rgba(0,0,0,0.6)]'
-            }`}
-            title="Portal Gateway (AUDIOVIDO)"
+            onClick={() => handleTravel('music3')}
+            className="flex items-center px-3 sm:px-4 py-1.5 sm:py-2 rounded-full border transition-all cursor-pointer select-none active:translate-y-[1px] active:scale-[0.98] group shrink-0 bg-black/60 hover:bg-slate-950/90 border-white/20 hover:border-cyan-400/50 shadow-[0_4px_16px_rgba(0,0,0,0.6)]"
+            title="AUDIOVIDO"
           >
             <AudioVidoBrandLogo size="sm" variant="horizontal" />
           </button>
         </div>
 
-        {/* Center: Tactile 3D Realm Navigation Bar (VIDEO, MUSIC 2, MUSIC 3) Centered in Screen */}
+        {/* Center: Tactile 3D Realm Navigation Bar (ONLY AUDIO & VIDEO) Centered in Screen */}
         <div className="hidden md:flex flex-1 items-center justify-center">
           <nav className="flex items-center gap-1.5 sm:gap-2.5 p-1 sm:p-1.5 bg-slate-950/90 border border-white/20 rounded-full backdrop-blur-3xl shadow-[0_10px_30px_rgba(0,0,0,0.85),inset_0_1.5px_2px_rgba(255,255,255,0.22)] shrink-0">
-            {/* 1. VIDEO */}
+            {/* 1. AUDIO (formerly MUSIC 3) */}
+            <button 
+              onClick={() => handleTravel('music3')} 
+              className={`relative px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1.5 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-red-400 ${
+                currentWorld === 'music3' 
+                  ? 'bg-gradient-to-b from-red-400 via-[#E61E2A] to-rose-700 text-white shadow-[0_4px_18px_rgba(230,30,42,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.85),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-red-200 scale-[1.02]' 
+                  : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-red-400/40'
+              }`}
+              title="Audio Streaming"
+            >
+              <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
+                currentWorld === 'music3' 
+                  ? 'bg-white shadow-sm' 
+                  : 'bg-[#E61E2A] shadow-[0_0_8px_#E61E2A]'
+              }`} />
+              <span>AUDIO</span>
+            </button>
+
+            {/* 2. VIDEO */}
             <button 
               onClick={() => handleTravel('movie')} 
               className={`relative px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1.5 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-purple-400 ${
@@ -1334,42 +1353,6 @@ export default function App() {
                   : 'bg-purple-400 shadow-[0_0_8px_#c084fc]'
               }`} />
               <span>VIDEO</span>
-            </button>
-
-            {/* 2. MUSIC 2 (Electric Lime Modern Streaming Hub) */}
-            <button 
-              onClick={() => handleTravel('music2')} 
-              className={`relative px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1.5 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-lime-400 ${
-                currentWorld === 'music2' 
-                  ? 'bg-gradient-to-b from-lime-300 via-lime-400 to-emerald-500 text-slate-950 shadow-[0_4px_18px_rgba(163,230,53,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.9),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-lime-100 scale-[1.02]' 
-                  : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-lime-400/40'
-              }`}
-              title="Music 2 Streaming (Pulse Studio)"
-            >
-              <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
-                currentWorld === 'music2' 
-                  ? 'bg-slate-950 shadow-sm' 
-                  : 'bg-lime-400 shadow-[0_0_8px_#a3e635]'
-              }`} />
-              <span>MUSIC 2</span>
-            </button>
-
-            {/* 3. MUSIC 3 (Crimson & Light Editorial Studio) */}
-            <button 
-              onClick={() => handleTravel('music3')} 
-              className={`relative px-3.5 sm:px-5 py-1.5 sm:py-2 rounded-full text-[10px] sm:text-xs font-black font-sans tracking-[0.14em] uppercase transition-all duration-200 cursor-pointer flex items-center gap-1.5 sm:gap-2 select-none active:translate-y-[1px] focus:outline-none focus:ring-2 focus:ring-red-400 ${
-                currentWorld === 'music3' 
-                  ? 'bg-gradient-to-b from-red-400 via-[#E61E2A] to-rose-700 text-white shadow-[0_4px_18px_rgba(230,30,42,0.65),inset_0_1.5px_1px_rgba(255,255,255,0.85),inset_0_-2.5px_3px_rgba(0,0,0,0.4)] border border-red-200 scale-[1.02]' 
-                  : 'text-slate-300 hover:text-white bg-white/[0.04] hover:bg-white/[0.1] border border-white/10 hover:border-red-400/40'
-              }`}
-              title="Music 3 Streaming"
-            >
-              <span className={`w-1.5 sm:w-2 h-1.5 sm:h-2 rounded-full transition-all shrink-0 ${
-                currentWorld === 'music3' 
-                  ? 'bg-white shadow-sm' 
-                  : 'bg-[#E61E2A] shadow-[0_0_8px_#E61E2A]'
-              }`} />
-              <span>MUSIC 3</span>
             </button>
           </nav>
         </div>
@@ -1390,7 +1373,7 @@ export default function App() {
             <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-lime-400 shadow-[0_0_8px_#a3e635]" />
           </button>
 
-          {/* 3-line Hamburger Menu Button for Social, Audio, Video, Music 2 tabs */}
+          {/* 3-line Hamburger Menu Button for Audio & Video tabs */}
           <button
             onClick={() => {
               setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -1492,10 +1475,8 @@ export default function App() {
 
             <div className="space-y-2">
               {[
-                { id: 'portal', label: 'PORTAL HOME', icon: Home, color: 'text-amber-300' },
-                { id: 'movie', label: 'VIDEO CINEMA', icon: Film, color: 'text-purple-300' },
-                { id: 'music2', label: 'MUSIC 2 PULSE', icon: Compass, color: 'text-lime-300' },
-                { id: 'music3', label: 'MUSIC 3 STUDIO', icon: Disc3, color: 'text-red-400' }
+                { id: 'music3', label: 'AUDIO', icon: Disc3, color: 'text-red-400' },
+                { id: 'movie', label: 'VIDEO', icon: Film, color: 'text-purple-300' }
               ].map(item => {
                 const Icon = item.icon;
                 const isActive = currentWorld === item.id;
@@ -1557,7 +1538,13 @@ export default function App() {
       />
 
       {/* --- MASTER VIEWPORT CONTEXT (WITH TOP PADDING FOR FIXED LOCKED HEADER) --- */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 pt-20 sm:pt-24 pb-8 flex flex-col justify-start items-center relative z-10 overflow-x-hidden max-w-full">
+      <main
+        className={
+          currentWorld === 'music3'
+            ? 'flex-1 w-full bg-[#F4F3F1] pt-14 sm:pt-16 pb-0 flex flex-col justify-start items-center relative z-10 overflow-x-hidden'
+            : 'flex-1 w-full max-w-7xl mx-auto px-3 sm:px-4 pt-20 sm:pt-24 pb-8 flex flex-col justify-start items-center relative z-10 overflow-x-hidden max-w-full'
+        }
+      >
 
         {/* ========================================================= */}
         {/* === VIEW 1: PORTAL MAIN MENU (3 HIGH-PERFORMANCE LIQUID GLASS CARDS) === */}
