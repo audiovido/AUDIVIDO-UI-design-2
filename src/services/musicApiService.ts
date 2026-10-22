@@ -60,12 +60,77 @@ class MusicApiService {
   private cache: Map<string, ApiTrack[]> = new Map();
   private lyricsCache: Map<string, LyricResult> = new Map();
   private streamCache: Map<string, { streamUrl: string; durationSeconds: number }> = new Map();
+  private inFlightResolves: Map<string, Promise<{ streamUrl?: string; durationSeconds?: number } | null>> = new Map();
+
+  /**
+   * Expand Persian/Finglish musical queries into canonical search terms (e.g. "کمل رجب" -> "Camel Rajaz")
+   */
+  public expandSearchQuery(raw: string): string {
+    let q = ` ${(raw || '').trim()} `;
+    if (!q.trim()) return '';
+    const stripped = q
+      .replace(/(?:^|\s)(?:آهنگ|موزیک|ترک|گروه|از|خواننده)(?=\s|$)/gi, ' ')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (stripped.length >= 2) {
+      q = ` ${stripped} `;
+    }
+
+    const pairs: Array<[RegExp, string]> = [
+      [/کمل\s*رجب|کمل\s*رجاز/gi, 'Camel Rajaz'],
+      [/گروه\s*کمل/gi, 'Camel'],
+      [/(?:^|\s)کمل(?=\s|$)/gi, 'Camel'],
+      [/(?:^|\s)(?:رجب|رجاز)(?=\s|$)/gi, 'Rajaz'],
+      [/پینک\s*فلوید/gi, 'Pink Floyd'],
+      [/رادیوهد|ریدیوهد/gi, 'Radiohead'],
+      [/مدرن\s*تاکینگ/gi, 'Modern Talking'],
+      [/لانا\s*دل\s*ری/gi, 'Lana Del Rey'],
+      [/ویکند/gi, 'The Weeknd'],
+      [/متالیکا/gi, 'Metallica'],
+      [/کلدپلی/gi, 'Coldplay'],
+      [/امینم/gi, 'Eminem'],
+      [/ادل/gi, 'Adele'],
+      [/هانس\s*زیمر/gi, 'Hans Zimmer'],
+      [/سیامک\s*عباسی/gi, 'Siamak Abbasi'],
+      [/سیاوش\s*قمیشی/gi, 'Siavash Ghomayshi'],
+      [/شادمهر\s*عقیلی|شادمهر/gi, 'Shadmehr Aghili'],
+      [/محسن\s*یگانه/gi, 'Mohsen Yeganeh'],
+      [/محسن\s*چاوشی/gi, 'Mohsen Chavoshi'],
+      [/فرزاد\s*فرزین/gi, 'Farzad Farzin'],
+      [/بهنام\s*بانی/gi, 'Behnam Bani'],
+      [/رضا\s*بهرام/gi, 'Reza Bahram'],
+      [/گرشا\s*رضایی/gi, 'Garsha Rezaei'],
+      [/عرفان\s*طهماسبی/gi, 'Erfan Tahmasbi'],
+      [/حامیم/gi, 'Haamim'],
+      [/سیروان\s*خسروی/gi, 'Sirvan Khosravi'],
+      [/زانیار\s*خسروی/gi, 'Xaniar Khosravi'],
+      [/مهدی\s*احمدوند/gi, 'Mehdi Ahmadvand'],
+      [/گوگوش/gi, 'Googoosh'],
+      [/داریوش/gi, 'Dariush'],
+      [/هایده/gi, 'Hayedeh'],
+      [/معین/gi, 'Moein'],
+      [/ابی/gi, 'Ebi'],
+      [/همایون\s*شجریان/gi, 'Homayoun Shajarian'],
+      [/علیرضا\s*قربانی/gi, 'Alireza Ghorbani'],
+      [/چارتار/gi, 'Chaartaar'],
+      [/شایع/gi, 'Shayea'],
+      [/یاس/gi, 'Yas'],
+      [/فرشته\s*پاک|فرشتهٔ\s*پاک/gi, 'Fereshteye Pak'],
+      [/فرنگیس/gi, 'Farangis'],
+      [/ستاره/gi, 'Setareh']
+    ];
+
+    for (const [pattern, rep] of pairs) {
+      q = q.replace(pattern, ` ${rep} `);
+    }
+    return q.replace(/\s+/g, ' ').trim();
+  }
 
   /**
    * Search YouTube Music Official Studio Master Catalog
    */
   async searchYouTubeMusic(query: string, limit: number = 20): Promise<ApiTrack[]> {
-    const trimmed = query.trim();
+    const trimmed = this.expandSearchQuery(query);
     if (!trimmed) return [];
 
     const cacheKey = `ytm_${trimmed.toLowerCase()}_${limit}`;
@@ -89,16 +154,18 @@ class MusicApiService {
         const durSec = item.durationSeconds || 210;
         const mins = Math.floor(durSec / 60);
         const secs = durSec % 60;
+        const tTitle = item.title || 'Official Song';
+        const tArtist = item.artist || 'Official Artist';
 
         return {
           id: item.id || `ytm-${Math.random()}`,
-          title: item.title || 'Official Song',
-          artist: item.artist || 'Official Artist',
+          title: tTitle,
+          artist: tArtist,
           album: item.album || 'Master Release',
           duration: `${mins}:${secs.toString().padStart(2, '0')}`,
           durationSeconds: durSec,
           coverUrl: item.coverUrl || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
-          previewUrl: `/api/resolve-stream?q=${encodeURIComponent(item.title + ' ' + item.artist)}`,
+          previewUrl: `/api/resolve-stream?q=${encodeURIComponent(tArtist + ' ' + tTitle)}&title=${encodeURIComponent(tTitle)}&artist=${encodeURIComponent(tArtist)}&duration=${durSec}`,
           genre: item.genre || 'Official Release',
           year: item.year || '2024',
           source: 'YouTubeMusic' as const,
@@ -121,7 +188,7 @@ class MusicApiService {
    * Search Apple iTunes Global Catalog (HD Artwork & Official Metadata)
    */
   async searchITunes(query: string, limit: number = 25): Promise<ApiTrack[]> {
-    const trimmed = query.trim();
+    const trimmed = this.expandSearchQuery(query);
     if (!trimmed) return [];
 
     const cacheKey = `itunes_${trimmed.toLowerCase()}_${limit}`;
@@ -139,37 +206,41 @@ class MusicApiService {
       if (!response.ok) return [];
 
       const data = await response.json();
-      const results: ApiTrack[] = (data.results || []).map((item: any) => {
-        const durationSec = item.trackTimeMillis ? Math.round(item.trackTimeMillis / 1000) : 180;
-        const mins = Math.floor(durationSec / 60);
-        const secs = durationSec % 60;
-        const durationFormatted = `${mins}:${secs.toString().padStart(2, '0')}`;
+      const results: ApiTrack[] = (data.results || [])
+        .map((item: any) => {
+          const durationSec = item.trackTimeMillis ? Math.round(item.trackTimeMillis / 1000) : 180;
+          const mins = Math.floor(durationSec / 60);
+          const secs = durationSec % 60;
+          const durationFormatted = `${mins}:${secs.toString().padStart(2, '0')}`;
 
-        let highResArtwork = item.artworkUrl100 || '';
-        if (highResArtwork.includes('100x100bb')) {
-          highResArtwork = highResArtwork.replace('100x100bb', '600x600bb');
-        } else if (highResArtwork.includes('60x60bb')) {
-          highResArtwork = highResArtwork.replace('60x60bb', '600x600bb');
-        }
+          let highResArtwork = item.artworkUrl100 || '';
+          if (highResArtwork.includes('100x100bb')) {
+            highResArtwork = highResArtwork.replace('100x100bb', '600x600bb');
+          } else if (highResArtwork.includes('60x60bb')) {
+            highResArtwork = highResArtwork.replace('60x60bb', '600x600bb');
+          }
 
-        const releaseYear = item.releaseDate ? new Date(item.releaseDate).getFullYear().toString() : '2024';
+          const releaseYear = item.releaseDate ? new Date(item.releaseDate).getFullYear().toString() : '2024';
+          const tTitle = item.trackName || 'Unknown Title';
+          const tArtist = item.artistName || 'Unknown Artist';
 
-        return {
-          id: `itunes-${item.trackId}`,
-          title: item.trackName || 'Unknown Title',
-          artist: item.artistName || 'Unknown Artist',
-          album: item.collectionName || item.trackName || 'Single',
-          duration: durationFormatted,
-          durationSeconds: durationSec,
-          coverUrl: highResArtwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
-          previewUrl: `/api/resolve-stream?q=${encodeURIComponent((item.trackName || '') + ' ' + (item.artistName || ''))}`,
-          genre: item.primaryGenreName || 'Pop / Rock',
-          year: releaseYear,
-          source: 'iTunes' as const,
-          plays: `${(Math.random() * 5 + 1).toFixed(1)}M`,
-          isFullTrack: true
-        };
-      });
+          return {
+            id: `itunes-${item.trackId}`,
+            title: tTitle,
+            artist: tArtist,
+            album: item.collectionName || tTitle || 'Single',
+            duration: durationFormatted,
+            durationSeconds: durationSec,
+            coverUrl: highResArtwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
+            previewUrl: `/api/resolve-stream?q=${encodeURIComponent(tArtist + ' ' + tTitle)}&title=${encodeURIComponent(tTitle)}&artist=${encodeURIComponent(tArtist)}&duration=${durationSec}`,
+            genre: item.primaryGenreName || 'Pop / Rock',
+            year: releaseYear,
+            source: 'iTunes' as const,
+            plays: `${(Math.random() * 5 + 1).toFixed(1)}M`,
+            isFullTrack: true
+          };
+        })
+        .filter((t: ApiTrack) => t.durationSeconds >= 60);
 
       this.cache.set(cacheKey, results);
       return results;
@@ -183,7 +254,7 @@ class MusicApiService {
    * Search SoundCloud Full Stream Engine
    */
   async searchSoundCloud(query: string, limit: number = 15): Promise<ApiTrack[]> {
-    const trimmed = query.trim();
+    const trimmed = this.expandSearchQuery(query);
     if (!trimmed) return [];
 
     const cacheKey = `sc_${trimmed.toLowerCase()}_${limit}`;
@@ -199,27 +270,29 @@ class MusicApiService {
       const data = await res.json();
       const collection = Array.isArray(data.collection) ? data.collection : [];
 
-      const results: ApiTrack[] = collection.map((item: any) => {
-        const durSec = item.durationSeconds || 180;
-        const mins = Math.floor(durSec / 60);
-        const secs = durSec % 60;
+      const results: ApiTrack[] = collection
+        .map((item: any) => {
+          const durSec = item.durationSeconds || 180;
+          const mins = Math.floor(durSec / 60);
+          const secs = durSec % 60;
 
-        return {
-          id: item.id || `sc-${Math.random()}`,
-          title: item.title || 'Unknown Title',
-          artist: item.artist || 'SoundCloud Artist',
-          album: item.album || 'SoundCloud Master',
-          duration: `${mins}:${secs.toString().padStart(2, '0')}`,
-          durationSeconds: durSec,
-          coverUrl: item.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
-          previewUrl: item.streamUrl,
-          genre: item.genre || 'SoundCloud Global',
-          year: item.year || '2024',
-          source: 'SoundCloud' as const,
-          plays: `${(Math.random() * 4 + 1).toFixed(1)}M`,
-          isFullTrack: true
-        };
-      }).filter((t: ApiTrack) => Boolean(t.previewUrl));
+          return {
+            id: item.id || `sc-${Math.random()}`,
+            title: item.title || 'Unknown Title',
+            artist: item.artist || 'SoundCloud Artist',
+            album: item.album || 'SoundCloud Master',
+            duration: `${mins}:${secs.toString().padStart(2, '0')}`,
+            durationSeconds: durSec,
+            coverUrl: item.artwork || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600&auto=format&fit=crop&q=80',
+            previewUrl: item.streamUrl,
+            genre: item.genre || 'SoundCloud Global',
+            year: item.year || '2024',
+            source: 'SoundCloud' as const,
+            plays: `${(Math.random() * 4 + 1).toFixed(1)}M`,
+            isFullTrack: true
+          };
+        })
+        .filter((t: ApiTrack) => Boolean(t.previewUrl) && t.durationSeconds >= 60);
 
       if (results.length > 0) {
         this.cache.set(cacheKey, results);
@@ -232,10 +305,10 @@ class MusicApiService {
   }
 
   /**
-   * Search JioSaavn 320kbps Full Studio & Audius Open Full Stream Catalog
+   * Search JioSaavn 320kbps Full Studio, Archive.org Lossless/MP3 & Audius Open Full Stream Catalog
    */
   async searchFullStreamCatalog(query: string, limit: number = 15): Promise<ApiTrack[]> {
-    const trimmed = query.trim();
+    const trimmed = this.expandSearchQuery(query);
     if (!trimmed) return [];
 
     const cacheKey = `fullcat_${trimmed.toLowerCase()}_${limit}`;
@@ -288,72 +361,182 @@ class MusicApiService {
   }
 
   /**
-   * Resolve Full-Length Audio Stream Waterfall (SoundCloud -> JioSaavn 320k -> Audius -> YouTube Music)
+   * Resolve Full-Length Studio Master Audio Stream (SoundCloud -> JioSaavn 320k -> Archive.org Lossless/MP3 -> Audius -> YouTube Music)
    */
-  async resolveFullTrackAudio(title: string, artist: string): Promise<{ streamUrl?: string; durationSeconds?: number } | null> {
+  async resolveFullTrackAudio(
+    title: string,
+    artist: string,
+    durationSeconds?: number
+  ): Promise<{ streamUrl?: string; durationSeconds?: number } | null> {
     const key = `${title.toLowerCase().trim()}___${artist.toLowerCase().trim()}`;
     if (this.streamCache.has(key)) {
       return this.streamCache.get(key)!;
     }
 
-    try {
-      const q = `${title} ${artist}`.trim();
-      const endpoint = `/api/resolve-stream?q=${encodeURIComponent(q)}`;
-      const res = await fetch(endpoint);
-
-      if (res.ok) {
-        const data = await res.json();
-        if (data?.streamUrl) {
-          const result = {
-            streamUrl: data.streamUrl,
-            durationSeconds: data.durationSeconds || 210
-          };
-          this.streamCache.set(key, result);
-          return result;
-        }
-      }
-    } catch (e) {
-      console.warn('Error resolving full track:', e);
+    if (this.inFlightResolves.has(key)) {
+      return this.inFlightResolves.get(key)!;
     }
-    return null;
+
+    const resolvePromise = (async (): Promise<{ streamUrl?: string; durationSeconds?: number } | null> => {
+      try {
+        const q = `${artist} ${title}`.trim();
+        const params = new URLSearchParams({
+          q,
+          title: title.trim(),
+          artist: artist.trim()
+        });
+        if (durationSeconds && durationSeconds >= 65) {
+          params.set('duration', String(Math.round(durationSeconds)));
+        }
+        const endpoint = `/api/resolve-stream?${params.toString()}`;
+        const res = await fetch(endpoint);
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.streamUrl) {
+            const result = {
+              streamUrl: data.streamUrl,
+              durationSeconds:
+                data.durationSeconds && data.durationSeconds >= 65
+                  ? data.durationSeconds
+                  : durationSeconds && durationSeconds >= 65
+                  ? durationSeconds
+                  : 210
+            };
+            this.streamCache.set(key, result);
+            return result;
+          }
+        }
+      } catch (e) {
+        console.warn('Error resolving full track:', e);
+      } finally {
+        this.inFlightResolves.delete(key);
+      }
+      return null;
+    })();
+
+    this.inFlightResolves.set(key, resolvePromise);
+    return resolvePromise;
   }
 
   /**
-   * Search across all engines with Full-Length Stream Priority (SoundCloud + JioSaavn 320k + Audius + YouTube Music)
+   * Score track by Spotify/Apple Music relevance + verified full-length master quality
+   */
+  private scoreTrackRelevanceAndQuality(
+    track: ApiTrack,
+    rawQuery: string,
+    expandedQuery: string,
+    hasDirectStream: boolean,
+    matchesCanonicalDuration: boolean,
+    hasOfficialCatalogMetadata: boolean
+  ): number {
+    if (track.durationSeconds < 60) return -10000;
+
+    const qNorm = this.normalizeForLyricMatch(expandedQuery || rawQuery);
+    const rawQNorm = this.normalizeForLyricMatch(rawQuery);
+    const titleNorm = this.normalizeForLyricMatch(track.title);
+    const artistNorm = this.normalizeForLyricMatch(track.artist);
+    const albumNorm = this.normalizeForLyricMatch(track.album || '');
+    const combined = `${artistNorm} ${titleNorm} ${albumNorm}`;
+
+    const tokens = [...new Set([...qNorm.split(' '), ...rawQNorm.split(' ')])].filter(
+      (t) => t.length >= 2
+    );
+
+    let matched = 0;
+    for (const tok of tokens) {
+      if (combined.includes(tok)) matched++;
+    }
+    if (tokens.length > 0 && matched === 0) {
+      return -5000;
+    }
+
+    let score = 0;
+
+    // 1. Token coverage & exact phrase match
+    if (tokens.length > 0) {
+      score += Math.round((matched / tokens.length) * 350);
+      if (matched === tokens.length) score += 180;
+    }
+
+    if (`${artistNorm} ${titleNorm}` === qNorm || `${titleNorm} ${artistNorm}` === qNorm) {
+      score += 550;
+    } else if (titleNorm === qNorm) {
+      score += 400;
+    } else if (artistNorm === qNorm) {
+      score += 360;
+    } else if (
+      `${artistNorm} ${titleNorm}`.includes(qNorm) ||
+      `${titleNorm} ${artistNorm}`.includes(qNorm)
+    ) {
+      score += 280;
+    }
+
+    // Check if query has both artist and song parts (e.g. "Camel Rajaz")
+    if (tokens.length >= 2) {
+      const titleHasToken = tokens.some((t) => titleNorm === t || titleNorm.startsWith(t));
+      const artistHasToken = tokens.some((t) => artistNorm === t || artistNorm.startsWith(t));
+      if (titleHasToken && artistHasToken) {
+        score += 320;
+      }
+    }
+
+    // 2. Studio Master vs Remix/Live/Cover/Karaoke penalty
+    const variantWords = [
+      'remix', 'dj ', 'bootleg', 'mashup', 'cover', 'tribute', 'karaoke',
+      'originally performed', 'originally perfomed', 'melody version',
+      'instrumental', 'slowed', 'reverb', 'sped up', 'nightcore', '8d',
+      'medley', 'live', 'snippet', 'preview', 'promo', 'amapiano', 'rework', 'flip'
+    ];
+    const userRequestedVariant = variantWords.some((w) => qNorm.includes(w.trim()));
+    const textCheck = `${track.title} ${track.artist} ${track.album}`.toLowerCase();
+    if (!userRequestedVariant && variantWords.some((w) => textCheck.includes(w))) {
+      score -= 600;
+    } else {
+      score += 160;
+    }
+
+    // Penalize short 60s-115s promo clips when full-length tracks exist
+    if (track.durationSeconds < 115) {
+      score -= 340;
+    }
+
+    // 3. Direct Verified Full Stream & Studio Duration Match Bonus
+    if (hasDirectStream) {
+      score += 260;
+    }
+    if (matchesCanonicalDuration) {
+      score += 220;
+    }
+    if (hasOfficialCatalogMetadata) {
+      score += 140;
+    }
+
+    return score;
+  }
+
+  /**
+   * Search across all engines with Spotify/Apple Music Relevance + Verified Full Studio Master Stream Priority
    */
   async searchTracks(
-    query: string, 
-    engine: 'all' | 'full' | 'itunes' | 'deezer' = 'all', 
+    query: string,
+    engine: 'all' | 'full' | 'itunes' | 'deezer' = 'all',
     limit: number = 25
   ): Promise<ApiTrack[]> {
-    const q = query.trim();
-    if (!q) return [];
+    const rawQ = query.trim();
+    if (!rawQ) return [];
+    const expandedQ = this.expandSearchQuery(rawQ);
 
-    if (engine === 'full') {
-      const [sc, fullCat, ytm] = await Promise.allSettled([
-        this.searchSoundCloud(q, limit),
-        this.searchFullStreamCatalog(q, limit),
-        this.searchYouTubeMusic(q, limit)
-      ]);
-      return [
-        ...(sc.status === 'fulfilled' ? sc.value : []),
-        ...(fullCat.status === 'fulfilled' ? fullCat.value : []),
-        ...(ytm.status === 'fulfilled' ? ytm.value : [])
-      ].slice(0, limit);
-    }
     if (engine === 'itunes') {
-      return this.searchITunes(q, limit);
+      return this.searchITunes(expandedQ, limit);
     }
 
-    // Default 'all' (shared by Music 2 and Music 3):
-    // Priority 1: SoundCloud Direct Full Unencrypted Streams
-    // Priority 2: JioSaavn 320kbps & Audius Direct Full Streams
-    // Priority 3: YouTube Music & Apple iTunes Catalog (resolved via full-track /api/resolve-stream)
+    // Fetch in parallel from our Full-Length Stream Sources + Official Catalog Metadata
     const [scRes, fullCatRes, ytmRes, itunesRes] = await Promise.allSettled([
-      this.searchSoundCloud(q, 15),
-      this.searchFullStreamCatalog(q, 12),
-      this.searchYouTubeMusic(q, 12),
-      this.searchITunes(q, 15)
+      this.searchSoundCloud(expandedQ, 15),
+      this.searchFullStreamCatalog(expandedQ, 12),
+      this.searchYouTubeMusic(expandedQ, 12),
+      this.searchITunes(expandedQ, 18)
     ]);
 
     const scTracks = scRes.status === 'fulfilled' ? scRes.value : [];
@@ -361,67 +544,141 @@ class MusicApiService {
     const ytmTracks = ytmRes.status === 'fulfilled' ? ytmRes.value : [];
     const itunesTracks = itunesRes.status === 'fulfilled' ? itunesRes.value : [];
 
-    // Helper to enrich direct full-stream tracks with HD artwork/album from iTunes if available
-    const enrichWithMetadata = (track: ApiTrack): ApiTrack => {
-      const normTitle = track.title.toLowerCase();
-      const match = itunesTracks.find((it) => {
-        const itTitle = it.title.toLowerCase();
-        return itTitle && (normTitle.includes(itTitle) || itTitle.includes(normTitle));
+    // Direct stream pool (tracks that ALREADY have a resolved, verified full-length MP3/MP4/AAC streamUrl)
+    const directStreams = [...fullCatTracks, ...scTracks].filter(
+      (t) => t.previewUrl && !t.previewUrl.startsWith('/api/resolve-stream') && t.durationSeconds >= 60
+    );
+
+    // Official catalog pool (Apple Music & YouTube Music with canonical titles, albums, HD covers & studio durations)
+    const officialCatalog = [...itunesTracks, ...ytmTracks];
+
+    // Helper: find matching official catalog metadata for a direct stream track
+    const findOfficialMatch = (track: ApiTrack): ApiTrack | undefined => {
+      const tTitle = this.normalizeForLyricMatch(track.title);
+      const tArtist = this.normalizeForLyricMatch(track.artist);
+      return officialCatalog.find((cat) => {
+        const cTitle = this.normalizeForLyricMatch(cat.title);
+        const cArtist = this.normalizeForLyricMatch(cat.artist);
+        const titleMatches =
+          cTitle === tTitle ||
+          (cTitle.length >= 4 && tTitle.includes(cTitle)) ||
+          (tTitle.length >= 4 && cTitle.includes(tTitle));
+        const artistMatches =
+          cArtist === tArtist ||
+          cArtist.includes(tArtist) ||
+          tArtist.includes(cArtist) ||
+          tTitle.includes(cArtist);
+        return titleMatches && artistMatches;
       });
-      if (match) {
-        return {
-          ...track,
-          coverUrl:
-            !track.coverUrl || track.coverUrl.includes('unsplash.com') || track.coverUrl.includes('default_avatar')
-              ? match.coverUrl
-              : track.coverUrl,
-          album: track.album === 'SoundCloud Master' || track.album === 'Studio Master' ? match.album : track.album,
-          genre: track.genre === 'SoundCloud Global' ? match.genre : track.genre,
-          year: track.year || match.year
+    };
+
+    // Helper: find matching direct full-length stream for an official catalog track
+    const findDirectStreamMatch = (catTrack: ApiTrack): ApiTrack | undefined => {
+      const cTitle = this.normalizeForLyricMatch(catTrack.title);
+      const cArtist = this.normalizeForLyricMatch(catTrack.artist);
+      const candidates = directStreams.filter((ds) => {
+        const dTitle = this.normalizeForLyricMatch(ds.title);
+        const dArtist = this.normalizeForLyricMatch(ds.artist);
+        const titleMatches =
+          dTitle === cTitle ||
+          (cTitle.length >= 4 && dTitle.includes(cTitle)) ||
+          (dTitle.length >= 4 && cTitle.includes(dTitle));
+        const artistMatches =
+          dArtist === cArtist ||
+          dArtist.includes(cArtist) ||
+          cArtist.includes(dArtist);
+        return titleMatches && artistMatches;
+      });
+
+      if (candidates.length === 0) return undefined;
+      // Pick the direct stream whose duration is closest to the official studio duration
+      candidates.sort(
+        (a, b) =>
+          Math.abs(a.durationSeconds - catTrack.durationSeconds) -
+          Math.abs(b.durationSeconds - catTrack.durationSeconds)
+      );
+      return candidates[0];
+    };
+
+    const scoredMap = new Map<string, { track: ApiTrack; score: number }>();
+
+    const upsertCandidate = (
+      track: ApiTrack,
+      hasDirectStream: boolean,
+      matchesCanonicalDuration: boolean,
+      hasOfficialCatalogMetadata: boolean
+    ) => {
+      const normTitle = this.normalizeForLyricMatch(track.title);
+      const normArtist = this.normalizeForLyricMatch(track.artist);
+      if (!normTitle) return;
+
+      const dedupKey = `${normTitle}___${normArtist}`;
+      const score = this.scoreTrackRelevanceAndQuality(
+        track,
+        rawQ,
+        expandedQ,
+        hasDirectStream,
+        matchesCanonicalDuration,
+        hasOfficialCatalogMetadata
+      );
+
+      if (score < 0) return;
+
+      const existing = scoredMap.get(dedupKey);
+      if (!existing || score > existing.score) {
+        scoredMap.set(dedupKey, { track, score });
+      }
+    };
+
+    // 1. Process direct full-length stream tracks (enriched with Apple Music / YouTube Music canonical metadata if matched)
+    for (const ds of directStreams) {
+      const official = findOfficialMatch(ds);
+      if (official) {
+        const durDiff = Math.abs(ds.durationSeconds - official.durationSeconds);
+        const mins = Math.floor(ds.durationSeconds / 60);
+        const secs = ds.durationSeconds % 60;
+        const mergedTrack: ApiTrack = {
+          ...official,
+          id: ds.id,
+          duration: `${mins}:${secs.toString().padStart(2, '0')}`,
+          durationSeconds: ds.durationSeconds,
+          previewUrl: ds.previewUrl, // Direct verified full-length audio stream!
+          source: ds.source,
+          isFullTrack: true
         };
+        upsertCandidate(mergedTrack, true, durDiff <= 12, true);
+      } else {
+        upsertCandidate(ds, true, false, false);
       }
-      return track;
-    };
+    }
 
-    const merged: ApiTrack[] = [];
-    const seen = new Set<string>();
-
-    const addTrack = (t: ApiTrack) => {
-      // Preserve Unicode letters & numbers (Persian, English, etc.)
-      const normalizedTitle = t.title.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').trim() || t.title.trim();
-      const normalizedArtist = t.artist.toLowerCase().replace(/[^\p{L}\p{N}\s]/gu, '').trim() || t.artist.trim();
-      const key = `${normalizedTitle}_${normalizedArtist}_${t.id}`;
-      const titleArtistKey = `${normalizedTitle}_${normalizedArtist}`;
-      if (!seen.has(key) && !seen.has(titleArtistKey) && merged.length < limit) {
-        seen.add(key);
-        if (normalizedTitle.length > 2) {
-          seen.add(titleArtistKey);
-        }
-        merged.push(enrichWithMetadata(t));
+    // 2. Process official Apple Music & YouTube Music catalog tracks (upgrading previewUrl if a direct stream matched)
+    for (const cat of officialCatalog) {
+      const matchedStream = findDirectStreamMatch(cat);
+      if (matchedStream && matchedStream.previewUrl) {
+        const durDiff = Math.abs(matchedStream.durationSeconds - cat.durationSeconds);
+        const mins = Math.floor(matchedStream.durationSeconds / 60);
+        const secs = matchedStream.durationSeconds % 60;
+        const upgraded: ApiTrack = {
+          ...cat,
+          duration: `${mins}:${secs.toString().padStart(2, '0')}`,
+          durationSeconds: matchedStream.durationSeconds,
+          previewUrl: matchedStream.previewUrl,
+          source: matchedStream.source,
+          isFullTrack: true
+        };
+        upsertCandidate(upgraded, true, durDiff <= 12, true);
+      } else if (engine !== 'full') {
+        upsertCandidate(cat, false, true, true);
       }
-    };
-
-    // 1. Add SoundCloud full unencrypted tracks first
-    for (const sc of scTracks) {
-      addTrack(sc);
     }
 
-    // 2. Add JioSaavn 320kbps & Audius full tracks
-    for (const fc of fullCatTracks) {
-      addTrack(fc);
-    }
+    // Sort strictly descending by composite relevance + studio master quality score
+    const ranked = Array.from(scoredMap.values())
+      .sort((a, b) => b.score - a.score)
+      .map((entry) => entry.track);
 
-    // 3. Add YouTube Music Official Tracks
-    for (const yt of ytmTracks) {
-      addTrack(yt);
-    }
-
-    // 4. Add iTunes metadata tracks (which resolve via full-stream /api/resolve-stream)
-    for (const it of itunesTracks) {
-      addTrack(it);
-    }
-
-    return merged.slice(0, limit);
+    return ranked.slice(0, limit);
   }
 
   /**
@@ -742,7 +999,31 @@ class MusicApiService {
     try {
       const data = localStorage.getItem(STORAGE_KEY);
       if (data) {
-        return JSON.parse(data);
+        const parsed = JSON.parse(data);
+        if (Array.isArray(parsed)) {
+          return parsed.map((t: ApiTrack) => {
+            const pUrl = (t.previewUrl || '').toLowerCase();
+            const isLegacyDemo =
+              !pUrl ||
+              pUrl.includes('itunes.apple.com') ||
+              pUrl.includes('mzstatic.com') ||
+              pUrl.includes('dzcdn.net') ||
+              pUrl.includes('deezer.com') ||
+              pUrl.includes('cf-hls-media.sndcdn.com');
+            const durSec = t.durationSeconds && t.durationSeconds >= 65 ? t.durationSeconds : 210;
+            const mins = Math.floor(durSec / 60);
+            const secs = durSec % 60;
+            return {
+              ...t,
+              durationSeconds: durSec,
+              duration: t.durationSeconds && t.durationSeconds < 65 ? `${mins}:${secs.toString().padStart(2, '0')}` : t.duration,
+              previewUrl: isLegacyDemo
+                ? `/api/resolve-stream?q=${encodeURIComponent(`${t.artist} ${t.title}`)}&title=${encodeURIComponent(t.title)}&artist=${encodeURIComponent(t.artist)}&duration=${durSec}`
+                : t.previewUrl,
+              isFullTrack: true
+            };
+          });
+        }
       }
     } catch (e) {
       console.warn('Error reading saved library tracks:', e);

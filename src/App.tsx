@@ -686,10 +686,26 @@ export default function App() {
     }
   }, [ambientVolume]);
 
-  // Helper to attach and play either HLS (.m3u8) or progressive (MP3/MP4) full-length audio streams
+  const resolvingTrackKeyRef = useRef<string>('');
+
+  const isUnresolvedOrDemoPreviewUrl = (url?: string): boolean => {
+    if (!url) return true;
+    const lower = url.toLowerCase();
+    return (
+      lower.startsWith('/api/resolve-stream') ||
+      lower.includes('itunes.apple.com') ||
+      lower.includes('mzstatic.com') ||
+      lower.includes('dzcdn.net') ||
+      lower.includes('deezer.com') ||
+      lower.includes('coffee_bars.mp3') ||
+      lower.includes('cf-hls-media.sndcdn.com')
+    );
+  };
+
+  // Helper to attach and play either progressive (MP3/MP4) or HLS (.m3u8) full-length audio streams
   const playResolvedAudioStream = (streamUrl: string, resetTime: boolean = false) => {
     const audio = audioPlayerRef.current;
-    if (!audio || !streamUrl) return;
+    if (!audio || !streamUrl || isUnresolvedOrDemoPreviewUrl(streamUrl)) return;
 
     if (loadedStreamUrlRef.current === streamUrl && !resetTime) {
       audio.play().catch((e) => {
@@ -707,7 +723,12 @@ export default function App() {
 
     if (streamUrl.includes('.m3u8')) {
       if (Hls.isSupported()) {
-        const hls = new Hls({ enableWorker: true });
+        const hls = new Hls({
+          enableWorker: true,
+          maxBufferLength: 600,
+          maxMaxBufferLength: 600,
+          maxBufferSize: 60 * 1000 * 1000
+        });
         audioHlsRef.current = hls;
         hls.loadSource(streamUrl);
         hls.attachMedia(audio);
@@ -721,7 +742,7 @@ export default function App() {
       }
     }
 
-    if (audio.src !== streamUrl) {
+    if (audio.src !== streamUrl && !audio.src.endsWith(streamUrl)) {
       audio.src = streamUrl;
       audio.load();
     }
@@ -738,21 +759,36 @@ export default function App() {
     const audio = audioPlayerRef.current;
     if (!audio) return;
     if (isPlaying && currentTrack) {
-      if (currentTrack.previewUrl && !currentTrack.previewUrl.startsWith('/api/resolve-stream')) {
+      const trackKey = `${currentTrack.id}___${currentTrack.title}`;
+      if (currentTrack.previewUrl && !isUnresolvedOrDemoPreviewUrl(currentTrack.previewUrl)) {
         playResolvedAudioStream(currentTrack.previewUrl, false);
-      } else {
-        // Resolve full stream dynamically if not resolved yet
+      } else if (resolvingTrackKeyRef.current !== trackKey) {
+        resolvingTrackKeyRef.current = trackKey;
+        const targetDur =
+          currentTrack.durationSeconds ||
+          (currentTrack.duration ? parseDurationStringToSeconds(currentTrack.duration) : 180);
         musicApi
-          .resolveFullTrackAudio(currentTrack.title, currentTrack.artist)
+          .resolveFullTrackAudio(currentTrack.title, currentTrack.artist, targetDur)
           .then((res) => {
+            if (resolvingTrackKeyRef.current === trackKey) {
+              resolvingTrackKeyRef.current = '';
+            }
             if (res?.streamUrl) {
-              if (res.durationSeconds) setAudioDuration(res.durationSeconds);
+              if (res.durationSeconds && res.durationSeconds >= 60) {
+                setAudioDuration(res.durationSeconds);
+                currentTrack.durationSeconds = res.durationSeconds;
+              }
               currentTrack.previewUrl = res.streamUrl;
               currentTrack.isFullTrack = true;
               playResolvedAudioStream(res.streamUrl, false);
             }
           })
-          .catch((err) => console.warn('Failed to resolve audio on play:', err));
+          .catch((err) => {
+            if (resolvingTrackKeyRef.current === trackKey) {
+              resolvingTrackKeyRef.current = '';
+            }
+            console.warn('Failed to resolve audio on play:', err);
+          });
       }
     } else {
       audio.pause();
@@ -864,24 +900,41 @@ export default function App() {
   };
 
   const selectAndPlayTrack = async (track: Track) => {
+    const trackKey = `${track.id}___${track.title}`;
     setCurrentTrack(track);
     setCurrentTrackSeconds(0);
     setTrackProgress(0);
 
-    const initialDur = track.durationSeconds || (track.duration ? parseDurationStringToSeconds(track.duration) : 180);
+    const parsedDur = track.duration ? parseDurationStringToSeconds(track.duration) : 180;
+    const initialDur =
+      track.durationSeconds && track.durationSeconds >= 60
+        ? track.durationSeconds
+        : parsedDur >= 60
+        ? parsedDur
+        : 210;
     setAudioDuration(initialDur);
 
     let streamUrl = track.previewUrl || '';
 
-    // If track doesn't have a direct full stream or has an unresolved API endpoint, resolve high-fidelity stream
-    if (!streamUrl || streamUrl.startsWith('/api/resolve-stream') || (!track.isFullTrack && !streamUrl.startsWith('blob:') && !streamUrl.includes('/api/audio-proxy'))) {
+    // If track doesn't have a verified full stream or has an old 30s demo / unresolved endpoint, resolve studio master stream
+    if (
+      isUnresolvedOrDemoPreviewUrl(streamUrl) ||
+      (!track.isFullTrack &&
+        !streamUrl.startsWith('blob:') &&
+        !streamUrl.startsWith('/api/sc-stream') &&
+        !streamUrl.includes('/api/audio-proxy'))
+    ) {
+      resolvingTrackKeyRef.current = trackKey;
       try {
-        const fullRes = await musicApi.resolveFullTrackAudio(track.title, track.artist);
+        const fullRes = await musicApi.resolveFullTrackAudio(track.title, track.artist, initialDur);
         if (fullRes?.streamUrl) {
           streamUrl = fullRes.streamUrl;
-          if (fullRes.durationSeconds) {
+          if (fullRes.durationSeconds && fullRes.durationSeconds >= 60) {
             setAudioDuration(fullRes.durationSeconds);
             track.durationSeconds = fullRes.durationSeconds;
+            const mins = Math.floor(fullRes.durationSeconds / 60);
+            const secs = fullRes.durationSeconds % 60;
+            track.duration = `${mins}:${secs.toString().padStart(2, '0')}`;
           }
           track.previewUrl = streamUrl;
           track.isFullTrack = true;
@@ -889,11 +942,15 @@ export default function App() {
         }
       } catch (err) {
         console.warn('Full stream lookup:', err);
+      } finally {
+        if (resolvingTrackKeyRef.current === trackKey) {
+          resolvingTrackKeyRef.current = '';
+        }
       }
     }
 
     const audio = audioPlayerRef.current;
-    if (audio && streamUrl && !streamUrl.startsWith('/api/resolve-stream')) {
+    if (audio && streamUrl && !isUnresolvedOrDemoPreviewUrl(streamUrl)) {
       setIsPlaying(true);
       playResolvedAudioStream(streamUrl, true);
     } else if (audio) {
@@ -1465,15 +1522,14 @@ export default function App() {
         </div>
       )}
 
-      {/* Real HTML5 Audio Player for Web Streaming Previews & Uploads */}
+      {/* Real HTML5 Audio Player for Full Studio Streams & Uploads (src controlled imperatively via playResolvedAudioStream) */}
       <audio 
         ref={audioPlayerRef} 
-        src={currentTrack?.previewUrl || customAudioUrl} 
         onTimeUpdate={handleTimeUpdate} 
         onLoadedMetadata={() => {
           if (audioPlayerRef.current) {
             const raw = audioPlayerRef.current.duration;
-            if (raw && !isNaN(raw) && isFinite(raw) && raw > 0) {
+            if (raw && !isNaN(raw) && isFinite(raw) && raw >= 45) {
               setAudioDuration(raw);
             }
           }
@@ -1481,7 +1537,7 @@ export default function App() {
         onDurationChange={() => {
           if (audioPlayerRef.current) {
             const raw = audioPlayerRef.current.duration;
-            if (raw && !isNaN(raw) && isFinite(raw) && raw > 0) {
+            if (raw && !isNaN(raw) && isFinite(raw) && raw >= 45) {
               setAudioDuration(raw);
             }
           }

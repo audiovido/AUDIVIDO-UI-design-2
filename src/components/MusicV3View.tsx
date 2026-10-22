@@ -232,13 +232,33 @@ export function MusicV3View({
   const [volumeLevel, setVolumeLevel] = useState<number>(80);
   const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
 
-  // Persistent Liked Tracks Repository (shared with Music 2 in localStorage)
+  // Persistent Liked Tracks Repository (shared with Music 2 in localStorage, sanitized against legacy 30s previews)
   const [savedLibraryTracks, setSavedLibraryTracks] = useState<Track[]>(() => {
     try {
       const saved = localStorage.getItem('audiovido_saved_liked_tracks_catalog_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((t: Track) => {
+            const pUrl = (t.previewUrl || '').toLowerCase();
+            const isLegacyDemo =
+              !pUrl ||
+              pUrl.includes('itunes.apple.com') ||
+              pUrl.includes('mzstatic.com') ||
+              pUrl.includes('dzcdn.net') ||
+              pUrl.includes('deezer.com') ||
+              pUrl.includes('cf-hls-media.sndcdn.com');
+            const durSec = t.durationSeconds && t.durationSeconds >= 65 ? t.durationSeconds : 210;
+            return {
+              ...t,
+              durationSeconds: durSec,
+              previewUrl: isLegacyDemo
+                ? `/api/resolve-stream?q=${encodeURIComponent(`${t.artist} ${t.title}`)}&title=${encodeURIComponent(t.title)}&artist=${encodeURIComponent(t.artist)}&duration=${durSec}`
+                : t.previewUrl,
+              isFullTrack: true
+            };
+          });
+        }
       }
     } catch {}
     return [AURA_TRACKS[0], AURA_TRACKS[4], AURA_TRACKS[8]];

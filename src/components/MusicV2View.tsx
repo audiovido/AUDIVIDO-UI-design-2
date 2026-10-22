@@ -152,7 +152,7 @@ export function MusicV2View({
   setIsPlaying,
   trackProgress,
   currentTrackSeconds,
-  audioDuration = 30,
+  audioDuration = 192,
   handleSeek,
   likedTracks,
   toggleLikeTrack,
@@ -174,13 +174,33 @@ export function MusicV2View({
   const [activeVibe, setActiveVibe] = useState<'chill' | 'relax' | 'workout'>('chill');
   const [searchQuery, setSearchQuery] = useState<string>('');
 
-  // Persistent liked tracks repository (saved in localStorage across sessions)
+  // Persistent liked tracks repository (saved in localStorage across sessions, sanitized against legacy 30s demos)
   const [savedLibraryTracks, setSavedLibraryTracks] = useState<Track[]>(() => {
     try {
       const saved = localStorage.getItem('audiovido_saved_liked_tracks_catalog_v2');
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((t: Track) => {
+            const pUrl = (t.previewUrl || '').toLowerCase();
+            const isLegacyDemo =
+              !pUrl ||
+              pUrl.includes('itunes.apple.com') ||
+              pUrl.includes('mzstatic.com') ||
+              pUrl.includes('dzcdn.net') ||
+              pUrl.includes('deezer.com') ||
+              pUrl.includes('cf-hls-media.sndcdn.com');
+            const durSec = t.durationSeconds && t.durationSeconds >= 65 ? t.durationSeconds : 210;
+            return {
+              ...t,
+              durationSeconds: durSec,
+              previewUrl: isLegacyDemo
+                ? `/api/resolve-stream?q=${encodeURIComponent(`${t.artist} ${t.title}`)}&title=${encodeURIComponent(t.title)}&artist=${encodeURIComponent(t.artist)}&duration=${durSec}`
+                : t.previewUrl,
+              isFullTrack: true
+            };
+          });
+        }
       }
     } catch (e) {}
     // Seed with initial tracks matching initial liked tracks (Chill, Relax, Workout flagship tracks)
